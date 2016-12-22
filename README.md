@@ -5,7 +5,9 @@ A collection a scripts to run a gene-based genome-wide burden tests using MONSTE
 
 This robust and highly customizable pipeline allows users to define which variants should be included in the association test based on the overlapping genomic feature (eg. GENCODE annotation, if the annotation belongs to a canoncial transcript, overlap with associated regulatory feature etc.), variant feature (MAF threshold, missingness threshold) and adds custom weights (CADD, phred-scaled CADD, Eigen, phred-scaled Eigen, GWAVA).
 
-**Steps**
+**WARNING: This pipeline is designed for GRCh38!!** 
+
+__Steps:__
 
 * Generating a file with annotated genomic features.
 * Selecting variants.
@@ -17,6 +19,15 @@ This robust and highly customizable pipeline allows users to define which varian
 
 
 As an initial step an annotation file is generated based on which we can select regions of interest for we consider overlapping variants.  
+
+
+**Requirements:**
+
+* loftOver
+* Chainfile to lift over from hg18 to hg38 stored in the script dir.
+* bgzip and tabix in path
+
+
 
 This script downoads and annotate genomic regions to allow precise feature selection. 
 Sources:
