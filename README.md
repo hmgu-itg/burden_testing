@@ -17,10 +17,12 @@ __Steps:__
 
 ## Annotate genomic regions using **prepare_regions.sh**
 
-As an initial step, an annotation file is generated based on which we can select regions of interest in we consider overlapping variants. The annotation is gene based: the output (bed)[http://www.ensembl.org/info/website/upload/bed.html] file has the coordinates of the genes, and in the 5th column, there is the annotation of all possible associated features for that gene. The association is based on GENCODE annotation (transcript, exon etc. of the given gene), or associated Ensembl regulatory features. A regulatory feautre is considered to be associated with a gene if
+As an initial step, an annotation file is generated based on which we can select regions of interest in we consider overlapping variants. The annotation is gene based: the output [bed](http://www.ensembl.org/info/website/upload/bed.html) file has the coordinates of the genes, the 5th column contains the JSON formatted annotation of all possible associated features for that gene. These associated regions can be GENCODE features (transcripts, exons etc. of the given gene), or associated Ensembl regulatory features. A regulatory feautre is considered to be associated with a gene if
 
 * it overlaps with the gene.
 * a variant overlaps with the regualtory feature that has been found to be an eQTL of that gene in the GTEx databse.
+
+(The annotation has further information that allows fine selection of the features.)
 
 **usage:** *./prepare_regions.sh \<target directory\>*
 
@@ -29,3 +31,7 @@ As an initial step, an annotation file is generated based on which we can select
 * loftOver
 * Chainfile to lift over from hg18 to hg38 stored in the script dir.
 * bgzip and tabix in path
+
+### Parsing the output file
+
+**Features Calsses:**
