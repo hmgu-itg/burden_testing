@@ -5,7 +5,7 @@ A collection a scripts to run a gene-based genome-wide burden tests using MONSTE
 
 This robust and highly customizable pipeline allows users to define which variants should be included in the association test based on the overlapping genomic feature (eg. GENCODE annotation, if the annotation belongs to a canoncial transcript, overlap with associated regulatory feature etc.), variant feature (MAF threshold, missingness threshold) and adds custom weights (CADD, phred-scaled CADD, Eigen, phred-scaled Eigen, GWAVA).
 
-**WARNING: This pipeline is designed for GRCh38!!**
+<b>WARNING: This pipeline is designed for GRCh38!!</b>
 
 __Steps:__
 
