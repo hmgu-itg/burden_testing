@@ -19,6 +19,7 @@ __Steps:__
 
 
 As an initial step, an annotation file is generated based on which we can select regions of interest in we consider overlapping variants. The annotation is gene based: the output (bed)[http://www.ensembl.org/info/website/upload/bed.html] file has the coordinates of the genes, and in the 5th column, there is the annotation of all possible associated features for that gene. The association is based on GENCODE annotation (transcript, exon etc. of the given gene), or associated Ensembl regulatory features. A regulatory feautre is considered to be associated with a gene if
+
 a) it overlaps with the gene.
 b) a variant overlaps with the regualtory feature that has been found to be an eQTL of that gene in the GTEx databse.
 
