@@ -22,7 +22,7 @@ As an initial step, an annotation file is generated based on which we can select
 * it overlaps with the gene.
 * a variant overlaps with the regualtory feature that has been found to be an eQTL of that gene in the GTEx databse.
 
-**usage:** *./prepare_regions.sh <target directory>*
+**usage:** *./prepare_regions.sh \<target directory\>*
 
 **Requirements:**
 
