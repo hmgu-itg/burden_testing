@@ -18,7 +18,13 @@ __Steps:__
 ## Annotate genomic regions using **prepare_regions.sh**
 
 
-As an initial step an annotation file is generated based on which we can select regions of interest for we consider overlapping variants.  
+As an initial step, an annotation file is generated based on which we can select regions of interest in we consider overlapping variants. The annotation is gene based: the output (bed)[http://www.ensembl.org/info/website/upload/bed.html] file has the coordinates of the genes, and in the 5th column, there is the annotation of all possible associated features for that gene. The association is based on GENCODE annotation (transcript, exon etc. of the given gene), or associated Ensembl regulatory features. A regulatory feautre is considered to be associated with a gene if
+a) it overlaps with the gene.
+b) a variant overlaps with the regualtory feature that has been found to be an eQTL of that gene in the GTEx databse.
+
+
+
+The script download the most recent GENCODE annotation, APPRIS annotation, regulatory features of Ensembl (v.84, hardcoded), GTEx data (v6, hardcoded). 
 
 
 **Requirements:**
@@ -26,17 +32,6 @@ As an initial step an annotation file is generated based on which we can select 
 * loftOver
 * Chainfile to lift over from hg18 to hg38 stored in the script dir.
 * bgzip and tabix in path
-
-
-
-This script downoads and annotate genomic regions to allow precise feature selection. 
-Sources:
-GENCODE
-APPRIS
-Ensembl Regulation
-
-
-The annotated features are 
 
 
 

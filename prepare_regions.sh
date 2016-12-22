@@ -257,8 +257,8 @@ info "Downloading GTEx data.\n"
 info "GTEX data version: ${GTExRelease} dbGaP Accession phs000424.v6.p1.\n"
 echo -e "[Warning] GTEx version is hardcoded! Please check if this is the most recent!\n"
 
-#wget -q http://www.gtexportal.org/static/datasets/gtex_analysis_v6/single_tissue_eqtl_data/GTEx_Analysis_${GTExRelease}_eQTLs.tar.gz \
-#    -O ${targetDir}/${today}/GTEx/GTEx_Analysis_${GTExRelease}_eQTLs.tar.gz
+wget -q http://www.gtexportal.org/static/datasets/gtex_analysis_v6/single_tissue_eqtl_data/GTEx_Analysis_${GTExRelease}_eQTLs.tar.gz \
+    -O ${targetDir}/${today}/GTEx/GTEx_Analysis_${GTExRelease}_eQTLs.tar.gz
 
 # Testing if the file was downloaded or not:
 testFile "${targetDir}/${today}/GTEx/GTEx_Analysis_V6_eQTLs.tar.gz"
@@ -272,8 +272,8 @@ info "Download complete.\n\n"
 mkdir -p ${targetDir}/${today}/APPRIS
 info "Downloading APPRIS isoform data.\n"
 info "Download from the current release folder. Build: GRCh38, for GENCODE version: 24\n"
-#wget -q http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
-#    -O ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+wget -q http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
+    -O ${targetDir}/${today}/APPRIS/appris_data.principal.txt
 
 # Testing if the file is exists or not:
 testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
@@ -379,12 +379,12 @@ done | perl -F"\t" -lane '
                 $h{$ID}{line}[1], $h{$ID}{line}[2], $h{$ID}{line}[4], $h{$ID}{line}[3], $cells
         }
     }
-' | sort -k1,1 -k2,2n | bgzip > ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz
+' | sort -k1,1 -k2,2n | bgzip --force > ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz
 
 # Test if output is empty or not:
 testFileLines ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz
 
-tabix -p bed ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz
+tabix -f -p bed ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz
 echo  "Done."
 
 # Print out report:
@@ -514,7 +514,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
         ($g_name) = $_ =~ /gene_name "(.+?)";/;
         ($g_ID) = $_ =~ /gene_id "(.+?)";/;
         printf "$F[0]\t$F[3]\t$F[4]\tID:$g_ID;Name:$g_name\n";
-    ' | sort -k1,1 -k2,2n | bgzip > ${targetDir}/${today}/processed/genes.bed.gz
+    ' | sort -k1,1 -k2,2n | bgzip --force > ${targetDir}/${today}/processed/genes.bed.gz
 
 # Intersect bed run.
 # chr1	16048	29570	ID:ENSG00000227232.5;Name:WASH7P	chr1	16048	30847	ENSR00000528774	chr=1;start=16048;end=30847;class=CTCF_binding_site;regulatory_ID=ENSR00000528774;Tissues=DND-41|HMEC|HSMMtube|IMR90|K562|MultiCell|NHDF-AD
@@ -542,7 +542,7 @@ intersectBed -wb -a ${targetDir}/${today}/processed/genes.bed.gz -b ${targetDir}
             "regulatory_ID" => $r_ID,
             "source"    => "overlap",
         })
-    ' | bgzip > ${targetDir}/${today}/processed/overlapping_features.txt.gz
+    ' | bgzip --force > ${targetDir}/${today}/processed/overlapping_features.txt.gz
 echo "Done."
 
 # Generate report:
@@ -584,8 +584,8 @@ cat <(echo -e "# Regions file for burden testing. Created: 2016.09.21
 # CHR\tSTART\END\tGENEID\tANNOTATION" ) ${targetDir}/${today}/Linked_features.bed | sponge ${targetDir}/${today}/Linked_features.bed
 
 # Compressing and indexing output file:
-bgzip ${targetDir}/${today}/Linked_features.bed
-tabix -p bed ${targetDir}/${today}/Linked_features.bed.gz
+bgzip --force ${targetDir}/${today}/Linked_features.bed
+tabix -f -p bed ${targetDir}/${today}/Linked_features.bed.gz
 
 # Final report and we are done.
 info "Output file was saved as: ${targetDir}/${today}/Linked_features.bed.gz\n"
