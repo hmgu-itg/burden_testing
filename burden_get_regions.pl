@@ -138,6 +138,7 @@ our $EigenPathCoding      = $ConfFiles{EigenPathCoding};
 our $caddPath         = $ConfFiles{caddPath};
 our $temporaryBedFile = $ConfFiles{temporaryBedFile};
 our $GENCODEFile      = $ConfFiles{GENCODEFile};
+our $GWAVA_DIR        = $ConfFiles{GWAVA_DIR};
 
 # All files must exist otherwise the scrip quits:
 foreach my $sourcefile ($geneBedFile, $vcfFile,  $chainFile, $liftoverPath, $EigenPathNonCoding, $EigenPathCoding, $caddPath, $GENCODEFile){
@@ -570,11 +571,6 @@ sub get_CADD_GERP {
 ## Get GWAVA scores
 ##
 sub get_GWAVA {
-    # This sub requires a decent amount of fixed variables, given how unlikely it will be used frequently,
-    # I have decided to put those requirements here:
-    my $GWAVA_DIR = '/lustre/scratch113/teams/zeggini/users/ds26/GWAVA/gwava_release';
-    my $GWAVA_annotate = 'gwava_annotate.py';
-    my $GWAVA_predict = 'gwava.py';
 
     my %hash = %{$_[0]};
     my $gene_name = $_[1];
@@ -583,10 +579,10 @@ sub get_GWAVA {
     print "[Info] Run GWAVA annotation... ";
 
     # Running GWAVA annotation:
-    `export GWAVA_DIR=${GWAVA_DIR}; python ${GWAVA_DIR}/src/${GWAVA_annotate} ${gene_name}_GRCh37.bed ${gene_name}_GRCh37.annot`;
+    `export GWAVA_DIR=${GWAVA_DIR}; python ${GWAVA_DIR}/src/gwava_annotate.py ${gene_name}_GRCh37.bed ${gene_name}_GRCh37.annot`;
 
     # Running GWAVA annotation:
-    `export GWAVA_DIR=${GWAVA_DIR}; python ${GWAVA_DIR}/src/${GWAVA_predict} tss ${gene_name}_GRCh37.annot ${gene_name}_GRCh37.gwava`;
+    `export GWAVA_DIR=${GWAVA_DIR}; python ${GWAVA_DIR}/src/gwava.py tss ${gene_name}_GRCh37.annot ${gene_name}_GRCh37.gwava`;
 
     # Now let's test if the file is exists, if not, all weights are 1:
     my %gwava_scores = ();
