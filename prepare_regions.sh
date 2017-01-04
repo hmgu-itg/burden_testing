@@ -597,9 +597,13 @@ FailedAssoc=$(wc -l ${targetDir}/${today}/failed | awk '{print $1}')
 FailedGenes=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /(ENSG\d+)/; print $1' | sort | uniq | wc -l )
 FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":"(.+?)"/; print $1' | sort | uniq | tr "\n" ", " )
 info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sournces: ${FailedSources}\n\n"
-info "Cleaning up..\n"
 
-tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file  APPRIS EnsemblRegulation failed GENCODE GTEx processed
+# Backing up intermedier files:
+tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file   ${targetDir}/${today}/APPRIS  \
+    ${targetDir}/${today}/EnsemblRegulation  ${targetDir}/${today}/failed  ${targetDir}/${today}/GENCODE  \
+    ${targetDir}/${today}/GTEx  ${targetDir}/${today}/processed
+
+info "Intermedier files are backed in in ${targetDir}/${today}/${today}_annotation.backup.tar.gz\n" 
 
 # Exit.
 info "Program finished.\n"
