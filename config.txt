@@ -24,9 +24,6 @@ vcfFile=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/release/postrelea
 # To get CADD/Eigen/GERP scores, we have to lift over the coordinates. Path to liftover:
 liftoverPath=/nfs/users/nfs_d/ds26/bin/liftOver
 
-# This is where the chain file for liftOver is located:
-chainFile=/nfs/team144/ds26/burden_testing/scripts/hg38ToHg19.over.chain.gz
-
 # This is where the temporary bedfile will be generated:
 temporaryBedFile=./%s_GRCh38.bed
 

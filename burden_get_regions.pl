@@ -1,53 +1,13 @@
 #!/usr/bin/env perl
 
 
-# Version history:
+# Version information:
+our $version = "v3.3 Last modified: 2017.01.05";
 
-# Version 3.1 - 2017.01.04
-    # Prepared for github, making script more robust.
-    # Update config file name and location.
-    # Updated POD documentation.
-
-# Version 3.0 - 2016.12.15
-    # Various new features has been implemented.
-    # Weighting based on GWAVA scores.
-    # Bug fixed: MAF filer was not applied if no weighting was turned on.
-    #
-
-# Version: 2.5. Last modified: 2016.09.08 - Developmental version.
-    # Input checking. To make sure the provided parameters sensuals (GENCODE/regulatory feature names).
-    # If no features are selected. the gene will be omitted.
-    # Updated documentation.* <- not yet!!!
-    # save SNP info file with MAF, consequence of variant etc.
-
-# Version: 2.4. - 2016.09.06
-    # Custom config file can be specified using -c.
-    # Ensembl Perl API is no longer needed: GENCODE coordinates are read from a file.
-    # Implement variant level missingness filtering using -m.
-    # Removing obligatory scaling of the scores.
-    # Eigen scores are shifted to make sure all values are positive.
-    # Shift of the scores can be set using -b.
-
-# Version: 2.3 - 2016.09.01
-    # Bug to fixed: selecting gtex linked regulatory features.
-
-# Version: 2.2 - 2016.08.11
-    # Adding score is made optional.
-    # Some bugs were fixed.
-    # If the scaled score is 0, it is set to 0.0001 to make sure MONSTER won't fail.
-    # Cell type based filterin is not yet implemented.
-
-# Version: 2.0 - 2016.07.25
-    # Input region file is changed: annoation is in json format.
-    # Source files updated: 15x MANOLIS vcf file: QC-d, post VQCR.
-    # Updated region file generated on 2016.07.26
-
-# Version: 1.2 - 2016.04.22
-    # Default weighting removed - if no weight specified there will be no weighting applied
-    #   (previously Eigen scores were the default) Output is changes accordingly.
-    # If the normalized weight is equal to zero, it will be increased by 0.0001
-    #   Monster fails if 0 weight is given.
-
+# Accepted feature names:
+    # GENCODE: gene, exon, transcript, CDS, UTR
+    # GTEx: promoter, enhancer, promoterFlank, openChrom, TF_bind, allreg
+    # overlap: promoter, enhancer, promoterFlank, openChrom, TF_bind, allreg
 
 # Only a handful packages were used:
 use strict;
@@ -55,23 +15,38 @@ use warnings;
 use Data::Dumper; # used for diagnostic purposes.
 use Pod::Usage qw(pod2usage); # Used for providing useful error/warning and user messages.
 use JSON;
+use DateTime;
 use File::Basename;
 use HTTP::Tiny; # used to query Ensembl to get consequences.
-
-# Accepted feature names:
-    # GENCODE: gene, exon, transcript, CDS, UTR
-    # GTEx: promoter, enhancer, promoterFlank, openChrom, TF_bind, allreg
-    # overlap: promoter, enhancer, promoterFlank, openChrom, TF_bind, allreg
-
-# First step report:]
-print  "[Info] The script was called with the following parameters:\n", join(" ", $0, @ARGV), "\n";
-
-# Initializing command line parameters:
 use Getopt::Long qw(GetOptions);
-my $score = "NA"; # When score is not set, this is the default value, we are expecting.
-my ($inputFile, $outputFile, $GENCODE, $GTEx, $verbose, $overlap, $help, $floor, $cutoff,
-    $extend, $minor, $tissue_list, $MAF, $MAC, $MAF_weight, $k, $configFileName, $missingthreshold, $shift);
-our ($lof, $loftee); # A command line switch. If turned on, only loss of function variants will be included in the test.
+
+# Status report:
+print "[Info] The script was called with the following parameters:\n", join(" ", $0, @ARGV), "\n";
+print "[Info] Script version: $version\n";
+printf "[Info] Run date: %s\n", DateTime->now->strftime("%Y. %b %d %H:%M");
+
+# Storing script directory:
+our $scriptdir = dirname(__FILE__);
+
+# Initializing command line parameters with default values if required:
+my $score = "NA";
+my $shift = 0;
+my $k = 50; # Weighting constant.
+my $extend = 0;
+my $MAF = 0.05; # 5%
+my $MAC = 0;
+my $missingthreshold = 0.001; # 0.1%
+my $configFileName = "config.txt"; #
+my $floor = "NA"; # Variants will not be removed below the threshold, but assigned with this value
+my $cutoff = 0; # That is the default value, below which every variant will be removed.
+
+
+# Command line options with no default values:
+my ($inputFile, $outputFile, $GENCODE, $GTEx, $verbose, $overlap, $help,
+    $minor, $tissue_list, $MAF_weight);
+
+# A command line switch. If turned on, only loss of function variants will be included in the test.
+our ($lof, $loftee);
 
 GetOptions(
     # Input/Output:
@@ -131,7 +106,6 @@ my %ConfFiles = %{&read_param($configFileName)};
 
 our $geneBedFile      = $ConfFiles{geneBedFile};
 our $vcfFile          = $ConfFiles{vcfFile};
-our $chainFile        = $ConfFiles{chainFile};
 our $liftoverPath     = $ConfFiles{liftoverPath};
 our $EigenPathNonCoding   = $ConfFiles{EigenPathNonCoding};
 our $EigenPathCoding      = $ConfFiles{EigenPathCoding};
@@ -141,10 +115,11 @@ our $GENCODEFile      = $ConfFiles{GENCODEFile};
 our $GWAVA_DIR        = $ConfFiles{GWAVA_DIR};
 
 # All files must exist otherwise the scrip quits:
-foreach my $sourcefile ($geneBedFile, $vcfFile,  $chainFile, $liftoverPath, $EigenPathNonCoding, $EigenPathCoding, $caddPath, $GENCODEFile){
+foreach my $sourcefile ($geneBedFile, $vcfFile, $liftoverPath, $EigenPathNonCoding, $EigenPathCoding, $caddPath, $GENCODEFile){
     my $file = sprintf($sourcefile, "chr12");
     pod2usage({-verbose => 99, -message => "[Error] One of the requested file does not exits ($file). Exiting.\n", -sections => "FILES|SYNOPSIS" }) unless ( -e $file);
 }
+
 
 # Checking essential parameters:
 pod2usage({-verbose => 2}) if $help;
@@ -155,20 +130,11 @@ pod2usage({-message => "[Error] Output file prefix has to be specified with the 
 our %GENCODE = %{&parseGENCODE($GENCODE)};
 our %GTEx    = %{&parseRegulation($GTEx)} if $GTEx;
 our %overlap = %{&parseRegulation($overlap)} if $overlap;
-our %Variant = ('MAF' => $MAF || 0.05,
-                'MAC' => $MAC || 0);
+our %Variant = ('MAF' => $MAF, 'MAC' => $MAC);
 
 # Optional parameters regarding the genes:
 $GENCODE{'minor'}  = 1 if $minor;
-$GENCODE{'extend'} = $extend || 0;
-
-# Processing variables that affects scores and weights:
-$cutoff = 0 unless $cutoff;  # That is the default value, below which every variant will be removed.
-$floor = "NA" unless $floor; # Variants will not be removed below the threshold, but assigned with this value
-unless ($shift){
-    $shift = 0 if $score eq "CADD" or $score eq "GWAVA";
-    $shift = 1 if $score eq "Eigen";
-}
+$GENCODE{'extend'} = $extend;
 
 # Reporting score shifts:
 unless ($score eq "NA"){
@@ -178,11 +144,7 @@ unless ($score eq "NA"){
 }
 
 # Missingness:
-$missingthreshold = 0.01 unless $missingthreshold;
-printf  "[Info] Missingness threshold is %s, which is equivalent of %s missing genotypes.\n", $missingthreshold, int(1482 * $missingthreshold + 0.5);
-
-# Assigning default value to the weighting constant:
-$k = 50 unless $k;
+printf  "[Info] Missingness threshold: %s (variants above %s%% missing genotypes will be excluded).\n", $missingthreshold, $missingthreshold * 100;
 
 # Reading genomic data:
 our ($GENCODE_name, $GENCODE_ID) = &read_GENCODE($GENCODEFile);
@@ -197,12 +159,6 @@ pod2usage({-message => sprintf('[Warning] %s is not a supported scoring method. 
 ###
 # open(my $INPUT, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened.\n";
 open(my $variant_output, ">", $outputFile."_variants") or die "[Error] Output file ($outputFile\_variants) could not opened.\n";
-open(my $SNPinfo, ">", $outputFile."_SNP_info") or die "[Error] Output file ($outputFile\_SNP_info) could not opened.\n";
-
-# Adding header to the SNP info file:
-#print $SNPinfo "gene\tvariant\talleles\tMAF\tconsequence\traw_eigen\tphred_eigen\trsID\n" if $score eq "Eigen";
-
-$score eq "Eigen" ? print $SNPinfo "gene\tvariant\trsID\talleles\tMAF\tconsequence\tMissingness\traw_eigen\tphred_eigen\n" : print $SNPinfo "gene\tvariant\trsID\talleles\tMAF\tconsequence\tMissingness\n";
 
 my $genotypes = {};
 my $ID = $inputFile;
@@ -261,12 +217,9 @@ if ( $score eq "Eigen" || $score eq "CADD" || $score eq "GWAVA") {
     $hash = &process_score($hash, $floor, $shift, $cutoff);
 }
 
-# Once we have all the variants, we can retrieve variant consequences:
-#$hash = &get_Consequences($hash); # removed for genome wide test!
-
-# Saving data into file:
+# Saving SNP data into file:
 &print_SNPlist($hash, $variant_output, $name);
-#&print_SNP_info($hash, $SNPinfo, $name); # removed for genome wide test!
+&print_SNP_info($hash, $name);
 
 # Diagnostic dumper of the hash:
 # print Dumper $hash;
@@ -280,26 +233,31 @@ open(my $genotype_output, ">", $outputFile."_genotype") or die "[Error] Output f
 ##
 sub print_SNP_info {
     my %hash = %{$_[0]};
-    my $outfilehandle = $_[1];
-    my $gene_name = $_[2];
+    my $gene_name = $_[1];
 
     # print Dumper %hash;## Diagnostic line: what do we have sotred in the hash at the last stage?
 
     # Looping through all the variants and save the data:
-    foreach my $variant (keys %hash){
-        my @array = ();
+    open(my $outfilehandle, ">", $outputFile."_SNP_info") or die "[Error] Output file ($outputFile\_SNP_info) could not opened.\n";
 
-        push(@array, ($gene_name,
-                      $variant,
-                      $hash{$variant}{'rsID'},
-                      join("/", @{$hash{$variant}{'alleles'}}),
-                      $hash{$variant}{'frequencies'}[2],
-                      $hash{$variant}{'Consequence'},
-                      $hash{$variant}{'missingness'}));
-        push(@array, ($hash{$variant}{"score"}{"processed_eigen"},
-                      $hash{$variant}{"score"}{'raw_eigen_phred'})) if $score eq "Eigen";
+    # Printing out header:
+    print $outfilehandle "gene_name\tSNPID\trsID\tallele_string\tconsequence\tMAF\tmissingness\tscore\n";
 
-        print $outfilehandle join("\t", @array), "\n";
+    foreach my $variant (values %hash){
+
+        # generating all the required fields:
+        my $alleleString = join("/", @{$variant->{'alleles'}});
+        my $rsID = $variant->{'rsID'};
+        my $MAF = sprintf "%.4f", $variant->{'frequencies'}->[2];
+        my $missingness = sprintf "%.4f", $variant->{'missingness'};
+        my $score = exists $variant->{'score'} ? $variant->{'score'} : "NA";
+        my ($consequence) = $variant->{'consequence'} =~ /(.+?);/;
+        my $SNPID = $variant->{'GRCh38'}->[0].":".$variant->{'GRCh38'}->[1];
+
+        $SNPID .= "(".$variant->{'GRCh37'}->[0].":".$variant->{'GRCh37'}->[2]."[b37])" if exists $variant->{'GRCh37'};
+
+
+        print $outfilehandle join ("\t", $gene_name, $SNPID, $rsID, $alleleString, $consequence, $MAF, $missingness, $score), "\n";
     }
 
 }
@@ -318,7 +276,7 @@ sub parseGENCODE {
             $hash{$feature} = 1;
         }
         else {
-            print STDERR "[Error] The provided GENCODE feature name is not supported: $feature. Use these: gene, exon, transcript, CDS or UTR\n";
+            printf STDERR "[Error] The provided GENCODE feature name is not supported: %s. Use these: %s\n", $feature, join(", ", keys %AcceptedFeatures);
         }
 
 
@@ -327,17 +285,17 @@ sub parseGENCODE {
 }
 sub parseRegulation {
     # Accepted features: promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind, allreg
-    my %AcceptedFeatures = ( "promoter" => 1, "CTCF" => 1, "enhancer" => 1, "promoterFlank" => 1, "openChrom" => 1, "TF_binding_site" => 1, "allreg" => 1 );
+    my %AcceptedFeatures = ( "promoter" => 1, "CTCF" => 1, "enhancer" => 1, "promoterFlank" => 1, "openChrom" => 1, "TF_bind" => 1, "allreg" => 1 );
     my $regString = $_[0];
     my %hash = ();
     foreach my $feature (split(",", $regString)){
 
         unless (exists $AcceptedFeatures{$feature}) {
-            print STDERR "[Error] The provided regulatory feature name is not supported: $feature. Use these: promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind or allreg\n";
+            printf STDERR "[Error] The provided regulatory feature name is not supported: %s. Use these: %s\n", $feature, join(", ", keys %AcceptedFeatures);
             next;
         }
 
-        $hash{'TF_binding_site'}   = 1 if "TF_binding_site" eq $feature;
+        $hash{'TF_binding_site'}   = 1 if "TF_bind" eq $feature;
         $hash{'CTCF_binding_site'} = 1 if "CTCF" eq $feature;
         $hash{'enhancer'}          = 1 if "enhancer" eq $feature;
         $hash{'Open chromatin'}    = 1 if "openChrom" eq $feature;
@@ -568,7 +526,7 @@ sub get_CADD_GERP {
     return \%hash
 }
 ##
-## Get GWAVA scores
+## Get GWAVA scores as weights:
 ##
 sub get_GWAVA {
 
@@ -578,26 +536,34 @@ sub get_GWAVA {
     # Report progress:
     print "[Info] Run GWAVA annotation... ";
 
-    # Running GWAVA annotation:
-    `export GWAVA_DIR=${GWAVA_DIR}; python ${GWAVA_DIR}/src/gwava_annotate.py ${gene_name}_GRCh37.bed ${gene_name}_GRCh37.annot`;
-
-    # Running GWAVA annotation:
-    `export GWAVA_DIR=${GWAVA_DIR}; python ${GWAVA_DIR}/src/gwava.py tss ${gene_name}_GRCh37.annot ${gene_name}_GRCh37.gwava`;
-
-    # Now let's test if the file is exists, if not, all weights are 1:
     my %gwava_scores = ();
-    if ( -e $gene_name."_GRCh37.gwava" ) {
-        open(my $GWF, "<", $gene_name."_GRCh37.gwava" ) or warn "[Warning] ${gene_name}_GRCh37.gwava could not be opened!\n";
-        while ( my $line = <$GWF>) {
-            chomp $line;
-            my ($chr, $start, $end, $ID, $gwava) = split("\t", $line);
-            $gwava_scores{$ID} = $gwava;
-        }
-    } else { print "[Warning] GWAVA file could not be opened!\n" }
 
+    # before running gwava we have to check if the directory and the scripts are there:
+    if ( -e "$GWAVA_DIR/src/gwava_annotate.py") {
+
+        # Running GWAVA annotation:
+        `export GWAVA_DIR=${GWAVA_DIR}; python ${GWAVA_DIR}/src/gwava_annotate.py ${gene_name}_GRCh37.bed ${gene_name}_GRCh37.annot`;
+
+        # Running GWAVA prediction:
+        `export GWAVA_DIR=${GWAVA_DIR}; python ${GWAVA_DIR}/src/gwava.py tss ${gene_name}_GRCh37.annot ${gene_name}_GRCh37.gwava`;
+
+        # Now let's test if the file is exists, if not, all weights are 1:
+        if ( -e $gene_name."_GRCh37.gwava" ) {
+            open(my $GWF, "<", $gene_name."_GRCh37.gwava" ) or warn "[Warning] ${gene_name}_GRCh37.gwava could not be opened!\n";
+            while ( my $line = <$GWF>) {
+                chomp $line;
+                my ($chr, $start, $end, $ID, $gwava) = split("\t", $line);
+                $gwava_scores{$ID} = $gwava;
+            }
+        } else { print "[Warning] GWAVA file could not be opened!\n" }
+    }
+    else {
+        print "\n[Warning] GWAVA executables were not found in the specified path: $GWAVA_DIR/src/gwava_annotate.py\n";
+        print "[Warning] Please update config file!\n[Info] Adding NA-s as scores. "
+    }
     # Looping through all variants in the hash:
     foreach my $var (keys %hash){
-        $hash{$var}{"score"} = exists $gwava_scores{$var} ? $gwava_scores{$var} : "NA"; # Initialize Eigen score.
+        $hash{$var}{"score"} = exists $gwava_scores{$var} ? $gwava_scores{$var} : "NA"; # Initialize GWAVA score.
     }
 
     # Report progress:
@@ -617,12 +583,10 @@ sub liftover {
     open( my $tempbed, ">", $tempFileName) or die "[Error] Temporary bedfile could not be opened for writing: $tempFileName\n";
     foreach my $variant (keys %hash){
         printf $tempbed "%s\t%s\t%s\t%s\n", $hash{$variant}{GRCh38}[0], $hash{$variant}{GRCh38}[1] - 1, $hash{$variant}{GRCh38}[1], $variant;
-        # printf STDERR "%s\t%s\t%s\t%s\n", $hash{$variant}{GRCh38}[0], $hash{$variant}{GRCh38}[1] - 1, $hash{$variant}{GRCh38}[1], $variant; ## Trouble shooting line: is there any input generated for liftOver?
     }
 
     # Liftover query:
-    my $liftover_query = sprintf("%s %s %s %s_GRCh37.bed %s_unmapped.bed  2> /dev/null", $liftoverPath, $tempFileName, $chainFile, $gene_name, $gene_name);
-    # print STDERR "$liftover_query\n"; ## Trouble shooting: testable liftOver line.
+    my $liftover_query = sprintf("%s %s %s/hg38ToHg19.over.chain.gz %s_GRCh37.bed %s_unmapped.bed  2> /dev/null", $liftoverPath, $tempFileName, $scriptdir, $gene_name, $gene_name);
 
     # Calling liftover:
     `bash -O extglob -c \'$liftover_query\'`;
@@ -949,7 +913,6 @@ sub read_param {
 
     # if any problem occur, we use the default value:
     unless ( -e $absConfigFile ) {
-        my $scriptdir = dirname(__FILE__);
         $absConfigFile = $scriptdir."/config.txt";
         $absConfigFile = `readlink -f $absConfigFile`;
         chomp $absConfigFile;
@@ -1077,54 +1040,6 @@ sub read_GENCODE {
 
     return \%gene_IDs, \%gene_names;
 }
-
-
-    # select source (arguments are the class of the features.):
-    "GENCODE|G=s" => \$GENCODE,
-    "GTEx|E=s"    => \$GTEx,
-    "overlap|L=s" => \$overlap,
-
-    # Extend regions with a defined length:
-    "extend=s" => \$extend,
-
-    # Appris:
-    "SkipMinor" => \$minor,
-
-    # Only considering regulatory elements associated in the
-    # following tissues (this only filters based on ensembl tissues):
-    "tissues|T=s" => \$tissue_list,
-
-    # Variant features:
-    'MAF=s' => \$MAF,
-    'MAC=s' => \$MAC,
-
-    # Verbose output:
-    'verbose|v' => \$verbose,
-
-    # specifying config file:
-    'conf|c=s' => \$configFileName,
-
-    # Which score we need:
-    'score|s=s' => \$score,
-
-    # A flag to weight by MAF:
-    'MAFweight|w'  => \$MAF_weight,
-    'ExpConst|k=s' => \$k,
-
-    # Do we need only loss of function:
-    'lof' => \$lof,
-    'loftee' => \$loftee, # Filters in only high confident loss of function variants
-
-    # Accepting missingness filter:
-    'missingness|m=s' => \$missingthreshold,
-
-    # Changing scores that will be used for weights:
-    'shift=s'  => \$shift,  # The value used to shift eigen scores:
-    'cutoff=s' => \$cutoff, # hard threshold that will be applied on scores:
-    'floor=s'  => \$floor,  # How do we want to floor Eigen values:
-
-    # Asking for help:
-    'help|h' => \$help
 
 
 ##

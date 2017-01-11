@@ -1,13 +1,17 @@
 #!/usr/local/bin/bash
 
+# To be fixed in a later version: 2017.01.05
+    # Constant values are sourced from a config file.
+    #
+
 # A wrapper script to automate genome-wide burden testing using MONSTER.
 # For more information on the applied method see: http://www.stat.uchicago.edu/~mcpeek/software/MONSTER/
 
-version="v9.0 Last modified: 2016.12.21"
+version="v9.2 Last modified: 2017.01.05"
 today=$(date "+%Y.%m.%d") # Get the date
 
 # The variant selector script, that generates input for MONSTER:
-regionSelector=burden_get_regions_v3.0.pl
+regionSelector=burden_get_regions.pl
 
 # Folder with all the scripts:
 export scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -17,6 +21,8 @@ phenotypeDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/phenotypes
 
 # File with all the gene names (only on autosomes):
 geneListFile=${scriptDir}/gene_list.lst
+
+# MONSTER link that has to be adjusted:
 
 # Kinship matrix file:
 kinshipMatrix=/nfs/team144/ds26/burden_testing/kinship/2016.10.20_fix_diagonal/kinship.fixdiag.txt
@@ -56,6 +62,7 @@ It pools results together within one chunk."
     echo ""
     echo "General options:"
     echo "     -w  - working directory or actual directory"
+    echo "     -b  - Keep temporary files."
     echo ""
     echo "Monster parameters:"
     echo "     -p  - phenotype"
@@ -82,7 +89,7 @@ function failed (){
 
     # Generating failed directory and compress gene dir:
     mkdir -p ${workingDir}/failed
-    tar -czvf ${workingDir}/failed/${gene}.tar.gz ${workingDir}/gene_set.${chunkNo}/${gene}
+    tar -czvf ${workingDir}/failed/${gene}.tar.gz -C ${workingDir}/gene_set.${chunkNo}/ ${gene}
 
     # Removing directory:
     rm -rf ${workingDir}/gene_set.${chunkNo}/${gene}
@@ -91,7 +98,7 @@ function failed (){
 # --- If a p-value is really low, the whole run backed up:
 function savehit (){
     mkdir -p ${workingDir}/hits
-    tar -czvf ${workingDir}/hits/${gene}.tar.gz ${workingDir}/gene_set.${chunkNo}/${gene}
+    tar -czvf ${workingDir}/hits/${gene}.tar.gz -C ${workingDir}/gene_set.${chunkNo}/ ${gene}
 }
 
 
@@ -175,6 +182,9 @@ if [ -z $workingDir ]; then
     workingDir=$(pwd)
     echo -e "\tWorking directory: $workingDir"
 fi
+
+# Reporting if temporary files are saved:
+if [[ ${keep_temp} -eq 1 ]]; then echo -e "\tTemporary files will not be deleted!"; fi
 
 # 2. GTEx - expecting a list of feature names separeted by comma.
 if [ ! -z $gtex ]; then
@@ -302,7 +312,7 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
 
     # We have to test if the output files are OK, then we go to the next gene:
     if [[ ! -e ${gene}_output_genotype ]]; then
-        failed "[Warning] ${gene} has failed, no genotype output generated. Gene skipped."
+        failed "${gene} has failed, no genotype output generated. Gene skipped."
         cd .. && rm -rf ${gene}
         continue
     fi
@@ -310,11 +320,11 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
 
     # Checking if output files are created and has enough lines to run MONSTER:
     if [[ ! ${genoLines[0]} -ge 0 ]]; then
-        failed "[Warning] ${gene} has failed, genotype file is empty. Gene skipped."
+        failed "${gene} has failed, genotype file is empty. Gene skipped."
         continue
     fi
     if [[ ! -e ${gene}_output_variants ]]; then
-        failed "[Warning] ${gene} has failed, phenotype file was not generated. Gene skipped."
+        failed "${gene} has failed, phenotype file was not generated. Gene skipped."
         continue
     fi
 
@@ -374,13 +384,13 @@ ${imputation_method}"
 
     # Checking if output was generated:
     if [[ ! -e MONSTER_out_${gene}.out ]]; then
-        failed "[Warning] MONSTER has failed for ${gene}, no output has been generated. Temporary files are kept for troubleshooting."
+        failed "MONSTER has failed for ${gene}, no output has been generated. Temporary files are kept for troubleshooting."
         continue;
     fi
 
     # Checking if al the p value is also in the file:
     if [[ $(tail -1 MONSTER_out_${gene}.out | awk '{print NF}') -ne 5 ]]; then
-        failed "[Warning] MONSTER has failed for ${gene}, p-value calculated!. Temporary files are kept for troubleshooting."
+        failed "MONSTER has failed for ${gene}, p-value calculated!. Temporary files are kept for troubleshooting."
         continue;
     fi
 
