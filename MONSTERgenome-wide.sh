@@ -1,13 +1,17 @@
 #!/usr/local/bin/bash
 
-# To be fixed in a later version: 2017.01.05
+# To be fixed in a later version: 2017.01.12
     # Constant values are sourced from a config file.
     #
 
 # A wrapper script to automate genome-wide burden testing using MONSTER.
 # For more information on the applied method see: http://www.stat.uchicago.edu/~mcpeek/software/MONSTER/
 
-version="v9.2 Last modified: 2017.01.05"
+# In this version when the script founds a significant gene, it tests if the association is
+## driven by a single variant or more by repeating the test with removing a variant
+## each time.
+
+version="v10.0 Last modified: 2017.01.12"
 today=$(date "+%Y.%m.%d") # Get the date
 
 # The variant selector script, that generates input for MONSTER:
@@ -26,6 +30,15 @@ geneListFile=${scriptDir}/gene_list.lst
 
 # Kinship matrix file:
 kinshipMatrix=/nfs/team144/ds26/burden_testing/kinship/2016.10.20_fix_diagonal/kinship.fixdiag.txt
+
+# Single point p-values are read from here:
+singlePointDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/single_point/output
+
+# Path to MONSTER executable:
+MONSTER=/nfs/team144/software/MONSTER/MONSTER
+
+# By default we are not keeping temporary files:
+keep_temp=0
 
 # By default, the first chunk is read, or it can be submitted using -d or form jobindex:
 # By default we process all genes at once.
@@ -91,16 +104,80 @@ function failed (){
     mkdir -p ${workingDir}/failed
     tar -czvf ${workingDir}/failed/${gene}.tar.gz -C ${workingDir}/gene_set.${chunkNo}/ ${gene}
 
+    # Adding NA-s to the output file.:
+    echo -e "${gene}\tNA\tNA" >> ../results
+
     # Removing directory:
     rm -rf ${workingDir}/gene_set.${chunkNo}/${gene}
+    return 0
 }
 
 # --- If a p-value is really low, the whole run backed up:
 function savehit (){
     mkdir -p ${workingDir}/hits
     tar -czvf ${workingDir}/hits/${gene}.tar.gz -C ${workingDir}/gene_set.${chunkNo}/ ${gene}
+    return 0
 }
 
+# --- if a gene has low p-value, we test if the association is driven by a single variant or not:
+function testhit (){
+
+    # Report the test:
+    echo "[Info] Testing which variants were driving the association in gene ${gene} for trait ${phenotype}"
+
+    # Printing header:
+    echo -e "trait\tSNP\tsingle_pval\tburden_pval\trsID\tallele_string\tconsequence\tMAF" > ${gene}.pvalues.txt
+
+    # Indexing single point output file if not indexed yet:
+    if [[ ! -e ${singlePointDir}/${phenotype}/MANOLIS.${phenotype}.assoc.txt.bgz.tbi ]]; then
+        echo "[Warning] Single point output file was not indexed. Indexing."
+        zcat ${singlePointDir}/${phenotype}/MANOLIS.${phenotype}.assoc.txt.gz | bgzip > ${singlePointDir}/${phenotype}/MANOLIS.${phenotype}.assoc.txt.bgz
+        tabix -f -s 1 -b 3 -e 3 -S 1 ${singlePointDir}/${phenotype}/MANOLIS.${phenotype}.assoc.txt.bgz
+    fi
+
+    # Now we have to get a list of all variants:
+    for pos in $(seq 3 $(head -n1 ${gene}_output_variants | tr "\t" "\n" | wc -l )); do
+
+        # Grepping p value from the corresponding single point associations:
+        variant=$(cut -f $pos ${gene}_output_variants | head -n1)
+        echo "[Info] ${gene} is a significant gene for ${phenotype}. Now re-testing association without ${variant}"
+
+        tabixQuery=$( echo ${variant} | perl -F"_" -lane 'printf "%s:%s-%s", substr($F[0],3), $F[1], $F[1]' )
+
+        singlePoint=$( tabix ${singlePointDir}/${phenotype}/MANOLIS.${phenotype}.assoc.txt.bgz ${tabixQuery} | cut -f14 )
+
+        # Get variant info:
+        variantString=$(grep $(echo ${variant} | perl -F"_" -lane 'printf $F[1]') ${gene}_output_SNP_info | cut -f3-6)
+
+        # Call Monster if more than 2 variants are in the original set:
+        if [[ $( cat ${gene}_output_genotype | wc -l ) -gt 3 ]]; then
+
+            # Which is the variant we are excluding:
+            variant=$(cut -f${pos} ${gene}_output_variants | head -n1 )
+
+            start=$(( $pos - 1 ))
+            end=$(( $pos + 1 ))
+
+            # Exclude variant from the variant dataset:
+            cut -f-${start},${end}- snpfile.mod.txt > snpfile.mod.${pos}.txt
+
+            # Exclude variant from the genotype dataset:
+            grep -w -v $variant genotype.mod.filtered.txt > genotype.mod.filtered.${pos}.txt
+
+            # Calling Monster:
+            ${MONSTER} -k kinship.mod.filtered.txt -p pheno.mod.ordered.txt -m ${missing_cutoff} \
+                -g genotype.mod.filtered.${pos}.txt -s snpfile.mod.${pos}.txt
+
+            # If everything went fine, we have to extract the p-value:
+            pval_hit=$(cut -f5  MONSTER.out  | tail -1)
+        fi;
+
+        # Now print out result:
+        echo -e "${phenotype}\t${variant}\t${singlePoint:--}\t${pval_hit:--}\t${variantString}" >> ${gene}.pvalues.txt
+    done
+
+    return 0
+}
 
 # --- Capture command line options --------------------------------------------
 
@@ -156,6 +233,7 @@ echo -e "\tGene list: ${geneListFile}"
 echo -e "\tPhenotype folder: ${phenotypeDir}"
 echo -e "\tScript dir: ${scriptDir}"
 echo -e "\tKinship matrix: ${kinshipMatrix}"
+echo -e "\tSingle point association results: ${singlePointDir}"
 echo ""
 
 
@@ -209,9 +287,10 @@ fi
 
 # 5. If lof is set, we only need loss of function variants:
 if [ ! -z $lof ]; then
-    folder=${folder}".loftee"
-    commandOptions=${commandOptions}" --loftee "
-    echo -e "\tOnly loss-of-function variants will be considered (loftee HC and LC)."
+    folder=${folder}".lof"
+    commandOptions=${commandOptions}" --lof "
+    #echo -e "\tOnly loss-of-function variants will be considered (loftee HC and LC)."
+    echo -e "\tOnly variants with severe consequences will be considered (down to missense)."
 fi
 
 # 5. Score - If score is not given we apply no score. Otherwise we test the submitted value:
@@ -230,6 +309,11 @@ echo -e "\tWeighting: ${score}"
 
 # Only adding score to command line if score is requested:
 if [ ${score} != "noweights" ]; then commandOptions=${commandOptions}" -s ${score}"; fi
+
+# If Eigen score is applied, we automatically shift scores by 1:
+if [ ${score} == "Eigen" ]; then commandOptions=${commandOptions}" --shift 1 "; fi
+
+# Adjust dir name:
 folder=${folder}"."${score}
 
 # 6. Extend regions:
@@ -290,9 +374,12 @@ fi
 
 # --- Main loop executed for all genes --------------------------------------------
 
+# Creating results file with header:
+mkdir -p ${workingDir}/gene_set.${chunkNo}
+echo -e "GeneName\tp-value\tSNP_count" > ${workingDir}/gene_set.${chunkNo}/results
+
 # Looping through all genes in the gene set:
 awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} | while read gene ; do
-
     # Testing if a run was already completed:
     #flag=$( if [[ -e ${workingDir}/gene_set.${chunkNo}/results ]]; then grep -w ${gene} ${workingDir}/gene_set.${chunkNo}/results; fi)
     #if [[ ! -z "${flag}" ]]; then echo "$gene is done! Next."; continue; fi
@@ -329,7 +416,7 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
     fi
 
     # Assigning default cutoff values for monster (will be moved up somewhere..):
-    if [[ ! -n ${missing_cutoff} ]]; then missing_cutoff=0; fi
+    if [[ ! -n ${missing_cutoff} ]]; then missing_cutoff=0.001; fi
 
     # Echoing MONSTER parameters: (Will be located above somewhere...)
     echo "Optional MONSTER parameters: missingness: ${missing_cutoff}, imputation method: ${imputation_method}"
@@ -364,14 +451,14 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
         }{print $_ if exists $h{$F[1]} and exists $h{$F[2]};}' > kinship.mod.filtered.txt
 
     # Calling MONSTER:
-    echo "[Info] MONSTER call: /nfs/team144/software/MONSTER/MONSTER -k kinship.mod.filtered.txt \
+    echo "[Info] MONSTER call: ${MONSTER} -k kinship.mod.filtered.txt \
 -p pheno.mod.ordered.txt \
 -m ${missing_cutoff} \
 -g genotype.mod.filtered.txt \
 -s snpfile.mod.txt \
 ${imputation_method}"
 
-    /nfs/team144/software/MONSTER/MONSTER -k kinship.mod.filtered.txt \
+    ${MONSTER} -k kinship.mod.filtered.txt \
         -p pheno.mod.ordered.txt \
         -m ${missing_cutoff} \
         -g genotype.mod.filtered.txt \
@@ -398,11 +485,15 @@ ${imputation_method}"
     varcnt=$(cut -f3- *output_variants | head -n1 | tr "\t" "\n" | wc -l )
     pval=$(tail -1 MONSTER_out_${gene}.out | cut -f5)
 
-    # If p-value is really low save into a folder:
-    if [[ $(echo $pval | perl -lane 'print int(-log(abs($F[0]))/log(10))') -ge 6 ]]; then echo "[Info] Found a hit! ${gene} p-value: ${pval}"; savehit; fi
+    # Adding p-values to file:
+    echo -e "${gene}\t${pval:--}\t${varcnt:--}" >> ../results
 
-    # Saving file:
-    echo -e "${gene}\t${pval}\t${varcnt}" >> ../results
+    # If p-value is really low save into a folder:
+    if [[ $(echo $pval | perl -lane 'print int(-log(abs($F[0]))/log(10))') -ge 5 ]]; then
+        echo "[Info] Found a hit! ${gene} p-value: ${pval}";
+        testhit; # Run test with removing variants.
+        savehit; # Saving all intermediate files.
+    fi
 
     # Cleaning up: removing all files or just the mod files if requested.
     if [[ ${keep_temp} -eq 1 ]]; then rm *mod*; else cd .. && rm -rf ${gene}; fi

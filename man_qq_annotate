@@ -1,0 +1,456 @@
+#!/software/R-3.2.2/bin/Rscript
+#.libPaths(Sys.getenv("R_LIBS”))
+require(argparse)
+###############################################################################
+# A program to plot Manhattan and QQ plots                                    #
+###############################################################################
+# Add circles around points of interest
+# allow graphical parameters to be changed from the command line, via a graphical config file
+# sort out the significance threshold lines
+
+
+suppressPackageStartupMessages(library(argparse))
+suppressPackageStartupMessages(library(data.table))
+
+#.libPaths(Sys.getenv("R_LIBS”))
+
+# Get the path to my R functions
+funct_path=Sys.getenv("CF9_R_LIBS")
+funct_path="/nfs/users/nfs_a/ag15/scripts"
+# Now make sure that the function files can be found and that they can  be 
+# accessed and sourced in
+#my_libs=c("utility_functions.R")
+my_libs=c("utility_functions.R","MQ_Art.R")
+# Loop through all the libraries I want to source in
+print(funct_path)
+print(my_libs)
+for (i in my_libs ) {
+  # Check that the function path exists and is readable
+  i_path=paste(funct_path,i,sep="/")
+  
+  # Make sure the files exist and we can access them
+print(paste("Testing if is loadable:", i_path))
+  if (file.access(i_path,4)==-1) {
+    stop(paste("[FATAL] Can't find",
+               i_path,
+               "library (or it is not readable), ensure",
+               i_path,
+               "is set in your .bashrc !"),sep="")
+  }
+  
+  # Source in the functions required to do the fast manhattan and q plots
+  # I should really drop this into a try - catch block
+  source(i_path)
+  #  tryCatch(source(i_path),
+  #           error = function(e) e,
+  #           finally = stop(sprintf("[FATAL] Problem sourcing %s!",i_path)))
+}
+
+print("Main functions sourced.")
+#source("~ag15/MQ_ArtT.R")
+
+# Check that the function path exists and is readable
+#mqart=paste(funct_path,"MQ_Art.R",sep="/")
+
+#if (file.access(mqart,4)==-1) {
+#  stop("[FATAL] Can't find MQ_Art.R library (or it is not readable), ensure CF9_R_LIBS is set in your .bashrc !")
+#}
+
+# Source in the functions required to do the fast manhattan and qq plots
+#source(mqart)
+
+# # Now define a function that will search for the correct column names 
+# # and return the column number
+# getColNames = function(header,args) {
+#   colnos=list()
+  
+#   errors=FALSE
+#   # Find the pvalue column
+#   for (cn in c("pval_col","pos_col","chr_col")) {
+# #    print(cn)
+#     count=table(header %in% args[[cn]])
+# #    print(count)
+    
+#     if (is.na(count['TRUE'])) {
+#       errors=TRUE
+#       write(paste("[FATAL] Can't find: ",cn,sep=""),stderr())
+#     } else if (count['TRUE'] > 1) {
+#       errors=TRUE
+#       write(paste("[FATAL] Found",count['TRUE'],cn,"columns"),stderr())
+#     } else {
+#       colnos[[cn]]=which(header==args[[cn]])
+#     }
+
+#   }
+  
+# #  print(colnos)
+#   if (errors==TRUE) {
+#     stop("[FATAL] Can't find all the required columns!")
+#   }
+# #  count=table(header %in% args$pval_col)
+# #  print(count['FALSE'])
+# #  print(is.na(count['TRUE']))
+# #  if (header %in% args$pval_col) {
+    
+# #  }
+#   return(colnos)
+# }
+
+
+# # A function to control addional labelling on the plot
+# addLabels = function(args,regions) {
+#   if (nrow(regions) > 0) {
+#     if (nchar(args$label)>0) {
+#       mtext(sprintf("%s; Excluded: %s",args$label,paste(regions$region,collapse=",")),
+#             side=3,
+#             at=0,
+#             cex=1.5,
+#             adj=0)
+#     } else {
+#       mtext(args$label,
+#             side=3,
+#             at=0,
+#             cex=1.5,
+#             adj=0)
+#     }
+#   } else {
+#     mtext(args$label,
+#           side=3,
+#           at=0,
+#           cex=1.5,
+#           adj=0)
+#   }
+# }
+
+
+# create parser object
+parser <- ArgumentParser(description="A program to plot Manhattan and QQ plots")
+
+parser$add_argument("-x", 
+                    "--exclude-regions", 
+                    type="character",
+                    help="A comma separated list of regions to exclude from the data before plotting, should be CHR:STPOS-ENDPOS format",
+                    metavar="[character]")
+
+parser$add_argument("--chr-col", 
+                    type="character",
+                    default="chr",
+                    help="The column NAME for the chromosome column, default chr",
+                    metavar="[character]")
+
+parser$add_argument("--pval-col", 
+                    type="character",
+                    default="pval",
+                    help="The column NAME for the chromosome column, default pval",
+                    metavar="[character]")
+
+parser$add_argument("--pos-col", 
+                    type="character",
+                    default="pos",
+                    help="The column NAME for the chromosome column, default pos",
+                    metavar="[character]")
+
+parser$add_argument("--sig-thresh", 
+                    type="double",
+                    default=5E-08,
+                    help="The significance threshold above which points will appear green",
+                    metavar="[DOUBLE]")
+
+parser$add_argument("--sig-thresh-line", 
+                    type="double",
+                    default=-1.0,
+                    help="The significance threshold for the line",
+                    metavar="[DOUBLE]")
+
+parser$add_argument("--title", 
+                    type="character",
+                    default="",
+                    help="An optional text title to add to each plot",
+                    metavar="[character]")
+
+parser$add_argument("-s", 
+                    "--plot-combined", 
+                    action="store_true",
+                    help="Do you want separate manhattan and qq plots to be plotted as opposed to combined plot"
+                    )
+
+parser$add_argument("-m",
+                    "--manual-labels",
+                    type="character",
+                    help="The path to a file containing all the data to plot manual labels on the MH plot. Should have cols: chr,pos,label_colour,hightlight,peak_colour,label_name")
+
+parser$add_argument("--auto-label", action="store_true",
+                    help="Should we automatically find the nearest gene for top peaks")
+
+parser$add_argument("-b",
+                    "--biotypes",
+                    type="character",
+                    help="A comma separated list of biotypes to restrict the gene searches")
+
+parser$add_argument("--pdf", action="store_false", default=TRUE,
+                    dest="png",help="Should the output be a pdf file")
+
+parser$add_argument("--png", action="store_true",
+                    help="Should the output be a png file (the default)")
+
+parser$add_argument("--no-mh", action="store_true", default=FALSE,
+                    help="Should I only plot a qq plot")
+
+parser$add_argument("--no-qq", action="store_true",default=FALSE,
+                    help="Should I only plot a mh plot")
+
+parser$add_argument("--qq-width", type="integer",default=15,
+                    help="The width of the QQ plot in cm",
+                    metavar="[integer]")
+
+parser$add_argument("--qq-height", type="integer",default=15,
+                    help="The height of the QQ plot in cm",
+                    metavar="[integer]")
+
+parser$add_argument("--manh-width", type="integer",default=20,
+                    help="The width of the manhattan plot in cm",
+                    metavar="[integer]")
+
+parser$add_argument("--manh-height", type="integer",default=15,
+                    help="The height of the manhattan plot in cm",
+                    metavar="[integer]")
+
+
+
+# The input file used to create the plots
+parser$add_argument("INFILE", nargs=1, help="Input file name, can be gzip file (detected from extension)")
+
+# The input file used to create the plots
+parser$add_argument("OUTFILE", nargs=1, help="Output file name (with no file extension)")
+
+args <- parser$parse_args()
+#print(args)
+#q()
+
+# If we have seleected not to draw anything then die
+if (args$no_qq==TRUE && args$no_mh==TRUE) {
+  stop("[FATAL] You have selected --no-qq and --no-mh, nothing to do!")
+}
+
+# Now check that we have not got --plot-combined along with --no-mh --no-qq
+if (args$plot_combined==TRUE && (args$no_qq==TRUE || args$no_mh==TRUE)) {
+  stop("[FATAL] You have selected --plot-combined with --no-qq or --no-mh!")
+}
+
+if (file.access(args$INFILE,4)==-1) {
+  stop(sprintf("[FATAL] Can't find %s input file (or it is not readable)!\n",args$INFILE))
+}
+
+# Get the base directory for output file and check that it exists
+base_dir=dirname(args$OUTFILE)
+if (file.access(base_dir,2)==-1) {
+  stop(sprintf("[FATAL] The base directory for output %s does not exist (or it is not writable)!\n",base_dir))
+}
+
+# If we have chosen to exclude some regions then check that the regions have
+# valid names
+regions=data.table()
+if (is.null(args$exclude_regions)==FALSE) {
+  # If there are multiple regions to exclude they will be comma separated
+  # so split them up
+  args$exclude_regions=unlist(strsplit(gsub("\\s+","",args$exclude_regions,perl=TRUE),",") )
+  
+  # Loop through the custom regions supplied and split them up
+  for (i in args$exclude_regions) {
+    reg=unlist(strsplit(i,":") )  
+    
+    # Now check that the custom region sting is the correct format
+    # First I will check that we have 2 elements in the vector:
+    # [1] chr [2] startpos-endpos
+    if (length(reg) != 2) {
+      stop(paste("[FATAL] Bad format custom region: ",i,sep=""))
+    }
+    
+    # Now check that the we have a sensible chromosome, I am not clever enough 
+    # to dream up a regular expression to do this in one go!
+    if ( regexpr("^[XY]$",reg[1]) == -1 && 
+           regexpr("^[1-9]$",reg[1]) == -1 &&
+           regexpr("^1[0-9]$|^2[0-2]$",reg[1]) == -1 ) {
+      stop(paste("[FATAL] The chromsome does not make sense:",reg[1]))
+    }
+    
+    # Now process the positional information
+    pos=unlist( strsplit(reg[2],"-") )
+    
+    # Check that the positional information is correct if not die
+    if (length(pos) != 2 || regexpr("^[1-9][0-9]*",pos[1]) == -1 ||
+          regexpr("^[1-9][0-9]*",pos[2]) == -1 || as.numeric(pos[1]) > as.numeric(pos[2]) ) {
+      stop(paste("[FATAL] The position string does not make sense:",reg[2]))
+    }
+    
+    # If we get to here then we will add the custom region to the regions
+    # data.table
+    regions=rbindlist(list(regions,
+                           data.table(i,
+                                      as.numeric(reg[1]),
+                                      as.numeric(pos[1]),
+                                      as.numeric(pos[2])
+                                      ) 
+                            ) 
+                      )
+  }
+  
+  setnames(regions,c("region","chr","start","end"))
+  setkey(regions,"chr","start","end")
+}
+
+# If the user wants to plot some manual labels then open the file and read them
+# in
+man.labels=NULL
+if (is.null(args$manual_labels)==FALSE) {
+  # Read in the manual labels
+  man.labels=suppressWarnings(smartFread(args$manual_labels,
+                              colnames=c("chr","pos","label_col","poi","peak_col","label_name"),
+                              key=c("chr","pos"),
+                              ignore.case=TRUE))
+}
+
+# If biotypes is defined then separate the string and add back to the args
+if (is.null(args$biotypes)==FALSE) {
+  args$biotypes=splitDelimiter(args$biotypes)
+}
+
+# Now we open the input file, there is a possibility that the input file is 
+# gzipped, I will just use the file extension to detect this (rather than)
+# looking at the first few bytes (which would be the correct way of doing
+# it)
+pd=suppressWarnings(smartFread(args$INFILE,
+              colnames=c(args$chr_col,args$pos_col,args$pval_col),
+              map=c("chr","ps","p_lrt"),
+              key=c("chr","ps"),
+              ignore.case=TRUE)
+)
+
+# If we have regions that we want to exclude
+if (nrow(regions) > 0) {
+  # Loop through all the regions and remove them from the data
+  for (i in 1:nrow(regions)) {
+    reg_chr=regions[i,chr]
+    reg_start=regions[i,start]
+    reg_end=regions[i,end]
+
+    pd=pd[!(chr==reg_chr & ps >= reg_start & ps <= reg_end),]
+  }
+}
+
+if (args$sig_thresh_line==-1) {
+  args$sig_thresh_line=args$sig_thresh
+}
+#print(args)
+# If we want to produce a single plot all together
+# Then we need to do some adjustments to the image sizes
+if (args$plot_combined==TRUE) {
+  # This scales the layout to be 99% of the image file otherwise
+  # R throws a plot region too large error
+  scale_down_by=0.99
+  
+  # This is the total width of the plotting region
+  # The manhattan width + the qq plot width
+  joint_width=args$manh_width+args$qq_width
+  
+  # Ths combined height is the max height of the 
+  # the manhattan and qq height
+  joint_height=max(c(args$manh_height,args$qq_height) )
+  
+  if (args$png==FALSE) {
+    pdf(paste(args$OUTFILE,"_man_qq.pdf",sep=""),
+        width=(joint_width/2.4),
+        height=(joint_height/2.4))
+  } else {
+    # Pointsize is important here, 7 is optimal for the 
+    # default widths and heights but may not be for others
+    png(paste(args$OUTFILE,"_man_qq.png",sep=""),
+        width=joint_width,
+        height=joint_height,
+        pointsize=7,
+        res=300,
+        units="cm")
+  }
+  
+  # Create a grid layout of 1 row and 2 columns the MH plot will be in the 
+  # first column and the qq plot will be in the second column
+  top.vp <- viewport(
+  layout=grid.layout(1, 2,
+                       widths=unit(c(args$manh_width,args$qq_width), "cm"),
+                       heights=unit(max(c(args$manh_height,args$qq_height)),"cm")))
+
+  # Add the viewport the the viewport tree
+  pushViewport(top.vp)
+  
+  # Now I want to gplot the qq plot first as ggplot2 doesn't seem to like it
+  # when other viewports are already added to the layout
+  qqvp=viewport(layout.pos.col=2, layout.pos.row=1, name="qqplot")
+
+  # Do the qqplot, this now uses ggplot2 and supply the viewport to plot to
+  qqplot(pd$p_lrt, lambda=lambdaCalc(pd$p_lrt,round=4),vp=qqvp )
+
+  # Now add the manhatten plot viewport to the first column in the layout
+  # and make sure it is selected (not structly necessary)
+  pushViewport(viewport(layout.pos.col=1, layout.pos.row=1, name="mhplot") )
+  seekViewport("mhplot")
+
+  # Plot the manhattan plot
+  mhp.annotate.peak(pd,
+                    manual.labels=man.labels,
+                    auto.labels=args$auto_label,
+                    mp=mhppar(sig.thresh.line.plot=TRUE,sig.thresh=args$sig_thresh,sig.thresh.line=args$sig_thresh_line),
+                    auto.labels.sigcut=5E-40,
+                    gene.search.biotype=args$biotypes)
+
+#  addLabels(args,regions)
+  dev.off()
+} else {
+  # if we don't want to plot a qq plot
+  if (args$no_qq==FALSE) {
+    if (args$png==FALSE) {
+      pdf(paste(args$OUTFILE,"_qq.pdf",sep=""),
+          width=(args$qq_width/2.4),
+          height=(args$qq_height/2.4))
+    } else {
+      print("HELLO")
+      png(paste(args$OUTFILE,"_qq.png",sep=""),
+          width=args$qq_width,
+          height=args$qq_height,
+          pointsize=7,
+          res=300,
+          units="cm")
+    }
+    qqplot(pd$p_lrt, lambda=lambdaCalc(pd$p_lrt,round=4))
+#  addLabels(args,regions)
+    dev.off()
+  }
+
+  # If we don't want a qq plot then do not plot it
+  if (args$no_mh==FALSE) {
+    if (args$png==FALSE) {
+      pdf(paste(args$OUTFILE,"_manh.pdf",sep=""),
+          width=(args$manh_width/2.4),
+          height=(args$manh_height/2.4))
+    } else {
+      png(paste(args$OUTFILE,"_manh.png",sep=""),
+          width=args$manh_width,
+          height=args$manh_height,
+          pointsize=7,
+          res=300,
+          units="cm")
+    }
+
+    mhp.annotate.peak(pd,
+                 manual.labels=man.labels,
+                 auto.labels=args$auto_label,
+                 mp=mhppar(sig.thresh.line.plot=TRUE,sig.thresh=args$sig_thresh,sig.thresh.line=args$sig_thresh_line),
+                 auto.labels.sigcut=5E-40,
+                 gene.search.biotype=args$biotypes)
+#  mhp(pd,sig.thresh=args$sig_thresh)
+#  addLabels(args,regions)
+    dev.off()
+#    print(warnings())
+#    warnings()
+  }
+}
+

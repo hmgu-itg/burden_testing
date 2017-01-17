@@ -619,7 +619,7 @@ sub processVar {
 
     # This is the list of those consequences that will be retained upon switchin --lof
     my %lof_cons = (
-        "transcript_ablation"     => 1,
+        "transcript_ablation"      => 1,
         "splice_acceptor_variant"  => 1,
         "splice_donor_variant"     => 1,
         "stop_gained"              => 1,
@@ -631,6 +631,7 @@ sub processVar {
         "inframe_deletion"         => 1,
         "missense"                 => 1,
         "splice_region_variant"    => 1,
+        "coding_sequence_variant"  => 1
     );
 
     #
@@ -795,8 +796,10 @@ sub FilterLines {
             # If the user has specified, minor transcripts will be excluded:
             next if exists $GENCODE{"minor"} && $annot_hash{"appris"} == "Minor";
 
-            push (@output_lines, formatLines(\%annot_hash));
+            push (@output_lines, formatLines(\%annot_hash, $GENCODE{'extend'}));
             $hash{GENCODE}{$class} ++;
+
+            print Dumper %GENCODE;
         }
         elsif (($source eq "GTEx" and exists $GTEx{$class})
                or ($source eq "GTEx" and exists $GTEx{'allreg'})){
@@ -853,7 +856,8 @@ sub FilterLines {
 ##
 sub formatLines {
     my %hash = %{$_[0]};
-    return sprintf("%s\t%s\t%s\t%s", $hash{"chr"}, $hash{"start"}, $hash{"end"}, encode_json(\%hash))
+    my $ext = $_[1] // 0;
+    return sprintf("%s\t%s\t%s\t%s", $hash{"chr"}, $hash{"start"} - $ext, $hash{"end"} + $ext, encode_json(\%hash))
 }
 
 
