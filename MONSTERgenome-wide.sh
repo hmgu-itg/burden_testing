@@ -64,7 +64,7 @@ It pools results together within one chunk."
     echo "     -e  - list of linked GTEx featuress"
     echo "     -l  - list of linked overlapping features."
     echo "     -m  - upper maf thresholds"
-    echo "     -s  - turn weights on. Arguments: CADD, Eigen or GWAVA."
+    echo "     -s  - turn weights on. Arguments: GWAVA, CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred"
     echo "     -x  - extend genomic regions (bp)."
     echo "     -o  - exclude all non loss-of-function variants from the test."
     echo ""
@@ -294,15 +294,21 @@ if [ ! -z $lof ]; then
 fi
 
 # 5. Score - If score is not given we apply no score. Otherwise we test the submitted value:
+# Accepted scores:
 if [[ ! -z ${score} ]]; then
     score=${score^^}
     case ${score} in
         EIGEN) score="Eigen";;
+        EIGENPC) score="EigenPC";;
+        EIGENPHRED) score="EigenPhred";;
+        EIGENPCPHRED) score="EigenPCPhred";;
         CADD) score="CADD";;
         GWAVA) score="GWAVA";;
         *) score="noweight";;
     esac
 else
+    echo "[Warning] Submitted score is not recognized! Accepted scores: GWAVA, CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred."
+    echo "[Warning] No scores are being applied."
     score="noweights"
 fi
 echo -e "\tWeighting: ${score}"

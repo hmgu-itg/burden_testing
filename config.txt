@@ -28,14 +28,15 @@ liftoverPath=/nfs/users/nfs_d/ds26/bin/liftOver
 temporaryBedFile=./%s_GRCh38.bed
 
 # Path to Eigen scores (in this release coding and non-coding variants are located in separate files):
-EigenPathNonCoding=/lustre/scratch113/teams/zeggini/users/ds26/refseq/eigen_v1.1/Eigen_hg19_noncoding_annot_%s.tab.bgz
-EigenPathCoding=/lustre/scratch113/teams/zeggini/users/ds26/refseq/eigen_v1.1/Eigen_hg19_coding_annot_04092016.tab.bgz
+#EigenPathNonCoding=/lustre/scratch113/teams/zeggini/users/ds26/refseq/eigen_v1.1/Eigen_hg19_noncoding_annot_%s.tab.bgz
+#EigenPathCoding=/lustre/scratch113/teams/zeggini/users/ds26/refseq/eigen_v1.1/Eigen_hg19_coding_annot_04092016.tab.bgz
+EigenPath=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/eigen.phred_v2.dat
 
 # Path to CADD scores:
 caddPath=/lustre/scratch114/resources/cadd_scores/20150729-v1.3/whole_genome_SNVs_inclAnno.tsv.gz
 
 # Path to GENCODE file:
-GENCODEFile=/lustre/scratch113/projects/helic/ds26/project_burden/2016.09.04/gencode_genes_V25.tsv
+#GENCODEFile=/lustre/scratch113/projects/helic/ds26/project_burden/2016.09.04/gencode_genes_V25.tsv
 
 # Path to workig installation of GWAVA:
 GWAVA_DIR=/lustre/scratch113/teams/zeggini/users/ds26/GWAVA/gwava_release

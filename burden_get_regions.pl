@@ -29,7 +29,7 @@ printf "[Info] Run date: %s\n", DateTime->now->strftime("%Y. %b %d %H:%M");
 our $scriptdir = dirname(__FILE__);
 
 # Initializing command line parameters with default values if required:
-my $score = "NA";
+our $score = "NA";
 my $shift = 0;
 my $k = 50; # Weighting constant.
 my $extend = 0;
@@ -107,15 +107,14 @@ my %ConfFiles = %{&read_param($configFileName)};
 our $geneBedFile      = $ConfFiles{geneBedFile};
 our $vcfFile          = $ConfFiles{vcfFile};
 our $liftoverPath     = $ConfFiles{liftoverPath};
-our $EigenPathNonCoding   = $ConfFiles{EigenPathNonCoding};
-our $EigenPathCoding      = $ConfFiles{EigenPathCoding};
+our $EigenPath        = $ConfFiles{EigenPath};
 our $caddPath         = $ConfFiles{caddPath};
 our $temporaryBedFile = $ConfFiles{temporaryBedFile};
 our $GENCODEFile      = $ConfFiles{GENCODEFile};
 our $GWAVA_DIR        = $ConfFiles{GWAVA_DIR};
 
 # All files must exist otherwise the scrip quits:
-foreach my $sourcefile ($geneBedFile, $vcfFile, $liftoverPath, $EigenPathNonCoding, $EigenPathCoding, $caddPath, $GENCODEFile){
+foreach my $sourcefile ($geneBedFile, $vcfFile, $liftoverPath, $EigenPath, $caddPath){
     my $file = sprintf($sourcefile, "chr12");
     pod2usage({-verbose => 99, -message => "[Error] One of the requested file does not exits ($file). Exiting.\n", -sections => "FILES|SYNOPSIS" }) unless ( -e $file);
 }
@@ -147,12 +146,15 @@ unless ($score eq "NA"){
 printf  "[Info] Missingness threshold: %s (variants above %s%% missing genotypes will be excluded).\n", $missingthreshold, $missingthreshold * 100;
 
 # Reading genomic data:
-our ($GENCODE_name, $GENCODE_ID) = &read_GENCODE($GENCODEFile);
+our ($GENCODE_name, $GENCODE_ID) = &read_GENCODE($scriptdir."/gencode_genes_V25.tsv.gz");
 
-pod2usage({-message => sprintf('[Warning] %s is not a supported scoring method. Either CADD, GERP or Eigen has to be specified.
-[Warning] The default Eigen method is used.\n', $score), -verbose => 0, -exitval => "NOEXIT"}) unless ( $score eq "GERP" or
-                    $score eq "CADD" or $score eq "Eigen" or $score eq "NA" or $score eq "GWAVA"); # The submitted scoring method might not be supported! Check for it now!
-
+# The submitted scoring method might not be supported! Check for it now!
+my %acceptedScores = ("GWAVA" => 1,"CADD" => 1,"Eigen" => 1,"EigenPC" => 1,"EigenPhred" => 1,"EigenPCPhred" => 1, "NA" => 1);
+unless ( exists $acceptedScores{$score}){
+    pod2usage({-message => sprintf('[Warning] %s is not a supported scoring method.
+[Warning] Implemented scoring methods: %s.
+[Warning] No weights will be used.\n', $score, join(",", keys %acceptedScores)), -verbose => 0, -exitval => "NOEXIT"})
+}
 
 ###
 ### Reading file, processing the list of genes, line by line.
@@ -194,8 +196,8 @@ my $hash;
 # We exit if there is not variant for the gene:
 die "[Warning] Less than two variants remained in the gene, will be skipped.\n" unless scalar(keys %{$hash}) > 1;
 
-# IF we want to assign weight, we has to do liftover as well!
-if ( $score eq "Eigen" || $score eq "CADD" || $score eq "GWAVA") {
+# If we apply scores, coordinates have to lifted over:
+if ( $score ne "NA" ) {
 
     # Saving temporary bedfile for liftover:
     my $flag;
@@ -205,7 +207,7 @@ if ( $score eq "Eigen" || $score eq "CADD" || $score eq "GWAVA") {
     die "[Warning] None of the variants of this gene was lifted over! So no scoring is doable. Check if liftOver works, and the filtering parameters.\n" if ($flag == 0);
 
     # Returning Eigen scores if that's the case:
-    $hash = &get_Eigen_Score($hash) if $score eq "Eigen";
+    $hash = &get_Eigen_Score($hash) if $score =~ /Eigen/i;
 
     # Returning CADD scores if that's the case:
     $hash = &get_CADD_GERP($hash, "CADD") if $score eq "CADD";
@@ -250,14 +252,14 @@ sub print_SNP_info {
         my $rsID = $variant->{'rsID'};
         my $MAF = sprintf "%.4f", $variant->{'frequencies'}->[2];
         my $missingness = sprintf "%.4f", $variant->{'missingness'};
-        my $score = exists $variant->{'score'} ? $variant->{'score'} : "NA";
+        my $weight = exists $variant->{'score'} ? $variant->{'score'} : "NA";
         my ($consequence) = $variant->{'consequence'} =~ /(.+?);/;
         my $SNPID = $variant->{'GRCh38'}->[0].":".$variant->{'GRCh38'}->[1];
 
         $SNPID .= "(".$variant->{'GRCh37'}->[0].":".$variant->{'GRCh37'}->[2]."[b37])" if exists $variant->{'GRCh37'};
 
 
-        print $outfilehandle join ("\t", $gene_name, $SNPID, $rsID, $alleleString, $consequence, $MAF, $missingness, $score), "\n";
+        print $outfilehandle join ("\t", $gene_name, $SNPID, $rsID, $alleleString, $consequence, $MAF, $missingness, $weight), "\n";
     }
 
 }
@@ -420,7 +422,7 @@ sub get_Eigen_Score {
 
     # Looping throuh all variants and return the Eigen score for all:
     foreach my $var (keys %hash){
-        my $EigenFile = sprintf($EigenPathNonCoding, $hash{$var}{GRCh37}[0]);
+        my $EigenFile = $EigenPath;
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
 
         # Two tabix queries will be submitted regardless of the output...
@@ -431,63 +433,29 @@ sub get_Eigen_Score {
 
         foreach my $line (split("\n", $lines)){
             chomp $line;
-            my @array = split("\t", $line);
+            # chr     pos     a1      a2      Eigen   EigenPC EigenPhred      EigenPCPhred
+            my @array = split(" ", $line);
 
             # Testing alleles:
             if (($array[2] eq $hash{$var}{alleles}[0] and $array[3] eq $hash{$var}{alleles}[1]) or
                 ($array[2] eq $hash{$var}{alleles}[1] and $array[3] eq $hash{$var}{alleles}[0])) {
-                $hash{$var}{"score"} = $array[29] || "NA"; # Un-scaled raw eigen score.
-                # $hash{$var}{"score"}{"raw_eigen_phred"} = $array[30] || "NA"; # Phred-scaled eigen score.
+
+                $hash{$var}{"score"} = $array[4] || "NA" if $score eq "Eigen"; # Un-scaled raw Eigen score.
+                $hash{$var}{"score"} = $array[5] || "NA" if $score eq "EigenPC"; # Un-scaled Eigen PC score.
+                $hash{$var}{"score"} = $array[6] || "NA" if $score eq "EigenPhred"; # Phred scaled Eigen score.
+                $hash{$var}{"score"} = $array[7] || "NA" if $score eq "EigenPCPhred"; # Phred scaled Eigen PC score.
             }
         }
-        # Removing variants where no Eigen score could be found:
+
+        # Reporting if no score has been found for the variant:
         if ( $hash{$var}{"score"} eq "NA") {
-            # print  "[Warning] Eigen score was not found for variant $var in the non-coding set! Checking coding.\n";
-
-            # Checking variant in the coding tabix file:
-            my ($eigen_raw, $eigen_phred) = &get_Eigen_Score_coding($chr, $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1], $hash{$var}{alleles}[0]);
-
-            if ($eigen_raw eq "NA") {
-                print "[Warning] Eigen score was not found for $var variant, will be removed.\n" if $verbose;
-                delete $hash{$var};
-            }
-            else {
-                # print "[Warning] Eigen score was found in the coding set.\n" if $verbose;
-                $hash{$var}{"score"} = $eigen_raw;
-                #$hash{$var}{"score"}{"raw_eigen_phred"} = $eigen_phred
-            }
+            printf ( "[Warning] %s score was not found for variant %s in the non-coding set! Removing variant.\n", $score, $var);
+            delete $hash{$var};
         }
     }
 
     printf "[Info] Eigen scores have been added to variants (Number of variants: %s).\n\n", scalar keys %hash if $verbose;
     return \%hash
-}
-sub get_Eigen_Score_coding {
-    my ($chr, $pos, $alt, $ref) = @_;
-
-    # Constructing tabix query string:
-    my $tabix_query = sprintf("tabix %s %s:%s-%s | grep %s", $EigenPathCoding, $chr, $pos, $pos, $alt);
-    print "$tabix_query\n" if $verbose;
-
-    #  Submit tabix query:
-    my $lines = `bash -O extglob -c \'$tabix_query\'`;
-    my $E_raw = "NA"; # Initialize raw Eigen score.
-    my $E_phred = "NA"; # Initialize phred scaled Eigen score.
-
-    foreach my $line (split("\n", $lines)){
-        # Line: 10     	116699794      	T      	A      	3.05   	1.9    	0.459  	0.570  	0.571  	0.074  	0.049  	0.966  	18.68  	15.6   	7.36   	0      	0      	0      	0      	0      	0      	0      	0      	0      	0      	0      	0      	0      	0      	0.408906299005838      	4.85036      	-0.0266817653556237    	8.15331
-        chomp $line;
-        my @array = split("\t", $line);
-
-        # Testing alleles:
-        if (($array[2] eq $ref and $array[3] eq $alt) or
-            ($array[2] eq $alt and $array[3] eq $ref)) {
-            $E_raw   = $array[17] || "NA"; # Raw unscaled eigen score.
-            $E_phred = $array[18] || "NA"; # Phred scaled eigen score
-        }
-    }
-
-    return ($E_raw, $E_phred);
 }
 
 ##
@@ -798,8 +766,6 @@ sub FilterLines {
 
             push (@output_lines, formatLines(\%annot_hash, $GENCODE{'extend'}));
             $hash{GENCODE}{$class} ++;
-
-            print Dumper %GENCODE;
         }
         elsif (($source eq "GTEx" and exists $GTEx{$class})
                or ($source eq "GTEx" and exists $GTEx{'allreg'})){
@@ -1023,7 +989,7 @@ sub read_GENCODE {
     # coordinate of the genes. Keys:
     my %gene_names = ();
     my %gene_IDs = ();
-    open(my $FILE, "<", $gencodeFile) or die "[Error] GENCODE file with gene coordinates could not be opened. Exiting.\n";
+    open(my $FILE, "zcat $gencodeFile | ") or die "[Error] GENCODE file with gene coordinates could not be opened. Exiting.\n";
     while (my $line = <$FILE>) {
         next if $line =~ /^#/; # skipping header
         chomp $line;
