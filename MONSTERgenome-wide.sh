@@ -387,6 +387,9 @@ echo -e "GeneName\tp-value\tSNP_count" > ${workingDir}/gene_set.${chunkNo}/resul
 
 # Looping through all genes in the gene set:
 awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} | while read gene ; do
+    # Adjusting genomic coordinates:
+    gene=${gene/:/_}
+
     # Testing if a run was already completed:
     #flag=$( if [[ -e ${workingDir}/gene_set.${chunkNo}/results ]]; then grep -w ${gene} ${workingDir}/gene_set.${chunkNo}/results; fi)
     #if [[ ! -z "${flag}" ]]; then echo "$gene is done! Next."; continue; fi

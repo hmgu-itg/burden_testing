@@ -169,12 +169,12 @@ chomp $ID;
 #########
 my ($chr, $start, $end, $stable_ID, $name, $CollapsedBed);
 # If the input is not a region a few extra steps will be taken:
-unless ($ID =~ /chr(\d+)-(\d+)-(\d+)/i){
+unless ($ID =~ /chr(\d+)_(\d+)-(\d+)/i){
     ($chr, $start, $end, $stable_ID, $name) = &GetCoordinates($ID);
 
     # if a false gene name or ID was given, we record it and kill the process:
     unless ($name){
-        printf STDERR "[Error] Gene %s was not found in the GENCODE data! Exiting.\n", $ID;
+        printf STDERR "[Error] Gene %s was not found in the GENCODE data! Exiting.\n    ", $ID;
         exit;
     }
 
@@ -194,7 +194,7 @@ unless ($ID =~ /chr(\d+)-(\d+)-(\d+)/i){
 }
 # If the
 else {
-    ($chr, $start, $end) = $ID =~ /(chr\d+)-(\d+)-(\d+)/i;
+    ($chr, $start, $end) = $ID =~ /(chr\d+)_(\d+)-(\d+)/i;
     $CollapsedBed = join("\t", $chr, $start, $end);
     $name = $ID;
     printf "\n\n[Info] Queried region: %s:%s-%s\n", $chr, $start, $end;
