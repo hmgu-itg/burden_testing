@@ -369,6 +369,7 @@ echo -e "[Info] output folder: ${workingDir}/${folder}"
 echo "[Info] command line options for burden get region: ${commandOptions}"
 
 # Updating working dir, and create folder:
+folder=$( echo $folder | perl -lane '$_ =~ s/^\.//; print $_')
 workingDir=${workingDir}/${folder}
 mkdir -p ${workingDir}
 

@@ -119,14 +119,13 @@ foreach my $sourcefile ($geneBedFile, $vcfFile, $liftoverPath, $EigenPath, $cadd
     pod2usage({-verbose => 99, -message => "[Error] One of the requested file does not exits ($file). Exiting.\n", -sections => "FILES|SYNOPSIS" }) unless ( -e $file);
 }
 
-
 # Checking essential parameters:
 pod2usage({-verbose => 2}) if $help;
 pod2usage({-message => "[Error] Input file has to be specified with the -i switch!\n", -verbose => 0}) unless $inputFile;
 pod2usage({-message => "[Error] Output file prefix has to be specified with the -o switch!\n", -verbose => 0}) unless $outputFile;
 
 # Parsing command line arguments:
-our %GENCODE = %{&parseGENCODE($GENCODE)};
+our %GENCODE = %{&parseGENCODE($GENCODE)} if $GENCODE;
 our %GTEx    = %{&parseRegulation($GTEx)} if $GTEx;
 our %overlap = %{&parseRegulation($overlap)} if $overlap;
 our %Variant = ('MAF' => $MAF, 'MAC' => $MAC);
@@ -145,7 +144,7 @@ unless ($score eq "NA"){
 # Missingness:
 printf  "[Info] Missingness threshold: %s (variants above %s%% missing genotypes will be excluded).\n", $missingthreshold, $missingthreshold * 100;
 
-# Reading genomic data:
+# Reading genomic coordinates:
 our ($GENCODE_name, $GENCODE_ID) = &read_GENCODE($scriptdir."/gencode_genes_V25.tsv.gz");
 
 # The submitted scoring method might not be supported! Check for it now!
@@ -159,32 +158,50 @@ unless ( exists $acceptedScores{$score}){
 ###
 ### Reading file, processing the list of genes, line by line.
 ###
-# open(my $INPUT, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened.\n";
 open(my $variant_output, ">", $outputFile."_variants") or die "[Error] Output file ($outputFile\_variants) could not opened.\n";
 
 my $genotypes = {};
 my $ID = $inputFile;
 chomp $ID;
-my ($chr, $start, $end, $stable_ID, $name) = &GetCoordinates($ID);
 
-# Removing non-alphanumeric characters from gene names:
-$name =~ s/[^0-9a-z]//gi;
+#########
+######### The following block will be done for the gene.
+#########
+my ($chr, $start, $end, $stable_ID, $name, $CollapsedBed);
+# If the input is not a region a few extra steps will be taken:
+unless ($ID =~ /chr(\d+)-(\d+)-(\d+)/i){
+    ($chr, $start, $end, $stable_ID, $name) = &GetCoordinates($ID);
 
-# Skipping genes that were not found in the GENCODE dataset.
-if ($start eq "NA") {
-    print STDERR "[Warning] Gene $ID was not found in the GENCODE data. Is it a walid gene name? This gene will be skipped!\n";
-    next;
+    # if a false gene name or ID was given, we record it and kill the process:
+    unless ($name){
+        printf STDERR "[Error] Gene %s was not found in the GENCODE data! Exiting.\n", $ID;
+        exit;
+    }
+
+    # Removing non-alphanumeric characters from gene names:
+    $name =~ s/[^0-9a-z]//gi;
+
+    # Skipping genes that were not found in the GENCODE dataset.
+    if ($start eq "NA") {
+        print STDERR "[Warning] Gene $ID was not found in the GENCODE data. Is it a walid gene name? This gene will be skipped!\n";
+        exit;
+    }
+
+    print "\n\n[Info] Queried gene: $name (Ensembl ID: $stable_ID), Genomic location: chr$chr:$start-$end (Input: $ID)\n";
+    my $bedlines = &BedToolsQuery($chr, $start, $end, $stable_ID);
+
+    $CollapsedBed = &FilterLines($bedlines, $stable_ID);
 }
-
-print "\n\n[Info] Queried gene: $name (Ensembl ID: $stable_ID), Genomic location: chr$chr:$start-$end (Input: $ID)\n";
-my $bedlines = &BedToolsQuery($chr, $start, $end, $stable_ID);
-
-my $CollapsedBed = &FilterLines($bedlines, $stable_ID);
-
-# Check if no features were selected for the given gene. If that's the case
-# Go for the next gene:
-#print "Collapsed bed file: $"
-#next unless $CollapsedBed;
+# If the
+else {
+    ($chr, $start, $end) = $ID =~ /(chr\d+)-(\d+)-(\d+)/i;
+    $CollapsedBed = join("\t", $chr, $start, $end);
+    $name = $ID;
+    printf "\n\n[Info] Queried region: %s:%s-%s\n", $chr, $start, $end;
+}
+#########
+#########
+#########
 
 # Retrieve overlapping variations:
 my $variants = &GetVariants($CollapsedBed);
