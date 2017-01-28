@@ -651,7 +651,15 @@ sub processVar {
         # Calculating values for filtering:
         my $missingness = (scalar(@genotypes)*2 - $an)/(scalar(@genotypes)*2);
         my $MAF = $ac/$an;
-        $MAF = 1 - $MAF if $MAF > 0.5;
+
+        # This flag shows if the non-ref allele is the major:
+        my $genotypeFlip = 0; #
+        if ( $MAF > 0.5 ){
+            print "[Info] $MAF is greater then 0.5, genotype is flipped.\n";
+            $MAF = 1 - $MAF;
+            $genotypeFlip = 1;
+        }
+
         my $MAC = $ac;
         $MAC = $an - $ac if $MAC > $an / 2;
 
@@ -701,8 +709,8 @@ sub processVar {
         # Parsing genotypes:
         foreach my $gt (@genotypes){
             my @fields = split(":", $gt);
-            if    ($fields[0] eq "0/0") { push(@{$genotypeContainer{$SNPID}}, 0) }
-            elsif ($fields[0] eq "1/1") { push(@{$genotypeContainer{$SNPID}}, 2) }
+            if    ($fields[0] eq "0/0") { push(@{$genotypeContainer{$SNPID}}, $genotypeFlip == 1 ? 2 : 0) }
+            elsif ($fields[0] eq "1/1") { push(@{$genotypeContainer{$SNPID}}, $genotypeFlip == 1 ? 0 : 2) }
             elsif ($fields[0] eq "1/0" or $fields[0] eq "0/1") { push(@{$genotypeContainer{$SNPID}}, 1) }
             else {push(@{$genotypeContainer{$SNPID}}, "-9")}
         }

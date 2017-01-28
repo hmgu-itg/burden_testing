@@ -1,9 +1,5 @@
 #!/usr/local/bin/bash
 
-# To be fixed in a later version: 2017.01.12
-    # Constant values are sourced from a config file.
-    #
-
 # A wrapper script to automate genome-wide burden testing using MONSTER.
 # For more information on the applied method see: http://www.stat.uchicago.edu/~mcpeek/software/MONSTER/
 
@@ -11,7 +7,13 @@
 ## driven by a single variant or more by repeating the test with removing a variant
 ## each time.
 
-version="v10.0 Last modified: 2017.01.12"
+version="v10.1 Last modified: 2017.01.25"
+
+# New in this version:
+    # Sex is no longer added as covariate
+    # Directory structure is more stringent
+    # Within a run, traits are separated in subfolders.
+
 today=$(date "+%Y.%m.%d") # Get the date
 
 # The variant selector script, that generates input for MONSTER:
@@ -35,7 +37,7 @@ kinshipMatrix=/nfs/team144/ds26/burden_testing/kinship/2016.10.20_fix_diagonal/k
 singlePointDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/single_point/output
 
 # Path to MONSTER executable:
-MONSTER=/nfs/team144/software/MONSTER/MONSTER
+MONSTER=/nfs/team144/software/MONSTER_v1.3/MONSTER
 
 # By default we are not keeping temporary files:
 keep_temp=0
@@ -104,10 +106,11 @@ function failed (){
     mkdir -p ${workingDir}/failed
     tar -czvf ${workingDir}/failed/${gene}.tar.gz -C ${workingDir}/gene_set.${chunkNo}/ ${gene}
 
-    # Adding NA-s to the output file.:
+    # Adding NA-s to the output file:
     echo -e "${gene}\tNA\tNA" >> ../results
 
     # Removing directory:
+    cd ${workingDir}
     rm -rf ${workingDir}/gene_set.${chunkNo}/${gene}
     return 0
 }
@@ -116,6 +119,7 @@ function failed (){
 function savehit (){
     mkdir -p ${workingDir}/hits
     tar -czvf ${workingDir}/hits/${gene}.tar.gz -C ${workingDir}/gene_set.${chunkNo}/ ${gene}
+    cd ${workingDir}
     return 0
 }
 
@@ -211,7 +215,7 @@ while getopts ":hg:m:w:c:l:e:p:s:x:d:k:t:oL:b" optname; do
         "o") lof=1 ;;
 
       # Other parameters:
-        "w") workingDir=${OPTARG} ;;
+        "w") rootDir=${OPTARG} ;;
         "h") display_help ;;
         "?") display_help "[Error] Unknown option $OPTARG" ;;
         ":") display_help "[Error] No argument value for option $OPTARG";;
@@ -348,8 +352,6 @@ if [ -z $phenotype ]; then
 elif [ ! -e "${phenotypeDir}/MANOLIS.${phenotype}.txt" ]; then
     echo "[Error] Phenotype file was not found! ${phenotypeDir}/MANOLIS.${phenotype}.txt"
     exit 1
-else
-    folder=${folder}".Pheno."${phenotype}
 fi
 echo -e "\tPhenotype: ${phenotype}"
 echo -e "\tPhenotype file: ${phenotypeDir}/MANOLIS.${phenotype}.txt"
@@ -370,8 +372,8 @@ echo "[Info] command line options for burden get region: ${commandOptions}"
 
 # Updating working dir, and create folder:
 folder=$( echo $folder | perl -lane '$_ =~ s/^\.//; print $_')
-workingDir=${workingDir}/${folder}
-mkdir -p ${workingDir}
+workingDir=${rootDir}/${folder}/Pheno.${phenotype}
+mkdir -p ${rootDir}
 
 # Testing kinship matrix:
 if [[ ! -e ${kinshipMatrix} ]]; then
@@ -387,19 +389,16 @@ echo -e "GeneName\tp-value\tSNP_count" > ${workingDir}/gene_set.${chunkNo}/resul
 
 # Looping through all genes in the gene set:
 awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} | while read gene ; do
-    # Adjusting genomic coordinates:
-    gene=${gene/:/_}
 
-    # Testing if a run was already completed:
-    #flag=$( if [[ -e ${workingDir}/gene_set.${chunkNo}/results ]]; then grep -w ${gene} ${workingDir}/gene_set.${chunkNo}/results; fi)
-    #if [[ ! -z "${flag}" ]]; then echo "$gene is done! Next."; continue; fi
+    # Removing colons from genomic coordinates:
+    gene=${gene/:/_}
 
     echo ""
     echo "[Info] Processing $gene"
     (>&2 echo "[Info] Processing $gene" ) # Adding mark into the error file, so we'll know in which gene the error comes up.
     echo "[Info] Step 1.: extracting variants given the list of parameters."
 
-    # Creating folders for the parameters:
+    # Creating folders for the gene:
     mkdir -p ${workingDir}/gene_set.${chunkNo}/${gene}
     cd ${workingDir}/gene_set.${chunkNo}/${gene}
 
@@ -410,7 +409,6 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
     # We have to test if the output files are OK, then we go to the next gene:
     if [[ ! -e ${gene}_output_genotype ]]; then
         failed "${gene} has failed, no genotype output generated. Gene skipped."
-        cd .. && rm -rf ${gene}
         continue
     fi
     genoLines=($(wc -l ${gene}_output_genotype))
@@ -438,10 +436,10 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
     # The IDs have to be adjusted, and the non-alphanumeric characters are also removed:
     sed -f ${scriptDir}/HELIC.to.Num_genotype.sed ${gene}_output_genotype | perl -lane '$F[0] =~ s/[^0-9a-z]//gi; print join "\t", @F'  > genotype.mod.txt
 
-    ## Preparing phenotype file
+    # Preparing phenotype file
     export PhenoFile=${phenotypeDir}/MANOLIS.${phenotype}.txt
     sed -f ${scriptDir}/HELIC.to.Num.sed  ${PhenoFile}| perl -lane 'next if $. == 1; next unless $_ =~ /^\d+/;
-        printf "1\t%s\t0\t0\t%s\t%s\t%s\n", $F[0], $F[1], $F[3], $F[1]' > pheno.mod.txt # Adding sex as coveriate
+        printf "1\t%s\t0\t0\t%s\t%s\t%s\n", $F[0], $F[1], $F[3]' > pheno.mod.txt # Adding sex as coveriate
 
     # Adjusting the order of the phenotype file according to the samples in the genotype file:
     head -n1 genotype.mod.txt | tr "\t" "\n" | tail -n+2 | perl -lane 'BEGIN {open $pf, "< pheno.mod.txt";
@@ -506,7 +504,12 @@ ${imputation_method}"
     fi
 
     # Cleaning up: removing all files or just the mod files if requested.
-    if [[ ${keep_temp} -eq 1 ]]; then rm *mod*; else cd .. && rm -rf ${gene}; fi
+    if [[ ${keep_temp} -eq 1 ]]; then
+        rm ${workingDir}/gene_set.${chunkNo}/${gene}/*mod*;
+    else
+        cd ${workingDir};
+        rm -rf ${workingDir}/gene_set.${chunkNo}/${gene};
+    fi
 
 done
 
