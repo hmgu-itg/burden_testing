@@ -103,7 +103,7 @@ function failed (){
     echo ""
 
     # Adding NA-s to the output file:
-    echo -e "${gene}\tNA\tNA" >> ../results
+    echo -e "${gene}\tNA\tNA" >> ${workingDir}/gene_set.${chunkNo}/results
 
     # Generating failed directory and compress gene dir:
     mkdir -p ${workingDir}/failed
