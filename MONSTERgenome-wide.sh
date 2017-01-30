@@ -502,7 +502,7 @@ ${imputation_method}"
     pval=$(tail -1 MONSTER_out_${gene}.out | cut -f5)
 
     # Adding p-values to file:
-    echo -e "${gene}\t${pval:--}\t${varcnt:--}" >> ../results
+    echo -e "${gene}\t${pval:--}\t${varcnt:--}" >> ${workingDir}/gene_set.${chunkNo}/results
 
     # If p-value is really low save into a folder:
     if [[ $(echo $pval | perl -lane 'print int(-log(abs($F[0]))/log(10))') -ge 5 ]]; then
