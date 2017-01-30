@@ -204,6 +204,7 @@ else {
 #########
 
 # Retrieve overlapping variations:
+die "[Error] No genomic region was selected. Exiting.\n" unless $CollapsedBed;
 my $variants = &GetVariants($CollapsedBed);
 
 # Process variant list:

@@ -67,20 +67,20 @@ It pools results together within one chunk."
     echo "     -l  - list of linked overlapping features."
     echo "     -m  - upper maf thresholds"
     echo "     -s  - turn weights on. Arguments: GWAVA, CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred"
-    echo "     -x  - extend genomic regions (bp)."
+    echo "     -x  - extend genomic regions (bp) (de)."
     echo "     -o  - exclude all non loss-of-function variants from the test."
     echo ""
     echo "Gene filter options:"
-    echo "     -L  - list file with the gene names."
-    echo "     -d  - chunk count: how many chunks the gene list should be split into."
-    echo "     -c  - chunk number or jobindex"
+    echo "     -L  - list file with the gene names (default: ${geneListFile})."
+    echo "     -d  - chunk count: how many chunks the gene list should be split into (default: 1)."
+    echo "     -c  - chunk number or jobindex (default: 1)."
     echo ""
     echo "General options:"
-    echo "     -w  - working directory or actual directory"
+    echo "     -w  - working directory (default: current working directory)"
     echo "     -b  - Keep temporary files."
     echo ""
     echo "Monster parameters:"
-    echo "     -p  - phenotype"
+    echo "     -p  - phenotype (required, no default)"
     echo ""
     echo "Other options:"
     echo "     -h  - print help message and exit"
@@ -374,14 +374,14 @@ echo -e "\tNumber of chunks the gene list is split into: ${chunkCount}"
 echo -e "\tCurrent chunk: ${chunkNo}"
 echo -e "\tNumber of genes in one chunk: ${chunkSize}\n"
 
-# printing out report:
-echo -e "[Info] output folder: ${workingDir}/${folder}"
-echo "[Info] command line options for burden get region: ${commandOptions}"
-
 # Updating working dir, and create folder:
 folder=$( echo $folder | perl -lane '$_ =~ s/^\.//; print $_')
 workingDir=${rootDir}/${folder}/Pheno.${phenotype}
 mkdir -p ${rootDir}
+
+# printing out report:
+echo -e "[Info] output folder: ${workingDir}"
+echo "[Info] command line options for burden get region: ${commandOptions}"
 
 # Testing kinship matrix:
 if [[ ! -e ${kinshipMatrix} ]]; then
@@ -412,7 +412,7 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
 
     # Reporting call:
     echo "${scriptDir}/${regionSelector}  -i $gene -o ${gene}_output ${commandOptions} -v > ${gene}_log"
-    perl ${scriptDir}/${regionSelector}  -i $gene -o ${gene}_output ${commandOptions} -v > ${gene}_log
+    ${scriptDir}/${regionSelector}  -i $gene -o ${gene}_output ${commandOptions} -v > ${gene}_log
 
     # We have to test if the output files are OK, then we go to the next gene:
     if [[ ! -e ${gene}_output_genotype ]]; then
