@@ -268,8 +268,8 @@ if [ ! -z $gencode ]; then
 fi
 
 # If there is no specified output folder, use current working dir:
-if [ -z $workingDir ]; then
-    workingDir=$(pwd)
+if [ -z $rootDir ]; then
+    rootDir=$(pwd)
     echo -e "\tWorking directory: $workingDir"
 fi
 
