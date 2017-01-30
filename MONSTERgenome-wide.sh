@@ -102,12 +102,20 @@ function failed (){
     echo "[Error] folder moved to ${folder}/failed"
     echo ""
 
+    # Adding NA-s to the output file:
+    echo -e "${gene}\tNA\tNA" >> ../results
+
     # Generating failed directory and compress gene dir:
     mkdir -p ${workingDir}/failed
     tar -czvf ${workingDir}/failed/${gene}.tar.gz -C ${workingDir}/gene_set.${chunkNo}/ ${gene}
 
-    # Adding NA-s to the output file:
-    echo -e "${gene}\tNA\tNA" >> ../results
+    # Once the folder is compressed, we add to the pooled tar archive:
+    if [[ ! -e ${workingDir}/failed/failed_genes.tar ]]; then
+        tar -c --remove-files -f ${workingDir}/failed/failed_genes.tar -C ${workingDir}/failed  ${gene}.tar.gz # Create archive
+    else
+        tar -r --remove-files -f ${workingDir}/failed/failed_genes.tar -C ${workingDir}/failed  ${gene}.tar.gz  # Add to archive
+        rm ${workingDir}/failed/${gene}.tar.gz
+    fi
 
     # Removing directory:
     cd ${workingDir}
