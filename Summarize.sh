@@ -79,10 +79,10 @@ for file in $( find ${sourceDir} | grep hits | grep gz) ; do
 
     # Get least significant p-value:
     read HSP HBP <<< $( tail -n+2 ${workingDir}/temp_for_hits/${gene}/${gene}.pvalues.txt \
-             | sort -k4,4n | cut -f3,4 | tail -n1 )
+             | sort -k4,4g | cut -f3,4 | tail -n1 )
     # Get the most significant p-value:
     read LSP LBP <<< $( tail -n+2 ${workingDir}/temp_for_hits/${gene}/${gene}.pvalues.txt \
-             | sort -k4,4n | cut -f3,4 | head -n1 )
+             | sort -k4,4g | cut -f3,4 | head -n1 )
 
     # Print report:
     echo -e "${trait}\t${gene}\t${bpval}\t${bsnps}\t${HBP}\t${HSP}\t${LBP}\t${LSP}"  >> ${workingDir}/summaries/hits_summary.tsv
