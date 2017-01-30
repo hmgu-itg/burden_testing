@@ -270,7 +270,7 @@ fi
 # If there is no specified output folder, use current working dir:
 if [ -z $rootDir ]; then
     rootDir=$(pwd)
-    echo -e "\tWorking directory: $workingDir"
+    echo -e "\tWorking directory: $rootDir"
 fi
 
 # Reporting if temporary files are saved:
