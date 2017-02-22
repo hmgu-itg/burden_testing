@@ -14,6 +14,7 @@ Before starting the runs, an annotation file is generated that allows the precis
 __Usage:__
 ```bash
 ./prepare_regions.sh <target directory>
+./prepare_regions.sh -h # For more information
 ```
 This file is created based on various sources
 
@@ -23,8 +24,6 @@ As an initial step, an annotation file is generated based on which we can select
 * a variant overlaps with the regualtory feature that has been found to be an eQTL of that gene in the GTEx databse.
 
 (The annotation has further information that allows fine selection of the features.)
-
-<b>usage:</b> *./prepare_regions.sh \<target directory\>*
 
 <b>Requirements:</b>
 
