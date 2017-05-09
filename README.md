@@ -14,6 +14,7 @@ Before starting the runs, an annotation file is generated that allows the precis
 __Usage:__
 ```bash
 ./prepare_regions.sh <target directory>
+./prepare_regions.sh -h # For more information
 ```
 This file is created based on various sources
 
@@ -24,20 +25,35 @@ As an initial step, an annotation file is generated based on which we can select
 
 (The annotation has further information that allows fine selection of the features.)
 
-<b>usage:</b> *./prepare_regions.sh \<target directory\>*
-
 <b>Requirements:</b>
 
 * [liftOver](http://genome.sph.umich.edu/wiki/LiftOver), [bedtools](http://bedtools.readthedocs.io/en/latest/content/installation.html), [bgzip and tabix](http://www.htslib.org/doc/tabix.html) in path
 * [Chainfile](http://hgdownload.cse.ucsc.edu/goldenpath/hg19/liftOver/) to lift over from hg18 to hg38 stored in the script dir.
 
-### Parsing the output file
+### Running the burden test genome-wide
 
-The 5th column of the *bed* file contains the annotation in a regularly formatted [JSON](https://en.wikipedia.org/wiki/JSON) string. In this section the stored information is explained. Each feature has a *source* key describing from which source a given feature is linked to the gene. The containing information depend on the source tag.
+Once the preparation steps are finished, paths to input files have to be adjusted in the following files:
+`config.txt`, `MONSTERgenome-wide.sh`. 
 
+Once everything is set up, run the wrapper script:
 
-<b>Features Sources:</b>
+```bash
+./MONSTERgenome-wide.sh -g exon -d 1 -p TG -m 0.05 -s Eigen
+```
 
-* <b>GENCODE</b>: the region is a GENCODE feature of the gene, based on the "class" it could be exon/gene/transcript etc. The "appris" tag tells if the feature belongs to a principal transcript or not. The "chr", "start" and "end" tags give the GRCh38 coordinates of the feature.
-* <b>GTEx</b>: This is an Ensembl regulatory feature (Ensembl stabil ID is stored in the "regulatory_ID" tag). The "class" tag tells if it is an enhancer, promoter or something else. "Tissues" tag lists all the cell types and tissues in which the regulatory feature was found to be active. This regulatory region overlaps with a variant that was found to be an eQTL for this gene in the [GTEx](gtexportal.org/home/) database. The eQTLs are listed in the "GTEx_rsIDs". The list of tissues in which the eQTL was found is kept in "GTEx_tissues".
-* <b>Overlap</b>:  This is also an Ensembl regulatory feature that overlaps with the gene. The "class" tag tells if it is an enhancer, promoter or something else. "Tissues" tag lists all the cell types and tissues in which the regulatory feature was found to be active.
+In the above example the MONSTER will be run for exons of all protein coding genes, applying a 5% upper MAF cutoff on the selected variants, then adding raw Eigen scores as weights, and using TG (triglycerides) as phenotype. The script is highly customizable in terms of the selected genomic features, variant filters and weights. For more information see:
+
+```bash
+./MONSTERgenome-wide.sh -h
+```
+If a gene has p-value less than 1e-5, the script considers it as a potential hit, and performs extra checks to test if the association is driven by a single variant: the script repeats the test with one snp removed at a time. It will show that the signal is attenuated if a single signal is removed. This method however does not account for variants in LD.  
+
+### Summarizing the results
+
+As the test is run for potentially a large number of genes, a script is included to process and summarize the results.
+
+```bash
+./Summarize.sh <output of the burden runs> <output directory for the summary>
+```
+
+This script pools all p-values together for a given trait, and for the hits it reports the highest, less significant p-values it got for the above mentioned testing.
