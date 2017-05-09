@@ -192,8 +192,8 @@ function testhit (){
             grep -w -v $variant genotype.mod.filtered.txt > genotype.mod.filtered.${pos}.txt
 
             # Calling Monster:
-            ${MONSTER} -k kinship.mod.filtered.txt -p pheno.mod.ordered.txt -m ${missing_cutoff} \
-                -g genotype.mod.filtered.${pos}.txt -s snpfile.mod.${pos}.txt
+            #${MONSTER} -k kinship.mod.filtered.txt -p pheno.mod.ordered.txt -m ${missing_cutoff} \
+            #    -g genotype.mod.filtered.${pos}.txt -s snpfile.mod.${pos}.txt
 
             # If everything went fine, we have to extract the p-value:
             pval_hit=$(cut -f5  MONSTER.out  | tail -1)
@@ -213,7 +213,7 @@ if [ $# == 0 ]; then display_help; fi
 
 # Looping through all command line options:
 OPTIND=1
-while getopts ":hg:m:w:c:l:e:p:s:x:d:ak:t:oL:bf" optname; do
+while getopts ":hg:m:w:c:l:e:p:s:x:d:ak:t:oL:b" optname; do
     case "$optname" in
       # gene filter parameters:
         "L") geneListFile=${OPTARG} ;;
@@ -237,7 +237,6 @@ while getopts ":hg:m:w:c:l:e:p:s:x:d:ak:t:oL:bf" optname; do
         "t") scoreshift=${OPTARG} ;;
         "a") skiptest=1;;
         "o") lof=1 ;;
-        "f") loftee=1 ;;
 
       # Other parameters:
         "w") rootDir=${OPTARG} ;;
@@ -315,13 +314,13 @@ if [ ! -z $MAF ]; then
 fi
 
 # 5. If lof is set, we only need loss of function variants:
-if [ ! -z $loftee ]; then
-    folder=${folder}".loftee"
-    commandOptions=${commandOptions}" --loftee "
-    echo -e "\tOnly loss-of-function variants will be considered (loftee HC and LC)."
-fi
-## lines for severe variants:
 if [ ! -z $lof ]; then
+    ## lines for loftee:
+    # folder=${folder}".loftee"
+    #commandOptions=${commandOptions}" --loftee "
+    #echo -e "\tOnly loss-of-function variants will be considered (loftee HC and LC)."
+
+    ## lines for severe variants:
     folder=${folder}".lof"
     commandOptions=${commandOptions}" --lof "
     echo -e "\tOnly variants with severe consequences will be considered (down to missense)."
@@ -538,7 +537,7 @@ ${imputation_method}"
     echo -e "${gene}\t${pval:--}\t${varcnt:--}" >> ${workingDir}/gene_set.${chunkNo}/results
 
     # If p-value is really low save into a folder:
-    if [[ $(echo $pval | perl -lane 'print int(-log(abs($F[0]))/log(10))') -ge 5 ]]; then
+    if [[ $(echo $pval | perl -lane 'print int(-log(abs($F[0]))/log(10))') -ge 4 ]]; then
         echo "[Info] Found a hit! ${gene} p-value: ${pval}";
         if [ -z $skiptest ]; then
             echo "[Info] Testing if a single variant dirves the associations..."

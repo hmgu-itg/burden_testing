@@ -40,3 +40,9 @@ caddPath=/lustre/scratch114/resources/cadd_scores/20150729-v1.3/whole_genome_SNV
 
 # Path to workig installation of GWAVA:
 GWAVA_DIR=/lustre/scratch113/teams/zeggini/users/ds26/GWAVA/gwava_release
+
+# Path to bigWigTools:
+bigWigTools=/nfs/team144/software/bigWigTools
+
+# Path to linsight file:
+Linsight=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/LINSIGHT/LINSIGHT.bw
