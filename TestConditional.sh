@@ -328,7 +328,6 @@ done
 if [[ $outputFile != "/dev/stdout" ]]; then outputFile=${workingDir}/${outputFile}; fi
 
 # Testing files:
-if [[ ! -z ${h} ]]; then display_help; fi
 if [[ -z "${hitFile}" ]]; then display_help "[Error] Specify MONSTER output with -g."; fi
 if [[ ( -z "${SNPFile}" ) && ( -z "${geneName}" ) ]]; then display_help "[Error] Specify SNP list (-s) or gene name (-x)."; fi
 

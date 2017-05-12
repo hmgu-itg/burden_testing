@@ -1,0 +1,72 @@
+[Info] The script was called with the following parameters:
+/nfs/team144/ds26/burden_testing/Summary_true_signals/2017.02.24/temp_scripts/burden_get_regions.pl -i LUM -o LUM_output -G exon -E promoter,enhancer,TF_bind -L promoter,enhancer,TF_bind --maf 0.05 -s Linsight --extend 50 -v
+[Info] Script version: v3.3 Last modified: 2017.01.05
+[Info] Run date: 2017. May 09 10:33
+[Info] Config file: /nfs/team144/ds26/burden_testing/Summary_true_signals/2017.02.24/temp_scripts/config.txt
+[Info] Linsight scores are shifted by 0.
+[Info] Variants with score below 0, will be removed..
+[Info] Missingness threshold: 0.01 (variants above 1% missing genotypes will be excluded).
+
+
+[Info] Queried gene: LUM (Ensembl ID: ENSG00000139329), Genomic location: chr12:91102629-91111831 (Input: LUM)
+[Info] IntersectBed query string: intersectBed -wb -a <(echo -e "chr12\t91102629\t91111831\tENSG00000139329") -b /lustre/scratch113/projects/helic/ds26/project_burden/2016.10.10/Linked_features.bed.gz -sorted | cut -f9-
+
+[Info] From the GENCODE dataset the following features were extracted: exon: 9, 
+[Info] The following overlapping regulatory features were extracted: promoter: 1, enhancer: 1, 
+[Info] Selected lines:
+chr12	91104089	91104369	{"source":"GENCODE","appris":"Minor","chr":"chr12","end":"91104319","transcript_ID":"ENST00000546642","gene_ID":"ENSG00000139329","strand":"-","exon_ID":"ENSE00002328886","class":"exon","start":"91104139"}
+chr12	91103533	91104369	{"source":"GENCODE","appris":"Minor","chr":"chr12","end":"91104319","gene_ID":"ENSG00000139329","transcript_ID":"ENST00000548071","strand":"-","class":"exon","exon_ID":"ENSE00000937598","start":"91103583"}
+chr12	91108068	91108333	{"source":"GENCODE","appris":"Minor","chr":"chr12","end":"91108283","gene_ID":"ENSG00000139329","transcript_ID":"ENST00000548071","strand":"-","class":"exon","exon_ID":"ENSE00002373887","start":"91108118"}
+chr12	91108068	91108737	{"source":"GENCODE","appris":"Minor","chr":"chr12","end":"91108687","gene_ID":"ENSG00000139329","transcript_ID":"ENST00000546642","strand":"-","class":"exon","exon_ID":"ENSE00002370176","start":"91108118"}
+chr12	91111348	91111489	{"source":"GENCODE","appris":"Minor","chr":"chr12","end":"91111439","gene_ID":"ENSG00000139329","transcript_ID":"ENST00000546642","strand":"-","class":"exon","exon_ID":"ENSE00002369419","start":"91111398"}
+chr12	91111348	91111536	{"source":"GENCODE","appris":"Minor","chr":"chr12","end":"91111486","gene_ID":"ENSG00000139329","transcript_ID":"ENST00000548071","strand":"-","class":"exon","exon_ID":"ENSE00002379247","start":"91111398"}
+chr12	91102579	91104369	{"source":"GENCODE","appris":"PRINCIPAL","chr":"chr12","end":"91104319","gene_ID":"ENSG00000139329","transcript_ID":"ENST00000266718","strand":"-","class":"exon","exon_ID":"ENSE00002408674","start":"91102629"}
+chr12	91108068	91109050	{"source":"GENCODE","appris":"PRINCIPAL","chr":"chr12","end":"91109000","gene_ID":"ENSG00000139329","transcript_ID":"ENST00000266718","strand":"-","class":"exon","exon_ID":"ENSE00000937597","start":"91108118"}
+chr12	91111348	91111881	{"source":"GENCODE","appris":"PRINCIPAL","chr":"chr12","end":"91111831","gene_ID":"ENSG00000139329","transcript_ID":"ENST00000266718","strand":"-","class":"exon","exon_ID":"ENSE00001374163","start":"91111398"}
+chr12	91105183	91106382	{"source":"overlap","chr":"chr12","end":"91106382","Tissues":["GM12878","HSMM","IMR90","MSC_VenousBlood_hist","MultiCell","NH-A","NHDF-AD","NHLF","Osteobl"],"gene_ID":"ENSG00000139329","class":"enhancer","regulatory_ID":"ENSR00001827149","gene_name":"LUM","start":"91105183"}
+chr12	91109182	91111583	{"source":"overlap","chr":"chr12","end":"91111583","Tissues":["IMR90","MSC_VenousBlood_hist","MultiCell","NHDF-AD","Osteobl"],"gene_ID":"ENSG00000139329","class":"promoter","regulatory_ID":"ENSR00001827150","gene_name":"LUM","start":"91109182"}
+
+[Info] Extracting variants from vcf files:
+tabix /lustre/scratch115/projects/t144_helic_15x/analysis/HA/release/postrelease_missingnessfilter/chr12.missingfiltered-0.01_consequences.lof.vcf.gz  chr12:91102579-91104369 chr12:91105183-91106382 chr12:91108068-91109050 chr12:91109182-91111881
+[Info] Total covered genomic regions: 6670 bp
+
+[Info] Filtering variants:
+[Info] Total number of overlapping variants: 72
+[Info] 0.973575840768703 is greater then 0.5, genotype is flipped.
+[Warning] chr12_91103047_T_G will be omitted because of high MAF (0.119, cutoff: 0.05).
+[Warning] chr12_91103516_A_G will be omitted because of high MAF (0.119, cutoff: 0.05).
+[Warning] chr12_91103540_C_T will be omitted because of high MAF (0.119, cutoff: 0.05).
+[Info] 0.829444063143445 is greater then 0.5, genotype is flipped.
+[Warning] chr12_91105258_G_C will be omitted because of high MAF (0.171, cutoff: 0.05).
+[Warning] chr12_91105590_T_C will be omitted because of high MAF (0.136, cutoff: 0.05).
+[Info] 0.973575840768703 is greater then 0.5, genotype is flipped.
+[Warning] chr12_91106057_CCTGA_C will be omitted because indel! (CCTGA/C).
+[Info] 0.932052161976664 is greater then 0.5, genotype is flipped.
+[Warning] chr12_91106120_C_A will be omitted because of high MAF (0.068, cutoff: 0.05).
+[Warning] chr12_91109035_AT_A will be omitted because indel! (AT/A).
+[Info] 0.972889498970487 is greater then 0.5, genotype is flipped.
+[Warning] chr12_91109269_C_CTT will be omitted because indel! (C/CTT).
+[Info] 0.948524365133837 is greater then 0.5, genotype is flipped.
+[Warning] chr12_91109449_T_G will be omitted because of high MAF (0.051, cutoff: 0.05).
+[Info] 0.973575840768703 is greater then 0.5, genotype is flipped.
+[Info] 0.885037748798902 is greater then 0.5, genotype is flipped.
+[Warning] chr12_91110205_A_G will be omitted because of high MAF (0.115, cutoff: 0.05).
+[Warning] chr12_91110689_GCA_G will be omitted because indel! (GCA/G).
+[Info] 0.731297185998627 is greater then 0.5, genotype is flipped.
+[Warning] chr12_91111068_A_G will be omitted because of high MAF (0.269, cutoff: 0.05).
+[Warning] chr12_91111095_ACAT_A will be omitted because indel! (ACAT/A).
+[Warning] chr12_91111527_A_AGG,AGGG will be omitted because of multiallelic! (AGG,AGGG).
+[Warning] chr12_91111529_G_GGC will be omitted because indel! (G/GGC).
+[Info] Number of filtered variants: 56
+[Info] Number of variants successfully lifted over: 56
+
+[Info] Adding Linsight scores for variants.
+/nfs/team144/software/bigWigTools/bigWigAverageOverBed /lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/LINSIGHT/LINSIGHT.bw LUM_GRCh37.bed LUM_GRCh37_linsight.tab
+[Info] linsight scores have been added to variants (Number of variants: 56).
+
+[Info] Processing Linsight scores... [Warning] chr12_91108731_T_C is deleted, because Linsight score is below threshold: 0!
+[Warning] chr12_91108680_G_A is deleted, because Linsight score is below threshold: 0!
+[Warning] chr12_91108660_A_G is deleted, because Linsight score is below threshold: 0!
+[Warning] chr12_91108473_A_G is deleted, because Linsight score is below threshold: 0!
+[Warning] chr12_91108447_G_A is deleted, because Linsight score is below threshold: 0!
+Done.

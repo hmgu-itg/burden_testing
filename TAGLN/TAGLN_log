@@ -1,0 +1,325 @@
+[Info] The script was called with the following parameters:
+/nfs/team144/ds26/burden_testing/Summary_true_signals/2017.02.24/temp_scripts/burden_get_regions.pl -i TAGLN -o TAGLN_output -E promoter,enhancer,TF_bind -L promoter,enhancer,TF_bind --maf 0.05 -s Linsight -v
+[Info] Script version: v3.3 Last modified: 2017.01.05
+[Info] Run date: 2017. May 09 01:21
+[Info] Config file: /nfs/team144/ds26/burden_testing/Summary_true_signals/2017.02.24/temp_scripts/config.txt
+[Info] Linsight scores are shifted by 0.
+[Info] Variants with score below 0, will be removed..
+[Info] Missingness threshold: 0.01 (variants above 1% missing genotypes will be excluded).
+
+
+[Info] Queried gene: TAGLN (Ensembl ID: ENSG00000149591), Genomic location: chr11:117199321-117204782 (Input: TAGLN)
+[Info] IntersectBed query string: intersectBed -wb -a <(echo -e "chr11\t117199321\t117204782\tENSG00000149591") -b /lustre/scratch113/projects/helic/ds26/project_burden/2016.10.10/Linked_features.bed.gz -sorted | cut -f9-
+[Info] The following regulatory features were linked to the gene: TF_binding_site: 3, promoter: 8, enhancer: 26, 
+[Info] The following overlapping regulatory features were extracted: promoter: 1, enhancer: 1, 
+[Info] Selected lines:
+chr11	116955448	116956248	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs10502221"],"end":"116956248","Tissues":["CD8+abTcell_CordBlood_hist","eosinophil_VenousBlood_hist","H1ESC","HSMMtube","MultiCell","neutrophil_CordBlood_hist"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811693","start":"116955448","GTEx_tissues":["Whole_Blood"]}
+chr11	116901647	116903600	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs1076485","rs518181","rs7943309","rs17120139"],"end":"116903600","Tissues":["CD4+abTcell_VenousBlood_hist","CD8+abTcell_CordBlood_hist","CMCD4+abTcell_VenousBlood_hist","HSMM","HSMMtube","HUVEC","HUVECprol_CordBlood_hist","MultiCell","NHDF-AD"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811683","start":"116901647","GTEx_tissues":["Testis","Whole_Blood"]}
+chr11	117049801	117054600	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs10892066","rs4938328","rs1815786","rs1815787","rs76916861","rs143856824","rs7130297","rs117857960","rs3886960","rs723955"],"end":"117054600","Tissues":["CD14+CD16-Monocyte_CordBlood_hist","CD14+CD16-Monocyte_VenousBlood_hist","CD4+abTcell_VenousBlood_hist","CMCD4+abTcell_VenousBlood_hist","IMR90","M0Macrophage_VenousBlood_hist","M1Macrophage_CordBlood_hist","M1Macrophage_VenousBlood_hist","M2Macrophage_CordBlood_hist","M2Macrophage_VenousBlood_hist","MultiCell","neutroMyelocyte_BoneMarrow_hist","neutrophil_CordBlood_hist","neutrophil_VenousBlood_hist","NHDF-AD"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811702","start":"117049801","GTEx_tissues":["Cells_EBV-transformed_lymphocytes","Testis","Whole_Blood"]}
+chr11	117112048	117113247	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs10892075"],"end":"117113247","Tissues":["DND-41","GM12878","MultiCell"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811713","start":"117112048","GTEx_tissues":["Whole_Blood"]}
+chr11	117122648	117123247	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs10892078"],"end":"117123247","Tissues":["HSMMtube","MultiCell"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811714","start":"117122648","GTEx_tissues":["Whole_Blood"]}
+chr11	117105800	117106401	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs116896104","rs4388921"],"end":"117106401","Tissues":["CD14+CD16-Monocyte_CordBlood_hist","CD14+CD16-Monocyte_VenousBlood_hist","CD4+abTcell_VenousBlood_hist","CMCD4+abTcell_VenousBlood_hist","DND-41","HepG2","M0Macrophage_VenousBlood_hist","MultiCell","naiveBcell_VenousBlood_hist","neutrophil_VenousBlood_hist"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811711","start":"117105800","GTEx_tissues":["Cells_EBV-transformed_lymphocytes","Whole_Blood"]}
+chr11	116828847	116831048	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs12721090","rs734104"],"end":"116831048","Tissues":["HepG2","MultiCell"],"gene_ID":"ENSG00000149591","class":"promoter","regulatory_ID":"ENSR00001811661","start":"116828847","GTEx_tissues":["Whole_Blood"]}
+chr11	116937601	116938200	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs147683288"],"end":"116938200","Tissues":["CD14+CD16-Monocyte_CordBlood_hist","CD14+CD16-Monocyte_VenousBlood_hist","M0Macrophage_VenousBlood_hist","M1Macrophage_VenousBlood_hist","MultiCell","neutrophil_VenousBlood_hist"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811687","start":"116937601","GTEx_tissues":["Whole_Blood"]}
+chr11	116806448	116807047	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs1729407"],"end":"116807047","Tissues":["HepG2","MultiCell"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811651","start":"116806448","GTEx_tissues":["Whole_Blood"]}
+chr11	117194801	117195847	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs1794116"],"end":"117195847","Tissues":["CD14+CD16-Monocyte_CordBlood_hist","erythroblast_CordBlood_hist","M0Macrophage_VenousBlood_hist","M1Macrophage_CordBlood_hist","M1Macrophage_VenousBlood_hist","Monocytes-CD14+","MultiCell"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811728","start":"117194801","GTEx_tissues":["Cells_EBV-transformed_lymphocytes","Whole_Blood","Lung","Pancreas"]}
+chr11	117159648	117160047	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs1871757"],"end":"117160047","Tissues":["GM12878","MultiCell"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811723","start":"117159648","GTEx_tissues":["Whole_Blood"]}
+chr11	116946401	116947047	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs191655881"],"end":"116947047","Tissues":["A549","CD8+abTcell_CordBlood_hist","CMCD4+abTcell_VenousBlood_hist","EPC_VenousBlood_hist","HeLa-S3","HepG2","HUVEC","HUVECprol_CordBlood_hist","IMR90","MSC_VenousBlood_hist","MultiCell","NH-A","Osteobl"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811690","start":"116946401","GTEx_tissues":["Whole_Blood"]}
+chr11	116814001	116814200	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs2542063"],"end":"116814200","Tissues":["erythroblast_CordBlood_hist","MSC_VenousBlood_hist","MultiCell","neutroMyelocyte_BoneMarrow_hist","Osteobl"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811655","start":"116814001","GTEx_tissues":["Whole_Blood"]}
+chr11	117143001	117146201	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs2622934","rs147062051","rs2735183"],"end":"117146201","Tissues":["A549","CD14+CD16-Monocyte_CordBlood_hist","CD14+CD16-Monocyte_VenousBlood_hist","CD4+abTcell_VenousBlood_hist","CD8+abTcell_CordBlood_hist","CMCD4+abTcell_VenousBlood_hist","DND-41","eosinophil_VenousBlood_hist","EPC_VenousBlood_hist","erythroblast_CordBlood_hist","GM12878","H1ESC","HepG2","HMEC","HSMM","HSMMtube","HUVECprol_CordBlood_hist","IMR90","K562","M0Macrophage_CordBlood_hist","M0Macrophage_VenousBlood_hist","M1Macrophage_CordBlood_hist","M1Macrophage_VenousBlood_hist","M2Macrophage_CordBlood_hist","M2Macrophage_VenousBlood_hist","Monocytes-CD14+","MSC_VenousBlood_hist","MultiCell","naiveBcell_VenousBlood_hist","neutroMyelocyte_BoneMarrow_hist","neutrophil_CordBlood_hist","neutrophil_VenousBlood_hist","NH-A","NHDF-AD","NHEK","NHLF","Osteobl"],"gene_ID":"ENSG00000149591","class":"promoter","regulatory_ID":"ENSR00001811721","start":"117143001","GTEx_tissues":["Cells_EBV-transformed_lymphocytes","Whole_Blood"]}
+chr11	117067448	117067847	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs398017711"],"end":"117067847","Tissues":["A549","CD14+CD16-Monocyte_CordBlood_hist","CD14+CD16-Monocyte_VenousBlood_hist","MultiCell","neutrophil_VenousBlood_hist"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811704","start":"117067448","GTEx_tissues":["Cells_EBV-transformed_lymphocytes","Whole_Blood"]}
+chr11	116839048	116840248	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs4018880"],"end":"116840248","Tissues":["CMCD4+abTcell_VenousBlood_hist","HepG2","HSMM","HSMMtube","MultiCell","NHDF-AD"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811663","start":"116839048","GTEx_tissues":["Whole_Blood"]}
+chr11	116862648	116863647	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs476399","rs718847"],"end":"116863647","Tissues":["HSMM","HSMMtube","HUVECprol_CordBlood_hist","MultiCell","NH-A","NHDF-AD","NHEK","Osteobl"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811670","start":"116862648","GTEx_tissues":["Testis","Whole_Blood"]}
+chr11	116881248	116881647	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs482371","rs7124741"],"end":"116881647","Tissues":["HSMMtube","MSC_VenousBlood_hist","MultiCell","NHLF","Osteobl"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811676","start":"116881248","GTEx_tissues":["Testis","Whole_Blood"]}
+chr11	117178400	117180801	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs4938354"],"end":"117180801","Tissues":["CD14+CD16-Monocyte_CordBlood_hist","CD14+CD16-Monocyte_VenousBlood_hist","CD4+abTcell_VenousBlood_hist","CD8+abTcell_CordBlood_hist","DND-41","eosinophil_VenousBlood_hist","EPC_VenousBlood_hist","erythroblast_CordBlood_hist","GM12878","HeLa-S3","HepG2","HMEC","HSMM","HSMMtube","HUVEC","HUVECprol_CordBlood_hist","IMR90","K562","M0Macrophage_CordBlood_hist","M0Macrophage_VenousBlood_hist","M1Macrophage_CordBlood_hist","M1Macrophage_VenousBlood_hist","M2Macrophage_CordBlood_hist","M2Macrophage_VenousBlood_hist","Monocytes-CD14+","MSC_VenousBlood_hist","MultiCell","naiveBcell_VenousBlood_hist","neutroMyelocyte_BoneMarrow_hist","neutrophil_CordBlood_hist","NH-A","NHDF-AD","NHEK","NHLF","Osteobl"],"gene_ID":"ENSG00000149591","class":"promoter","regulatory_ID":"ENSR00001811726","start":"117178400","GTEx_tissues":["Cells_EBV-transformed_lymphocytes","Whole_Blood","Pancreas"]}
+chr11	117137216	117137721	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs502543"],"end":"117137721","Tissues":["H1ESC","HeLa-S3","HepG2","MultiCell"],"gene_ID":"ENSG00000149591","class":"TF_binding_site","regulatory_ID":"ENSR00001811718","start":"117137216","GTEx_tissues":["Whole_Blood"]}
+chr11	117204048	117205648	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs508487","rs148237776","rs78301905"],"end":"117205648","Tissues":["HSMMtube","MultiCell","NHLF"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811730","start":"117204048","GTEx_tissues":["Testis","Whole_Blood"]}
+chr11	117095800	117099401	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs60167594","rs1320668","rs10892073"],"end":"117099401","Tissues":["A549","CD14+CD16-Monocyte_CordBlood_hist","CD14+CD16-Monocyte_VenousBlood_hist","CD4+abTcell_VenousBlood_hist","CD8+abTcell_CordBlood_hist","CMCD4+abTcell_VenousBlood_hist","eosinophil_VenousBlood_hist","EPC_VenousBlood_hist","erythroblast_CordBlood_hist","GM12878","HeLa-S3","HepG2","HMEC","HSMM","HSMMtube","HUVEC","HUVECprol_CordBlood_hist","IMR90","K562","M0Macrophage_CordBlood_hist","M0Macrophage_VenousBlood_hist","M1Macrophage_CordBlood_hist","M1Macrophage_VenousBlood_hist","M2Macrophage_CordBlood_hist","M2Macrophage_VenousBlood_hist","Monocytes-CD14+","MSC_VenousBlood_hist","MultiCell","naiveBcell_VenousBlood_hist","neutroMyelocyte_BoneMarrow_hist","neutrophil_CordBlood_hist","neutrophil_VenousBlood_hist","NHDF-AD","NHEK","NHLF","Osteobl"],"gene_ID":"ENSG00000149591","class":"promoter","regulatory_ID":"ENSR00001811710","start":"117095800","GTEx_tissues":["Cells_EBV-transformed_lymphocytes","Testis","Whole_Blood"]}
+chr11	117198800	117201848	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs61905527","rs201972137","rs397805743","rs199773347","rs664971","rs664922","rs664082","rs652455","rs112333700","rs494356","rs117279127","rs488962"],"end":"117201848","Tissues":["HSMM","HSMMtube","IMR90","MSC_VenousBlood_hist","MultiCell","NH-A","NHLF","Osteobl"],"gene_ID":"ENSG00000149591","class":"promoter","regulatory_ID":"ENSR00001811729","start":"117198800","GTEx_tissues":["Cells_EBV-transformed_lymphocytes","Whole_Blood","Pancreas"]}
+chr11	117206647	117208647	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs61905530","rs199890178","rs202087066","rs200068220"],"end":"117208647","Tissues":["HepG2","HSMMtube","MultiCell"],"gene_ID":"ENSG00000149591","class":"promoter","regulatory_ID":"ENSR00001811731","start":"117206647","GTEx_tissues":["Cells_EBV-transformed_lymphocytes","Whole_Blood"]}
+chr11	116864248	116867247	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs6589576","rs573549","rs548638","rs139447106"],"end":"116867247","Tissues":["HSMM","HSMMtube","MSC_VenousBlood_hist","MultiCell","NHDF-AD","NHLF","Osteobl"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811671","start":"116864248","GTEx_tissues":["Testis","Whole_Blood"]}
+chr11	116958001	116959600	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs6589582","rs7120173","rs7120706","rs7120963"],"end":"116959600","Tissues":["CD14+CD16-Monocyte_CordBlood_hist","CD14+CD16-Monocyte_VenousBlood_hist","CD8+abTcell_CordBlood_hist","CMCD4+abTcell_VenousBlood_hist","erythroblast_CordBlood_hist","HeLa-S3","HMEC","HSMM","HSMMtube","M0Macrophage_VenousBlood_hist","MultiCell","naiveBcell_VenousBlood_hist","neutrophil_VenousBlood_hist","NHDF-AD","NHEK","NHLF"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811694","start":"116958001","GTEx_tissues":["Cells_EBV-transformed_lymphocytes","Whole_Blood"]}
+chr11	117087001	117090248	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs6589592","rs7103842","rs139654163","rs10892072"],"end":"117090248","Tissues":["A549","CD14+CD16-Monocyte_VenousBlood_hist","CD4+abTcell_VenousBlood_hist","CD8+abTcell_CordBlood_hist","CMCD4+abTcell_VenousBlood_hist","eosinophil_VenousBlood_hist","erythroblast_CordBlood_hist","GM12878","H1ESC","HMEC","HSMMtube","K562","M0Macrophage_VenousBlood_hist","M1Macrophage_VenousBlood_hist","M2Macrophage_VenousBlood_hist","MultiCell","naiveBcell_VenousBlood_hist","neutroMyelocyte_BoneMarrow_hist","neutrophil_CordBlood_hist","neutrophil_VenousBlood_hist","NH-A","NHEK"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811707","start":"117087001","GTEx_tissues":["Cells_EBV-transformed_lymphocytes","Testis","Whole_Blood"]}
+chr11	117209651	117210132	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs659955","rs11216315"],"end":"117210132","Tissues":["H1ESC","MultiCell"],"gene_ID":"ENSG00000149591","class":"TF_binding_site","regulatory_ID":"ENSR00001811733","start":"117209651","GTEx_tissues":["Testis","Whole_Blood"]}
+chr11	116889801	116891000	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs660443"],"end":"116891000","Tissues":["CD4+abTcell_VenousBlood_hist","CD8+abTcell_CordBlood_hist","CMCD4+abTcell_VenousBlood_hist","EPC_VenousBlood_hist","GM12878","HepG2","HSMM","HSMMtube","HUVEC","HUVECprol_CordBlood_hist","IMR90","MultiCell","NHLF"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811680","start":"116889801","GTEx_tissues":["Whole_Blood"]}
+chr11	116835647	116837648	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs7116797","rs5072","rs2070665","rs5070"],"end":"116837648","Tissues":["DND-41","EPC_VenousBlood_hist","HepG2","M0Macrophage_CordBlood_hist","M2Macrophage_CordBlood_hist","MSC_VenousBlood_hist","MultiCell"],"gene_ID":"ENSG00000149591","class":"promoter","regulatory_ID":"ENSR00001811662","start":"116835647","GTEx_tissues":["Testis","Whole_Blood"]}
+chr11	116880000	116880847	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs7396061"],"end":"116880847","Tissues":["CD14+CD16-Monocyte_VenousBlood_hist","HSMM","HSMMtube","IMR90","M0Macrophage_VenousBlood_hist","MSC_VenousBlood_hist","MultiCell","naiveBcell_VenousBlood_hist","NHDF-AD","NHLF","Osteobl"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811675","start":"116880000","GTEx_tissues":["Cells_EBV-transformed_lymphocytes","Whole_Blood"]}
+chr11	116813248	116813647	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs7396835","rs7396851"],"end":"116813647","Tissues":["HepG2","MultiCell"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811654","start":"116813248","GTEx_tissues":["Testis","Whole_Blood"]}
+chr11	117230400	117233801	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs74988348"],"end":"117233801","Tissues":["A549","CD14+CD16-Monocyte_CordBlood_hist","CD14+CD16-Monocyte_VenousBlood_hist","CD4+abTcell_VenousBlood_hist","CD8+abTcell_CordBlood_hist","CMCD4+abTcell_VenousBlood_hist","DND-41","eosinophil_VenousBlood_hist","EPC_VenousBlood_hist","erythroblast_CordBlood_hist","GM12878","H1ESC","HeLa-S3","HepG2","HMEC","HSMM","HSMMtube","HUVEC","HUVECprol_CordBlood_hist","IMR90","K562","M0Macrophage_CordBlood_hist","M0Macrophage_VenousBlood_hist","M1Macrophage_CordBlood_hist","M1Macrophage_VenousBlood_hist","M2Macrophage_CordBlood_hist","M2Macrophage_VenousBlood_hist","Monocytes-CD14+","MSC_VenousBlood_hist","MultiCell","naiveBcell_VenousBlood_hist","neutroMyelocyte_BoneMarrow_hist","neutrophil_CordBlood_hist","neutrophil_VenousBlood_hist","NH-A","NHDF-AD","NHEK","NHLF","Osteobl"],"gene_ID":"ENSG00000149591","class":"promoter","regulatory_ID":"ENSR00001811739","start":"117230400","GTEx_tissues":["Whole_Blood"]}
+chr11	117090848	117091247	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs75202546"],"end":"117091247","Tissues":["erythroblast_CordBlood_hist","HMEC","MultiCell","naiveBcell_VenousBlood_hist","NHEK"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811709","start":"117090848","GTEx_tissues":["Whole_Blood"]}
+chr11	117226448	117226797	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs7926958"],"end":"117226797","Tissues":["DND-41","GM12878","H1ESC","HeLa-S3","HepG2","HMEC","K562","Monocytes-CD14+","MultiCell","NHEK"],"gene_ID":"ENSG00000149591","class":"TF_binding_site","regulatory_ID":"ENSR00001811738","start":"117226448","GTEx_tissues":["Whole_Blood"]}
+chr11	116810848	116811447	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs7927820"],"end":"116811447","Tissues":["HepG2","MultiCell","Osteobl"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811653","start":"116810848","GTEx_tissues":["Whole_Blood"]}
+chr11	116966401	116968000	{"source":"GTEx","chr":"chr11","GTEx_rsIDs":["rs9971422","rs113224863","rs200409176","rs201491176","rs1241655","rs61905682","rs75296049"],"end":"116968000","Tissues":["A549","CD14+CD16-Monocyte_VenousBlood_hist","IMR90","M0Macrophage_VenousBlood_hist","M1Macrophage_VenousBlood_hist","M2Macrophage_CordBlood_hist","M2Macrophage_VenousBlood_hist","MultiCell","naiveBcell_VenousBlood_hist","neutrophil_VenousBlood_hist"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811696","start":"116966401","GTEx_tissues":["Testis","Whole_Blood"]}
+chr11	117198800	117201848	{"source":"overlap","chr":"chr11","end":"117201848","Tissues":["HSMM","HSMMtube","IMR90","MSC_VenousBlood_hist","MultiCell","NH-A","NHLF","Osteobl"],"gene_ID":"ENSG00000149591","class":"promoter","regulatory_ID":"ENSR00001811729","gene_name":"TAGLN","start":"117198800"}
+chr11	117204048	117205648	{"source":"overlap","chr":"chr11","end":"117205648","Tissues":["HSMMtube","MultiCell","NHLF"],"gene_ID":"ENSG00000149591","class":"enhancer","regulatory_ID":"ENSR00001811730","gene_name":"TAGLN","start":"117204048"}
+
+[Info] Extracting variants from vcf files:
+tabix /lustre/scratch115/projects/t144_helic_15x/analysis/HA/release/postrelease_missingnessfilter/chr11.missingfiltered-0.01_consequences.lof.vcf.gz  chr11:116806448-116807047 chr11:116810848-116811447 chr11:116813248-116813647 chr11:116814001-116814200 chr11:116828847-116831048 chr11:116835647-116837648 chr11:116839048-116840248 chr11:116862648-116863647 chr11:116864248-116867247 chr11:116880000-116880847 chr11:116881248-116881647 chr11:116889801-116891000 chr11:116901647-116903600 chr11:116937601-116938200 chr11:116946401-116947047 chr11:116955448-116956248 chr11:116958001-116959600 chr11:116966401-116968000 chr11:117049801-117054600 chr11:117067448-117067847 chr11:117087001-117090248 chr11:117090848-117091247 chr11:117095800-117099401 chr11:117105800-117106401 chr11:117112048-117113247 chr11:117122648-117123247 chr11:117137216-117137721 chr11:117143001-117146201 chr11:117159648-117160047 chr11:117178400-117180801 chr11:117194801-117195847 chr11:117198800-117201848 chr11:117204048-117205648 chr11:117206647-117208647 chr11:117209651-117210132 chr11:117226448-117226797 chr11:117230400-117233801
+[Info] Total covered genomic regions: 54111 bp
+
+[Info] Filtering variants:
+[Info] Total number of overlapping variants: 542
+[Info] 0.836195054945055 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116806505_A_ATTAT will be omitted because indel! (A/ATTAT).
+[Warning] chr11_116806508_A_ATTT will be omitted because indel! (A/ATTT).
+[Warning] chr11_116806654_C_G will be omitted because of high MAF (0.439, cutoff: 0.05).
+[Warning] chr11_116806655_G_A will be omitted because of high MAF (0.176, cutoff: 0.05).
+[Warning] chr11_116807007_A_G will be omitted because of high MAF (0.177, cutoff: 0.05).
+[Info] 0.84478021978022 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116811440_G_A will be omitted because of high MAF (0.155, cutoff: 0.05).
+[Info] 0.844436813186813 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116813312_T_C will be omitted because of high MAF (0.156, cutoff: 0.05).
+[Info] 0.84581043956044 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116813448_T_C will be omitted because of high MAF (0.154, cutoff: 0.05).
+[Warning] chr11_116814028_G_A will be omitted because of high MAF (0.451, cutoff: 0.05).
+[Info] 0.617788461538462 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116814051_G_A will be omitted because of high MAF (0.382, cutoff: 0.05).
+[Warning] chr11_116828965_G_A will be omitted because of high MAF (0.174, cutoff: 0.05).
+[Warning] chr11_116829063_GC_G will be omitted because indel! (GC/G).
+[Warning] chr11_116829210_C_CCTGAAATTCCAGTGTG will be omitted because indel! (C/CCTGAAATTCCAGTGTG).
+[Info] 0.660899653979239 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116829268_A_C will be omitted because of high MAF (0.339, cutoff: 0.05).
+[Info] 0.655925155925156 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116829279_A_G will be omitted because of high MAF (0.344, cutoff: 0.05).
+[Info] 0.646978021978022 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116829283_G_GT will be omitted because indel! (G/GT).
+[Info] 0.723747426218257 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116829426_T_C will be omitted because of high MAF (0.276, cutoff: 0.05).
+[Info] 0.66060398078243 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116829453_C_T will be omitted because of high MAF (0.339, cutoff: 0.05).
+[Warning] chr11_116829881_AAAC_A will be omitted because indel! (AAAC/A).
+[Warning] chr11_116830061_G_C will be omitted because of high MAF (0.229, cutoff: 0.05).
+[Info] 0.849004804392588 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116830144_C_T will be omitted because of high MAF (0.151, cutoff: 0.05).
+[Info] 0.649279341111874 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116830406_C_G will be omitted because of high MAF (0.351, cutoff: 0.05).
+[Info] 0.501715854495539 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116830437_T_G will be omitted because of high MAF (0.498, cutoff: 0.05).
+[Info] 0.685655456417296 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116830819_T_C will be omitted because of high MAF (0.314, cutoff: 0.05).
+[Warning] chr11_116836218_ACTT_A will be omitted because indel! (ACTT/A).
+[Info] 0.888469457789979 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116836622_A_G will be omitted because of high MAF (0.112, cutoff: 0.05).
+[Warning] chr11_116836685_G_A will be omitted because of high MAF (0.137, cutoff: 0.05).
+[Info] 0.89601921757035 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116836867_A_G will be omitted because of high MAF (0.104, cutoff: 0.05).
+[Info] 0.896705559368566 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116836968_A_G will be omitted because of high MAF (0.103, cutoff: 0.05).
+[Info] 0.528483184625944 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116837304_A_G will be omitted because of high MAF (0.472, cutoff: 0.05).
+[Info] 0.859643102264928 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116839451_C_CAT will be omitted because indel! (C/CAT).
+[Warning] chr11_116862667_CAT_C will be omitted because indel! (CAT/C).
+[Warning] chr11_116863012_T_C will be omitted because of high MAF (0.481, cutoff: 0.05).
+[Info] 0.836650652024708 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116863430_C_T will be omitted because of high MAF (0.163, cutoff: 0.05).
+[Warning] chr11_116864744_A_C will be omitted because of high MAF (0.139, cutoff: 0.05).
+[Warning] chr11_116865052_C_CA will be omitted because indel! (C/CA).
+[Info] 0.823610157858614 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116865072_C_G will be omitted because of high MAF (0.176, cutoff: 0.05).
+[Warning] chr11_116865963_A_G will be omitted because of high MAF (0.484, cutoff: 0.05).
+[Warning] chr11_116866377_T_G will be omitted because of high MAF (0.174, cutoff: 0.05).
+[Info] 0.500343170899108 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116880158_A_C will be omitted because of high MAF (0.500, cutoff: 0.05).
+[Warning] chr11_116880340_A_AGACCTT will be omitted because indel! (A/AGACCTT).
+[Warning] chr11_116880833_G_A will be omitted because of high MAF (0.141, cutoff: 0.05).
+[Warning] chr11_116881262_T_TTG will be omitted because indel! (T/TTG).
+[Warning] chr11_116881411_C_CT will be omitted because indel! (C/CT).
+[Warning] chr11_116881447_T_C will be omitted because of high MAF (0.481, cutoff: 0.05).
+[Info] 0.820178448867536 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116881503_A_T will be omitted because of high MAF (0.180, cutoff: 0.05).
+[Warning] chr11_116881544_C_CT will be omitted because indel! (C/CT).
+[Warning] chr11_116889829_G_A will be omitted because of high MAF (0.171, cutoff: 0.05).
+[Warning] chr11_116889977_T_C will be omitted because of high MAF (0.482, cutoff: 0.05).
+[Warning] chr11_116901725_C_T will be omitted because of high MAF (0.162, cutoff: 0.05).
+[Warning] chr11_116901770_T_C will be omitted because of high MAF (0.139, cutoff: 0.05).
+[Warning] chr11_116902071_C_A will be omitted because of high MAF (0.481, cutoff: 0.05).
+[Warning] chr11_116902201_G_A will be omitted because of high MAF (0.101, cutoff: 0.05).
+[Warning] chr11_116902485_GAGTGT_G will be omitted because indel! (GAGTGT/G).
+[Warning] chr11_116902602_T_A will be omitted because of high MAF (0.140, cutoff: 0.05).
+[Warning] chr11_116902662_A_T will be omitted because of high MAF (0.142, cutoff: 0.05).
+[Warning] chr11_116903045_T_G will be omitted because of high MAF (0.140, cutoff: 0.05).
+[Warning] chr11_116903485_G_A will be omitted because of high MAF (0.154, cutoff: 0.05).
+[Warning] chr11_116903528_G_T will be omitted because of high MAF (0.139, cutoff: 0.05).
+[Warning] chr11_116937737_C_T will be omitted because of high MAF (0.120, cutoff: 0.05).
+[Warning] chr11_116946939_A_C will be omitted because of high MAF (0.124, cutoff: 0.05).
+[Warning] chr11_116955881_G_GT will be omitted because indel! (G/GT).
+[Warning] chr11_116955893_CAT_C will be omitted because indel! (CAT/C).
+[Warning] chr11_116955901_T_C will be omitted because of high MAF (0.120, cutoff: 0.05).
+[Warning] chr11_116955927_A_C will be omitted because of high MAF (0.120, cutoff: 0.05).
+[Warning] chr11_116955955_T_TAG will be omitted because indel! (T/TAG).
+[Warning] chr11_116956154_C_T will be omitted because of high MAF (0.305, cutoff: 0.05).
+[Warning] chr11_116958223_C_A will be omitted because of high MAF (0.120, cutoff: 0.05).
+[Info] 0.500343170899108 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116958484_A_C will be omitted because of high MAF (0.500, cutoff: 0.05).
+[Warning] chr11_116958620_CAGG_C will be omitted because indel! (CAGG/C).
+[Warning] chr11_116958726_G_T will be omitted because of high MAF (0.119, cutoff: 0.05).
+[Warning] chr11_116958937_T_G will be omitted because of high MAF (0.195, cutoff: 0.05).
+[Info] 0.500343170899108 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116959371_T_C will be omitted because of high MAF (0.500, cutoff: 0.05).
+[Info] 0.500686341798215 is greater then 0.5, genotype is flipped.
+[Warning] chr11_116959545_T_C will be omitted because of high MAF (0.499, cutoff: 0.05).
+[Warning] chr11_116966657_T_C will be omitted because of high MAF (0.149, cutoff: 0.05).
+[Warning] chr11_116966687_GT_G will be omitted because indel! (GT/G).
+[Warning] chr11_116966782_CT_C will be omitted because indel! (CT/C).
+[Warning] chr11_116967009_AAAAAAG_A will be omitted because indel! (AAAAAAG/A).
+[Warning] chr11_116967092_G_T will be omitted because of high MAF (0.328, cutoff: 0.05).
+[Warning] chr11_116967414_A_C will be omitted because of high MAF (0.120, cutoff: 0.05).
+[Warning] chr11_117049961_T_TA,TAA will be omitted because of multiallelic! (TA,TAA).
+[Warning] chr11_117049977_T_A will be omitted because of high MAF (0.171, cutoff: 0.05).
+[Warning] chr11_117050188_C_CT will be omitted because indel! (C/CT).
+[Warning] chr11_117050211_C_T will be omitted because of high MAF (0.326, cutoff: 0.05).
+[Warning] chr11_117050220_CG_C will be omitted because indel! (CG/C).
+[Warning] chr11_117050286_TCA_TCACACA,T,TCACA will be omitted because of multiallelic! (TCACACA,T,TCACA).
+[Warning] chr11_117050503_G_T will be omitted because of high MAF (0.499, cutoff: 0.05).
+[Warning] chr11_117050531_CA_C will be omitted because indel! (CA/C).
+[Info] 0.900755494505495 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117050674_T_C will be omitted because of high MAF (0.099, cutoff: 0.05).
+[Info] 0.828983516483517 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117050681_T_C will be omitted because of high MAF (0.171, cutoff: 0.05).
+[Warning] chr11_117051048_CTAAA_C will be omitted because indel! (CTAAA/C).
+[Warning] chr11_117051870_G_A will be omitted because of high MAF (0.119, cutoff: 0.05).
+[Warning] chr11_117051998_C_T will be omitted because of high MAF (0.170, cutoff: 0.05).
+[Warning] chr11_117052138_A_G will be omitted because of high MAF (0.150, cutoff: 0.05).
+[Warning] chr11_117052169_ATC_A will be omitted because indel! (ATC/A).
+[Warning] chr11_117052772_T_C will be omitted because of high MAF (0.180, cutoff: 0.05).
+[Info] 0.82875772134523 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117053154_C_T will be omitted because of high MAF (0.171, cutoff: 0.05).
+[Warning] chr11_117053284_C_T will be omitted because of high MAF (0.118, cutoff: 0.05).
+[Warning] chr11_117053602_G_A will be omitted because of high MAF (0.137, cutoff: 0.05).
+[Warning] chr11_117054262_A_C will be omitted because of high MAF (0.179, cutoff: 0.05).
+[Warning] chr11_117054274_G_T will be omitted because of high MAF (0.330, cutoff: 0.05).
+[Warning] chr11_117054326_G_A will be omitted because of high MAF (0.329, cutoff: 0.05).
+[Warning] chr11_117067811_A_AC will be omitted because indel! (A/AC).
+[Warning] chr11_117087021_GT_G will be omitted because indel! (GT/G).
+[Info] 0.891901166781057 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117087191_C_G will be omitted because of high MAF (0.108, cutoff: 0.05).
+[Warning] chr11_117087312_G_A will be omitted because of high MAF (0.191, cutoff: 0.05).
+[Warning] chr11_117087442_C_CA will be omitted because indel! (C/CA).
+[Warning] chr11_117087817_C_A will be omitted because of high MAF (0.120, cutoff: 0.05).
+[Warning] chr11_117088227_A_G will be omitted because of high MAF (0.189, cutoff: 0.05).
+[Warning] chr11_117088323_G_A will be omitted because of high MAF (0.189, cutoff: 0.05).
+[Warning] chr11_117088847_TTTA_T will be omitted because indel! (TTTA/T).
+[Warning] chr11_117089132_G_A will be omitted because of high MAF (0.170, cutoff: 0.05).
+[Info] 0.500343170899108 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117089597_G_A will be omitted because of high MAF (0.500, cutoff: 0.05).
+[Warning] chr11_117089687_G_A will be omitted because of high MAF (0.189, cutoff: 0.05).
+[Warning] chr11_117089781_G_C will be omitted because of high MAF (0.171, cutoff: 0.05).
+[Warning] chr11_117090872_G_A will be omitted because of high MAF (0.188, cutoff: 0.05).
+[Warning] chr11_117091086_A_T will be omitted because of high MAF (0.170, cutoff: 0.05).
+[Warning] chr11_117091176_G_A will be omitted because of high MAF (0.188, cutoff: 0.05).
+[Warning] chr11_117091189_G_GT,GTTTTTTTTTTTTTTTTTTTTTTT will be omitted because of multiallelic! (GT,GTTTTTTTTTTTTTTTTTTTTTTT).
+[Warning] chr11_117091206_T_TC will be omitted because indel! (T/TC).
+[Info] 0.831159917638984 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117096950_C_T will be omitted because of high MAF (0.169, cutoff: 0.05).
+[Warning] chr11_117097552_C_T will be omitted because of high MAF (0.170, cutoff: 0.05).
+[Warning] chr11_117098082_G_A will be omitted because of high MAF (0.166, cutoff: 0.05).
+[Warning] chr11_117098674_C_T will be omitted because of high MAF (0.499, cutoff: 0.05).
+[Warning] chr11_117098692_G_A will be omitted because of high MAF (0.066, cutoff: 0.05).
+[Warning] chr11_117099220_C_CA will be omitted because indel! (C/CA).
+[Warning] chr11_117099370_GA_G will be omitted because indel! (GA/G).
+[Warning] chr11_117106062_T_C will be omitted because of high MAF (0.314, cutoff: 0.05).
+[Warning] chr11_117106066_CTTTG_C will be omitted because indel! (CTTTG/C).
+[Warning] chr11_117112105_C_T will be omitted because of high MAF (0.311, cutoff: 0.05).
+[Warning] chr11_117112212_G_A will be omitted because of high MAF (0.155, cutoff: 0.05).
+[Warning] chr11_117112300_G_A will be omitted because of high MAF (0.126, cutoff: 0.05).
+[Warning] chr11_117112840_G_A will be omitted because of high MAF (0.126, cutoff: 0.05).
+[Warning] chr11_117123072_G_A will be omitted because of high MAF (0.134, cutoff: 0.05).
+[Warning] chr11_117123213_A_T will be omitted because of high MAF (0.306, cutoff: 0.05).
+[Warning] chr11_117143442_A_AG will be omitted because indel! (A/AG).
+[Warning] chr11_117144146_G_T will be omitted because of high MAF (0.491, cutoff: 0.05).
+[Warning] chr11_117144147_G_A will be omitted because of high MAF (0.160, cutoff: 0.05).
+[Warning] chr11_117144310_GGCCGGAGGAGGGACGC_G will be omitted because indel! (GGCCGGAGGAGGGACGC/G).
+[Warning] chr11_117144473_G_C will be omitted because of high MAF (0.160, cutoff: 0.05).
+[Warning] chr11_117144479_C_T will be omitted because of high MAF (0.497, cutoff: 0.05).
+[Warning] chr11_117144522_C_A will be omitted because of high MAF (0.132, cutoff: 0.05).
+[Warning] chr11_117144557_T_TG will be omitted because indel! (T/TG).
+[Warning] chr11_117144736_G_GCGCCC will be omitted because indel! (G/GCGCCC).
+[Warning] chr11_117144746_C_CGG will be omitted because indel! (C/CGG).
+[Warning] chr11_117144747_CGCCCT_CCCTGCCCT,CGCCCTGCCCT,C will be omitted because of multiallelic! (CCCTGCCCT,CGCCCTGCCCT,C).
+[Warning] chr11_117144800_C_G will be omitted because of high MAF (0.133, cutoff: 0.05).
+[Warning] chr11_117144956_CCCT_C will be omitted because indel! (CCCT/C).
+[Info] 0.852436513383665 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117145447_C_CG will be omitted because indel! (C/CG).
+[Warning] chr11_117145734_C_T will be omitted because of high MAF (0.135, cutoff: 0.05).
+[Info] 0.652008310249307 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117146108_T_G will be omitted because of high MAF (0.348, cutoff: 0.05).
+[Warning] chr11_117146115_T_TTTC will be omitted because indel! (T/TTTC).
+[Warning] chr11_117146123_T_TGTG will be omitted because indel! (T/TGTG).
+[Warning] chr11_117146128_T_G will be omitted because of high MAF (0.361, cutoff: 0.05).
+[Warning] chr11_117146130_T_G will be omitted because of high MAF (0.469, cutoff: 0.05).
+[Info] 0.791695264241592 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117159865_T_A will be omitted because of high MAF (0.208, cutoff: 0.05).
+[Info] 0.641386410432395 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117159908_AT_A will be omitted because indel! (AT/A).
+[Warning] chr11_117159917_T_C will be omitted because of high MAF (0.134, cutoff: 0.05).
+[Warning] chr11_117179800_CT_C will be omitted because indel! (CT/C).
+[Warning] chr11_117180202_C_T will be omitted because of high MAF (0.135, cutoff: 0.05).
+[Warning] chr11_117180423_AG_A will be omitted because indel! (AG/A).
+[Info] 0.655456417295813 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117180449_A_G will be omitted because of high MAF (0.345, cutoff: 0.05).
+[Warning] chr11_117194817_G_A will be omitted because of high MAF (0.156, cutoff: 0.05).
+[Warning] chr11_117195000_C_G,T will be omitted because of multiallelic! (G,T).
+[Warning] chr11_117195056_C_A will be omitted because of high MAF (0.159, cutoff: 0.05).
+[Info] 0.642709053213545 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117195063_T_C will be omitted because of high MAF (0.357, cutoff: 0.05).
+[Warning] chr11_117195637_G_C will be omitted because of high MAF (0.156, cutoff: 0.05).
+[Warning] chr11_117199072_C_T will be omitted because of high MAF (0.134, cutoff: 0.05).
+[Warning] chr11_117199365_GC_G will be omitted because indel! (GC/G).
+[Warning] chr11_117199765_C_G,T will be omitted because of multiallelic! (G,T).
+[Info] 0.65442690459849 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117199831_TGAG_T will be omitted because indel! (TGAG/T).
+[Warning] chr11_117199880_C_T will be omitted because of high MAF (0.157, cutoff: 0.05).
+[Warning] chr11_117199954_CAG_C will be omitted because indel! (CAG/C).
+[Warning] chr11_117200024_A_C will be omitted because of high MAF (0.157, cutoff: 0.05).
+[Info] 0.657172271791352 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117200141_G_A will be omitted because of high MAF (0.343, cutoff: 0.05).
+[Info] 0.656829100892244 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117200179_C_A will be omitted because of high MAF (0.343, cutoff: 0.05).
+[Info] 0.656829100892244 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117200354_C_G will be omitted because of high MAF (0.343, cutoff: 0.05).
+[Warning] chr11_117200544_GC_G will be omitted because indel! (GC/G).
+[Info] 0.73095401509952 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117200733_C_T will be omitted because of high MAF (0.269, cutoff: 0.05).
+[Warning] chr11_117201046_C_T will be omitted because of high MAF (0.112, cutoff: 0.05).
+[Info] 0.844543582704187 is greater then 0.5, genotype is flipped.
+[Warning] chr11_117201254_T_C will be omitted because of high MAF (0.155, cutoff: 0.05).
+[Warning] chr11_117201809_C_T will be omitted because of high MAF (0.340, cutoff: 0.05).
+[Warning] chr11_117204850_C_T will be omitted because of high MAF (0.055, cutoff: 0.05).
+[Warning] chr11_117204910_A_AC will be omitted because indel! (A/AC).
+[Warning] chr11_117205003_AAGG_A will be omitted because indel! (AAGG/A).
+[Warning] chr11_117206661_TTGAG_T will be omitted because indel! (TTGAG/T).
+[Warning] chr11_117209663_T_A will be omitted because of high MAF (0.140, cutoff: 0.05).
+[Warning] chr11_117209888_AT_A will be omitted because indel! (AT/A).
+[Warning] chr11_117209924_C_G will be omitted because of high MAF (0.155, cutoff: 0.05).
+[Warning] chr11_117210082_TAC_T will be omitted because indel! (TAC/T).
+[Warning] chr11_117226506_T_G will be omitted because of high MAF (0.379, cutoff: 0.05).
+[Warning] chr11_117230729_A_T will be omitted because of high MAF (0.137, cutoff: 0.05).
+[Warning] chr11_117230858_C_A will be omitted because of high MAF (0.238, cutoff: 0.05).
+[Warning] chr11_117231484_G_A will be omitted because of high MAF (0.108, cutoff: 0.05).
+[Warning] chr11_117231557_T_TCC will be omitted because indel! (T/TCC).
+[Warning] chr11_117231591_A_G will be omitted because of high MAF (0.435, cutoff: 0.05).
+[Warning] chr11_117231932_T_C will be omitted because of high MAF (0.333, cutoff: 0.05).
+[Warning] chr11_117231990_C_G will be omitted because of high MAF (0.144, cutoff: 0.05).
+[Warning] chr11_117232875_TC_T will be omitted because indel! (TC/T).
+[Warning] chr11_117233421_T_TC will be omitted because indel! (T/TC).
+[Warning] chr11_117233432_A_G will be omitted because of high MAF (0.328, cutoff: 0.05).
+[Warning] chr11_117233662_TGCACCAC_T will be omitted because indel! (TGCACCAC/T).
+[Info] Number of filtered variants: 340
+[Info] Number of variants successfully lifted over: 340
+
+[Info] Adding Linsight scores for variants.
+/nfs/team144/software/bigWigTools/bigWigAverageOverBed /lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/LINSIGHT/LINSIGHT.bw TAGLN_GRCh37.bed TAGLN_GRCh37_linsight.tab
+[Info] linsight scores have been added to variants (Number of variants: 340).
+
+[Info] Processing Linsight scores... [Warning] chr11_116836328_A_T is deleted, because Linsight score is below threshold: 0!
+[Warning] chr11_117144294_C_T is deleted, because Linsight score is below threshold: 0!
+[Warning] chr11_116830805_A_G is deleted, because Linsight score is below threshold: 0!
+[Warning] chr11_116830637_C_T is deleted, because Linsight score is below threshold: 0!
+[Warning] chr11_116837379_A_G is deleted, because Linsight score is below threshold: 0!
+[Warning] chr11_117144336_G_C is deleted, because Linsight score is below threshold: 0!
+[Warning] chr11_117204332_C_T is deleted, because Linsight score is below threshold: 0!
+[Warning] chr11_117204343_G_C is deleted, because Linsight score is below threshold: 0!
+[Warning] chr11_117204287_G_T is deleted, because Linsight score is below threshold: 0!
+[Warning] chr11_116835987_C_G is deleted, because Linsight score is below threshold: 0!
+Done.
