@@ -551,7 +551,8 @@ ${imputation_method}"
     if [[ ${keep_temp} -ne 1 ]]; then
         rm -rf ${workingDir}/gene_set.${chunkNo}/${gene};
     else
-        rm ${workingDir}/gene_set.${chunkNo}/${gene}/*mod*
+        tar -czvf ${workingDir}/gene_set.${chunkNo}/${gene}.tar.gz -C ${workingDir}/gene_set.${chunkNo}/ ${gene}
+        rm -rf ${workingDir}/gene_set.${chunkNo}/${gene}
     fi
 
 done
