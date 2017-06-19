@@ -34,7 +34,8 @@ geneListFile=${scriptDir}/gene_list.lst
 kinshipMatrix=/nfs/team144/ds26/burden_testing/kinship/2016.10.20_fix_diagonal/kinship.fixdiag.txt
 
 # Single point p-values are read from here:
-singlePointDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/single_point/output
+#singlePointDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/single_point/output
+singlePointDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/single_point/output/missing_chunks
 
 # Path to MONSTER executable:
 MONSTER=/nfs/team144/software/MONSTER_v1.3/MONSTER
