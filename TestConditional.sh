@@ -12,33 +12,17 @@
 ## The window around the gene name can also be set by specifying with -w switch.
 
 
-## v.1.0 Last modified: 2017.04.24
-
-# Step -1: Preparation, setting up environment:
-
-# Directory of the vcf files:
-vcfDir=/lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/release/postrelease_missingnessfilter/
-
-# Single point dir: 
-singlePointDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/single_point/output/missing_chunks/
-
-# genome-wide plink file:
-plinkFile=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/single_point/input/whole_genome/autosomal
+## v.1.0 Last modified: 2017.07.13
+    # All the constant paths are read from a config file for increase portability.
 
 # Setting up working dir:
 workingDir=$(pwd)
 
-# Distance around the gene we fetch variants with phenotypes:
-export window=500000
-
-# Path to the burden p-values:
-
-
-# Path to MONSTER executable:
-MONSTER=/nfs/team144/software/MONSTER_v1.3/MONSTER
-
 # Folder with all the scripts:
 export scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Reading all the fixed parameters, paths etc:
+source ${scriptDir}/config.txt
 
 # --- print out help message and exit
 function display_help() {
@@ -69,10 +53,11 @@ function test_variant(){
     local pos="${2}"
     local variant="${3}"
     local ID MAF consequences
+    vcfFilename=$(get_vcf_filename ${chr} )
 
     # Extract variant:
     START_TIME=$SECONDS
-    read ID MAF consequences <<< $(tabix ${vcfDir}/chr${chr}.missingfiltered-0.01_consequences.vcf.gz chr${chr}:${pos}-${pos} | cut -f-8 | perl -lane '$_ =~ /AF=(.+?);.+consequence=(\S+)/; print "$F[2] $1 $2"')
+    read ID MAF consequences <<< $(tabix "${vcfFilename}" chr${chr}:${pos}-${pos} | cut -f-8 | perl -lane '$_ =~ /AF=(.+?);.+consequence=(\S+)/; print "$F[2] $1 $2"')
     ELAPSED_TIME=$(($SECONDS - $START_TIME))
     
     if [[ ${ELAPSED_TIME} -gt 1 ]]; then echo "[Warning] A single tabix took ${ELAPSED_TIME} sec." >&2; fi # report if the tabix query takes unusually long... 
@@ -86,8 +71,8 @@ function test_variant(){
     fi
     
     # If it was successful, we have to extract the genotypes:
-    paste <( zgrep -m1 "#CHROM" ${vcfDir}/chr11.missingfiltered-0.01_consequences.vcf.gz | cut -f10- | tr "\t" "\n" )\
-        <( tabix ${vcfDir}/chr${chr}.missingfiltered-0.01_consequences.vcf.gz chr${chr}:${pos}-${pos} \
+    paste <( zgrep -m1 "#CHROM" "${vcfFilename}" | cut -f10- | tr "\t" "\n" )\
+        <( tabix "${vcfFilename}" chr${chr}:${pos}-${pos} \
             | cut -f10- | tr "\t" "\n" | cut -f1 -d":" | perl -F"/" -lane '$F[0] eq "." ? print "-9" : print $F[0] + $F[1]') \
             | sed -f ${scriptDir}/HELIC.to.Num.sed | tr " " "\t" | cut -f1,3 | perl -lane '
         $h{$F[0]} = $F[1];
@@ -152,7 +137,7 @@ function getTrait(){
     if [[ ! -z $( ls *.pvalues.txt ) ]]; then    
         trait=$(tail -n1  *pvalues.txt | cut -f1)
         case "$trait" in
-            "adiponectin") trait=ADIPONECTIN;;
+            #"adiponectin") trait=ADIPONECTIN;;
             "BGP") trait=OSTEOCALCIN;;
             "Bilirubin") trait=BILIRUBIN;;
             "Fe_iron") trait=FEIRON;;
@@ -215,7 +200,7 @@ function get_phenotypes_for_gene(){
     wget -q --header='Content-type:application/json' "http://rest.ensembl.org/lookup/symbol/homo_sapiens/${geneName}?" -O - \
         | perl -MJSON -lane '$h = decode_json($_); printf "%s:%s-%s\n", $h->{"seq_region_name"}, $h->{"start"}-$ENV{"window"}, $h->{"end"}+$ENV{"window"}' \
         | while read coord ; do  wget -q --header='Content-type:application/json' "http://rest.ensembl.org/phenotype/region/homo_sapiens/${coord}?feature_type=Variation" -O - ; done \
-        | perl -MJSON -lane 'foreach $a (@{decode_json($_)}){ next unless $a->{"id"} =~ /^rs/; print $a->{"id"}}' \
+        | perl -MData::Dumper -MJSON -lane 'foreach $a (@{decode_json($_)}){ next unless $a->{"id"} =~ /^rs/; @t = (); foreach $ph ( @{$a->{"phenotype_associations"}}){push(@t, $ph->{"description"}) }; print $a->{"id"}, "\t", join "|", @t}'\
         > ${geneName}_phenotypes.rsIDs.lst
     varNo=$( cat  ${geneName}_phenotypes.rsIDs.lst | wc -l )
     echo "[Info] For ${geneName} we have found ${varNo} variants with phenotype annotations within 1Mbp window." >&2
@@ -233,7 +218,7 @@ function getLDblocks(){
     # Get variants in LD:
     echo "[Info] Running plink to find correlated variants."
     
-    plink --memory --bfile ${plinkFile} --extract ${gene}_variants -r2 square gz yes-really --out ${gene}_R2  > /dev/null
+    plink --bfile ${plinkFile} --extract ${gene}_variants -r2 square gz yes-really --out ${gene}_R2  > /dev/null
     
     # Checking if plink output file was generated. If not, the log file will be displayed.
     if [[ -e ${gene}_R2.ld.gz ]];then
@@ -371,14 +356,14 @@ done
 
 # Get basic information:
 trait=$( getTrait )
-gene=$(ls *bed | head -n1 | cut -f1 -d "_")
-basePval=$( tail -n1  *_${gene}.out  | cut -f5 )
+gene=$(ls MONSTER_out_*out | sed -e 's/MON.*_//;s/\.out// ')
+basePval=$( tail -n1  *_${gene:-GENE_MISSING!!}.out  | cut -f5 )
 
 # Step 1: Processing variants:
 if [[ -e "${SNPFile}" ]]; then # A valid file has been submitted.
     echo "[Info] A file with variants has been submitted." >&2
     
-    cat "${SNPFile}" | while read variant; do
+    cat "${SNPFile}" | cut -f1 | while read variant; do
         read chr pos ID type <<< $( get_coordinates "${variant}" )
         # Expected output: APOC3	1445	5	0.1	6.3049e-16
         singlePval=$( getSinglePoint ${trait} ${chr}:${pos}-${pos} )
