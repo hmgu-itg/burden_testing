@@ -2,8 +2,7 @@
 
 
 # Version information:
-our $version = "v3.3 Last modified: 2017.01.05";
-
+our $version = "v4.1 Last modified: 2017.08.01";
 # Accepted feature names:
     # GENCODE: gene, exon, transcript, CDS, UTR
     # GTEx: promoter, enhancer, promoterFlank, openChrom, TF_bind, allreg
@@ -33,7 +32,7 @@ our $score = "NA";
 my $shift = 0;
 my $k = 50; # Weighting constant.
 my $extend = 0;
-my $MAF = 0.05; # 5%
+my $MAF = 0.05; # 5% default MAF threshold
 my $MAC = 0;
 my $missingthreshold = 0.01; # 1% above which no variant will be included below which the genotype is imputed.
 my $configFileName = "config.txt"; #
@@ -43,7 +42,7 @@ my $cutoff = 0; # That is the default value, below which every variant will be r
 
 # Command line options with no default values:
 my ($inputFile, $outputFile, $GENCODE, $GTEx, $verbose, $overlap, $help,
-    $minor, $tissue_list, $MAF_weight);
+    $minor, $tissue_list, $MAF_weight, $vcfFile);
 
 # A command line switch. If turned on, only loss of function variants will be included in the test.
 our ($lof, $loftee);
@@ -96,6 +95,9 @@ GetOptions(
     'shift=s'  => \$shift,  # The value used to shift eigen scores:
     'cutoff=s' => \$cutoff, # hard threshold that will be applied on scores:
     'floor=s'  => \$floor,  # How do we want to floor Eigen values:
+    
+    # vcf File:
+    'vcfFile=s' => \$vcfFile, # In the updated version, the vcf file is no longer read from the config file. 
 
     # Asking for help:
     'help|h' => \$help
@@ -105,19 +107,17 @@ GetOptions(
 my %ConfFiles = %{&read_param($configFileName)};
 
 our $geneBedFile      = $ConfFiles{geneBedFile};
-our $vcfFile          = $ConfFiles{vcfFile};
 our $liftoverPath     = $ConfFiles{liftoverPath};
 our $EigenPath        = $ConfFiles{EigenPath};
 our $caddPath         = $ConfFiles{caddPath};
 our $temporaryBedFile = $ConfFiles{temporaryBedFile};
 our $GENCODEFile      = $ConfFiles{GENCODEFile};
-our $GWAVA_DIR        = $ConfFiles{GWAVA_DIR};
 our $bigWigToolDir    = $ConfFiles{bigWigTools};
 our $linsigthFile     = $ConfFiles{Linsight};
 
 # All files must exist otherwise the scrip quits:
-foreach my $sourcefile ($geneBedFile, $vcfFile, $liftoverPath, $EigenPath, $caddPath){
-    my $file = sprintf($sourcefile, "chr12");
+foreach my $file ($geneBedFile, $liftoverPath, $EigenPath, $caddPath){
+    $file =~ s/\%/12/g;
     pod2usage({-verbose => 99, -message => "[Error] One of the requested file does not exits ($file). Exiting.\n", -sections => "FILES|SYNOPSIS" }) unless ( -e $file);
 }
 
@@ -150,8 +150,7 @@ printf  "[Info] Missingness threshold: %s (variants above %s%% missing genotypes
 our ($GENCODE_name, $GENCODE_ID) = &read_GENCODE($scriptdir."/gencode_genes_V25.tsv.gz");
 
 # The submitted scoring method might not be supported! Check for it now!
-my %acceptedScores = ("GWAVA" => 1,
-                      "CADD" => 1,
+my %acceptedScores = ("CADD" => 1,
                       "Eigen" => 1,
                       "EigenPC" => 1,
                       "EigenPhred" => 1,
@@ -260,9 +259,6 @@ if ( $score ne "NA" ) {
     # Returning Insight scores if that's required:
     $hash = &get_linsight($hash, $name) if $score eq "Linsight";
 
-    # Returning GWAVA scores if that's the case:
-    $hash = &get_GWAVA($hash, $name) if $score eq "GWAVA";
-
     # Returning mixed Eigen/CADD scores if that's the case:
     $hash = &get_mixed($hash, $name) if $score eq "Mixed";
 
@@ -364,7 +360,8 @@ sub parseRegulation {
 sub print_genotypes {
     my %genotype = %{$_[0]};
     my $outputhandler = $_[1];
-    my $vcfChrFile = sprintf($vcfFile, "chr11");
+    my $vcfChrFile = $vcfFile;
+    $vcfChrFile =~ s/\%/11/g;
 
     # Get list of sample IDs:
     my $samples = `zgrep -m1 "#CHROM"  $vcfChrFile | cut -f10-`;
@@ -660,51 +657,6 @@ sub get_CADD_GERP {
     print "[Info] $score scores have been added to variants.\n" if $verbose;
     return \%hash
 }
-##
-## Get GWAVA scores as weights:
-##
-sub get_GWAVA {
-
-    my %hash = %{$_[0]};
-    my $gene_name = $_[1];
-
-    # Report progress:
-    print "[Info] Run GWAVA annotation... ";
-
-    my %gwava_scores = ();
-
-    # before running gwava we have to check if the directory and the scripts are there:
-    if ( -e "$GWAVA_DIR/src/gwava_annotate.py") {
-
-        # Running GWAVA annotation:
-        `export GWAVA_DIR=${GWAVA_DIR}; python ${GWAVA_DIR}/src/gwava_annotate.py ${gene_name}_GRCh37.bed ${gene_name}_GRCh37.annot`;
-
-        # Running GWAVA prediction:
-        `export GWAVA_DIR=${GWAVA_DIR}; python ${GWAVA_DIR}/src/gwava.py tss ${gene_name}_GRCh37.annot ${gene_name}_GRCh37.gwava`;
-
-        # Now let's test if the file is exists, if not, all weights are 1:
-        if ( -e $gene_name."_GRCh37.gwava" ) {
-            open(my $GWF, "<", $gene_name."_GRCh37.gwava" ) or warn "[Warning] ${gene_name}_GRCh37.gwava could not be opened!\n";
-            while ( my $line = <$GWF>) {
-                chomp $line;
-                my ($chr, $start, $end, $ID, $gwava) = split("\t", $line);
-                $gwava_scores{$ID} = $gwava;
-            }
-        } else { print "[Warning] GWAVA file could not be opened!\n" }
-    }
-    else {
-        print "\n[Warning] GWAVA executables were not found in the specified path: $GWAVA_DIR/src/gwava_annotate.py\n";
-        print "[Warning] Please update config file!\n[Info] Adding NA-s as scores. "
-    }
-    # Looping through all variants in the hash:
-    foreach my $var (keys %hash){
-        $hash{$var}{"score"} = exists $gwava_scores{$var} ? $gwava_scores{$var} : "NA"; # Initialize GWAVA score.
-    }
-
-    # Report progress:
-    print "Done.\n";
-    return \%hash;
-}
 
 
 ##
@@ -767,7 +719,7 @@ sub processVar {
         my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $a1, $a2);
 
         # Parsing info field for relevant information:
-        $info =~ /AC=(.+?);.+;AN=(.+?);.+consequence=(\S+?);/;
+        $info =~ /AC=(.+?);.+;AN=(.+?);.+consequence=(\S+?);*$/;
         my ($ac, $an) = $2 ? ($1, $2) : ("NA", "NA");
 
         my $consequence = $3 ? $3 : "NA";
@@ -865,8 +817,10 @@ sub GetVariants {
 
     # Print info:
     print  "\n[Info] Extracting variants from vcf files:\n" if $verbose;
-    my $chrSpecVcfFile = sprintf("$vcfFile", $chr);
-    my $bcftoos_query = sprintf("tabix %s ", $chrSpecVcfFile);
+
+    $chr =~ s/chr//;
+    $vcfFile =~ s/\%/$chr/g;
+    my $bcftoos_query = sprintf("tabix %s ", $vcfFile);
 
     # looping through all lines:
     foreach my $line (split("\n", $merged)){
@@ -1048,16 +1002,16 @@ sub read_param {
     print  "[Info] Config file: $absConfigFile\n";
 
     # Reading file:
-    open(my $CONF, "cat $absConfigFile | grep -v \"#\" | ") or die "[Error] Config file could not be oppended. Exiting.\n";
+    open(my $CONF, "cat $absConfigFile | grep -v \"##\" | ") or die "[Error] Config file could not be oppended. Exiting.\n";
 
     # Reading file:
-    my %hash;
+    my %hash;   
     while ( my $line = <$CONF>) {
         chomp $line;
         next unless $line;
 
-        my @pair = split(/=/, $line);
-        $hash{$pair[0]} = $pair[1];
+        my ($key, $value) = $line =~ /^(\S+)=(\S+)/;
+        $hash{$key} = $value if $key && $value;
     }
 
     return \%hash;
@@ -1277,7 +1231,7 @@ B<Scoring options:>
 
 =over 4
 
-B<score>: available scoring meghods are: CADD, Eigen, GWAVA are supported currently
+B<score>: available scoring meghods are: CADD, Eigen, EigenPC, Eigen-phred, EigenPC-phred, Linsight and mixed scores are supported currently
 (default: no weight)
 
 B<ExpConst>: describes the steepness of the weighting function. (default: 50)

@@ -575,13 +575,13 @@ zcat ${targetDir}/${today}/processed/overlapping_features.txt.gz \
 echo -e "Done.\n"
 
 # Creating header for the final output:
-cat <(echo -e "# Regions file for burden testing. Created: 2016.09.21
+cat <(echo -e "# Regions file for burden testing. Created: ${today}
 #
 # GENCODE version: v.${GENCODE_release}
 # Ensembl version: v.${Ensembl_release}
 # GTEx version: ${GTExRelease}
 #
-# CHR\tSTART\END\tGENEID\tANNOTATION" ) ${targetDir}/${today}/Linked_features.bed | sponge ${targetDir}/${today}/Linked_features.bed
+# CHR\tSTART\tEND\tGENEID\tANNOTATION" ) ${targetDir}/${today}/Linked_features.bed | sponge ${targetDir}/${today}/Linked_features.bed
 
 # Compressing and indexing output file:
 bgzip -f ${targetDir}/${today}/Linked_features.bed > ${targetDir}/${today}/Linked_features.bed.gz

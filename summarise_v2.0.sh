@@ -122,4 +122,3 @@ for trait in $(ls -d Pheno.* | sed -e 's/Pheno\.//'); do
 done
 
 cd $workingDir
-
