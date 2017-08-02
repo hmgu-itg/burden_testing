@@ -432,14 +432,21 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
         continue
     fi
 
-    # The IDs have to be adjusted: the non-alphanumeric characters are also removed:
+    # The variant IDs have to be adjusted: the non-alphanumeric characters are also removed:
     cat ${gene}_output_variants | perl -lane '$_ =~ s/[^0-9a-z\t\.]//gi; print $_'  > snpfile.mod.txt
-
+    
+    # The sample IDs also have to be mapped to numbers, so a mapping file has to be created when the first gene of the chunk is created:
+    if [[ ! -e ${workingDir}/gene_set.${chunkNo}/sample_mapping.sed ]]; then
+        cat <(head -n1 ${gene}_output_genotype | tr "\t" "\n") \
+            <(tail -n+2  ${phenotypeFile} | cut -f1) \
+            | sort -u | awk '{printf "s/%s/%s/g\n", $1, NR}' > ${workingDir}/gene_set.${chunkNo}/sample_mapping.sed
+    fi
+    
     # The IDs have to be adjusted, and the non-alphanumeric characters are also removed:
-    sed -f ${scriptDir}/HELIC.to.Num_genotype.sed ${gene}_output_genotype | perl -lane '$F[0] =~ s/[^0-9a-z]//gi; print join "\t", @F'  > genotype.mod.txt
+    sed -f ${workingDir}/gene_set.${chunkNo}/sample_mapping.sed ${gene}_output_genotype | perl -lane '$F[0] =~ s/[^0-9a-z]//gi; print join "\t", @F'  > genotype.mod.txt
 
     # Preparing phenotype file
-    sed -f ${scriptDir}/HELIC.to.Num.sed  ${phenotypeFile} | perl -lane 'next if $. == 1; next unless $_ =~ /^\d+/;
+    sed -f ${workingDir}/gene_set.${chunkNo}/sample_mapping.sed  ${phenotypeFile} | perl -lane 'next if $. == 1; next unless $_ =~ /^\d+/;
         printf "1\t%s\t0\t0\t%s\t%s\t%s\n", $F[0], $F[1], $F[3]' > pheno.mod.txt # Adding sex as coveriate
 
     # Adjusting the order of the phenotype file according to the samples in the genotype file:
@@ -502,7 +509,7 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
     # If p-value is really low save into a folder:
     if [[ $(echo $pval | perl -lane 'print $F[0] < $ENV{"signifThreshold"} ? 1 : 0') == 1 ]]; then
         echo "[Info] Found a hit! ${gene} p-value: ${pval}";
-        savehit; # Saving all intermediate files.
+        savehit;
     fi
 
     cd ${workingDir};
