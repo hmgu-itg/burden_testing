@@ -49,5 +49,5 @@ This file contains information which genomic regions can be linked to a gene. Eg
 
 ### Adjusting the config file used by the pipeline:
 
-The location of the score files, linked feature file, path to bigWigTools etc. 
+Update the location of the score files, linked feature file, path to bigWigTools etc. in the config.txt file. The script checks the existence of these files, and if the test fails, the script exits.
 
