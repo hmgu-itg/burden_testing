@@ -25,10 +25,14 @@
 #### as data format of subsequent releases are quite different.
 
 ##
-## Date: 2016.12.22 by Daniel Suveges. ds26@sanger.ac.uk
+## Date: 2017.08.03 by Daniel Suveges. ds26@sanger.ac.uk
 ##
-script_version=1.5
-last_modified=2016.12.22
+script_version=2.0
+last_modified=2017.08.03
+
+## Built in versions:
+GENCODE_release=25
+Ensembl_release=84 
 
 # Get script dir:
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -36,9 +40,9 @@ scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ## printing out information if no parameter is provided:
 function usage {
     echo ""
-    echo "Usage: $0 <targetdir>"
+    echo "Usage: $0 -G <GTEx file> -t <targetdir>"
     echo ""
-    echo " This script was written to prepare input file for the 15x burden testing."
+    echo " This script was written to prepare input file for the burden testing pipeline."
     echo ""
     echo ""
     echo "Version: ${script_version}, Last modified: ${last_modified}"
@@ -48,20 +52,20 @@ function usage {
     echo "  liftOver in path"
     echo "  hg19ToHg38.over.chain chain file in script dir"
     echo "  bedtools in path"
+    echo "  downloaded GTEx datafile with the single eQTLs (eg. GTEx_Analysis_V6_eQTLs.tar.gz)"
     echo ""
     echo ""
     echo "Workflow:"
-    echo "  1: Downloads newest GENCODE release."
-    echo "  2: V84. Ensembl Regulation release."
+    echo "  1: Downloads v25 GENCODE release."
+    echo "  2: Downloads V84 Ensembl Regulation release."
     echo "  3: Downloads newest APPRIS release"
-    echo "  4: Downloads GTEx release hardcoded... "
-    echo "  5: Adds Appris annotation to Gencode transcripts."
-    echo "  6: Creates cell-specific regulatory features."
-    echo "  7: Lifts over GTEx coordinates to GRCh38."
-    echo "  8: Links regulatory features to genes based on GTEx data."
-    echo "  9: Links regulatory features to genes based on overlapping."
-    echo "  10: Combined GENCODE, GTEx and Overlap data together into a single bedfile."
-    echo "  11: Tabix output, cleaning up."
+    echo "  4: Adds Appris annotation to Gencode transcripts."
+    echo "  5: Creates cell-specific regulatory features."
+    echo "  6: Lifts over GTEx coordinates to GRCh38."
+    echo "  7: Links regulatory features to genes based on GTEx data."
+    echo "  8: Links regulatory features to genes based on overlapping."
+    echo "  9: Combined GENCODE, GTEx and Overlap data together into a single bedfile."
+    echo "  10: Tabix output, cleaning up."
     echo ""
     echo ""
     echo "The output is a bed file, where the first 4 columns are the chromosome, start/end
@@ -69,9 +73,9 @@ coordinates and the stable ID of the gene respectively. The 5th column is a json
 formatted string describing one genomic region associated to the given gene. This
 line contains all information of the association."
     echo ""
-    echo "Tags:"
+    echo "JSON tags:"
     echo "  -source: from which source the given region is coming from (GENCODE, GTEx, Overlap)."
-    echo "  -class: class of the given region (eg. exon, promoter etc.)"
+    echo "  -class: class of the given feature (eg. exon, CDS, gene, enhancer, promoter etc.)"
     echo "  -chr, start, end: GRCh38 coordintes of the feature."
     echo "  -other sources contain information about the evidence. (linked rsID, tissue in
     which the feature in active etc.)"
@@ -130,37 +134,39 @@ function info {
 }
 
 # Printing help message if no parameters are given:
-[ -z $1 ] && { usage; }
+if [[ $# == 0 ]]; then usage; fi
 
-## Steps:
-# 1. First parameter is the target directory. Temporarily holds all source files.
-# 2. Download GENCODE file.
-# 3. Download Ensembl regulation file.
-# 4. Donwload GTEx file.
-# 5. Download APPRIS data.
-# 5. Check if all downloads were successfull. If yes, proceed.
-# 6. Process GENCODE file.
-# 8. Process regulation files.
-# 9. Process GTEx file
-# 10. Liftover GTEx file.
-# 11. Pull everything together.
-# 12. Test if everything went well.
+# Processing command line options:
+OPTIND=1
+while getopts "G:t:h" optname; do
+    case "$optname" in
+        "G" ) GTExFile="${OPTARG}" ;;
+        "t" ) targetDir="${OPTARG}" ;;
+        "h" ) usage ;;
+        "?" ) usage ;;
+        *) usage ;;
+    esac;
+done
 
-##
-## Step 1. Checking target directory:
-##
-
-targetDir=$1
+# Checking the provided working directory:
 if [[  ! -d "${targetDir}" ]]; then
     echo "[Error] The provided directory does not exists: $targetDir"
     exit 1
-fi
-
 # Checking if the defined working directory is writable:
-if [[ ! -w "${targetDir}" ]]; then
+elif [[ ! -w "${targetDir}" ]]; then
     echo "[Error] The provided working directory is not writable: ${targetDir}"
     exit 1
 fi
+
+# Checking if GTEx file exists:
+if [[ -z "${GTExFile}" ]]; then
+    echo "[Error] The compressed GTEx file is needed! eg. GTEx_Analysis_V6_eQTLs.tar.gz"
+    exit 1
+elif [[ ! -e "${GTExFile}" ]]; then
+    echo "[Error] The provided GTEx file (${GTExFile}) does not exist."
+    exit 1
+fi
+
 
 # Checking required commands:
 checkCommand tabix
@@ -175,14 +181,8 @@ today=$(date "+%Y.%m.%d")
 info "Current date: ${today}\n"
 info "Working directory: ${targetDir}/${today}\n\n"
 
-##
-## Step 2. Downloading GENCODE file (newest version, GRCh38 build)
-##
-
 # Get the most recent version of the data:
 mkdir -p ${targetDir}/${today}/GENCODE
-GENCODE_release=$(curl -s  ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/ | \
-        grep release | perl -lane 'push @a, $1 if $_ =~/release_(\d+)/; END {@a = sort {$a <=> $b} @a; print pop @a} ')
 info "Downloading GENCODE annotation from http://www.gencodegenes.org/. Release version: ${GENCODE_release}... "
 wget -q ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz \
         -O ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
@@ -195,27 +195,9 @@ testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.g
 genes=$(zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | awk '$3 == "gene"' | wc -l )
 info "Total number of genes in the GENCODE file: ${genes}\n\n"
 
-##
-## Step 3. Downloading Ensembl Regulation (GRCh38 build)
-##          These lines should be reviewed and adjusted if other version of Ensembl release
-##          is being used!
-##
-
 # prepare target directory:
 mkdir -p ${targetDir}/${today}/EnsemblRegulation
 info "Downloading cell specific regulatory features from Ensembl.\n"
-
-# Get the number of the most recent Ensembl version:
-# Ensembl_release=$(curl -s  ftp://ftp.ensembl.org/pub/ | \
-#       grep release | perl -lane 'push @a, $1 if $_ =~/release-(\d+)/; END {@a = sort {$a <=> $b} @a; print pop @a} ')
-Ensembl_release=84 # The Ensembl release version is hardcoded
-echo "[Warning] Ensembl regulatory release version is hardcoded! Version: v.${Ensembl_release}"
-# If the most recent release is not accessible, we use the previous one:
-#accessTest=$(curl -s ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/ | perl -lane 'print $_ ? 1 : 0' | head -n1)
-#if [[ ${accessTest} != 1 ]]; then
-#    Ensembl_release=`expr ${Ensembl_release} - 1`
-#fi
-#info "Ensembl release: ${Ensembl_release}.\n"
 
 # Get list of all cell types:
 cells=$(curl -s ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/ \
@@ -247,28 +229,7 @@ echo "Done."
 cellTypeCount=$(ls -la ${targetDir}/${today}/EnsemblRegulation/*gff.gz | wc -l)
 info "Number of cell types downloaded: ${cellTypeCount}.\n\n"
 
-##
-## Step 4. Download GTEx data:
-##
-
-mkdir -p ${targetDir}/${today}/GTEx
-GTExRelease="V6"
-info "Downloading GTEx data.\n"
-info "GTEX data version: ${GTExRelease} dbGaP Accession phs000424.v6.p1.\n"
-echo -e "[Warning] GTEx version is hardcoded! Please check if this is the most recent!\n"
-
-wget -q http://www.gtexportal.org/static/datasets/gtex_analysis_v6/single_tissue_eqtl_data/GTEx_Analysis_${GTExRelease}_eQTLs.tar.gz \
-    -O ${targetDir}/${today}/GTEx/GTEx_Analysis_${GTExRelease}_eQTLs.tar.gz
-
-# Testing if the file was downloaded or not:
-testFile "${targetDir}/${today}/GTEx/GTEx_Analysis_V6_eQTLs.tar.gz"
-
-info "Download complete.\n\n"
-
-##
-## Step 5. Downloading APPRIS data
-##
-
+# Downloading APPRIS data:
 mkdir -p ${targetDir}/${today}/APPRIS
 info "Downloading APPRIS isoform data.\n"
 info "Download from the current release folder. Build: GRCh38, for GENCODE version: 24\n"
@@ -280,10 +241,7 @@ testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
 
 info "Download complete.\n\n"
 
-
-##
-## Step 6. Combining APPRIS and GENCODE data
-##
+## Combining APPRIS and GENCODE data
 info "Combining APPRIS and GENCODE data.. "
 mkdir -p ${targetDir}/${today}/processed
 export APPRIS_FILE=${targetDir}/${today}/APPRIS/appris_data.principal.txt
@@ -400,7 +358,7 @@ info "Number of cell specific regulatory features: $cellSpecFeatLines\n\n"
 # This step takes around 7 minutes.
 info "Mapping GTEx variants to GRCh38 build.\n"
 info "Creating temporary bed file (~9 minutes)... "
-zcat ${targetDir}/${today}/GTEx/GTEx_Analysis_${GTExRelease}_eQTLs.tar.gz  | perl -F"\t" -lane '
+zcat ${GTExFile}  | perl -F"\t" -lane '
         if ($_ =~ /snpgenes/){
             ($tissue) = $_ =~ /([A-Z]+.+)_Analysis.snpgenes/;
             next;

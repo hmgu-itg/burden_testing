@@ -12,10 +12,10 @@ The following programs have to be in the path:
 
 * [liftOver](https://genome.sph.umich.edu/wiki/LiftOver)
 * [MONSTER](https://www.stat.uchicago.edu/~mcpeek/software/MONSTER/)
-* [tabix](http://www.htslib.org/doc/tabix.html)
+* [bgzip/tabix](http://www.htslib.org/doc/tabix.html)
 * [bedtools](http://bedtools.readthedocs.io/en/latest/)
 
-The following items should be installed/downloaded:
+The following items should be available:
 
 * [bigWigTools](https://genome.ucsc.edu/goldenpath/help/bigWig.html)
 * [Linsight genome-wide scores](http://compgen.cshl.edu/~yihuang/LINSIGHT/)
@@ -35,19 +35,15 @@ The filtering of variants partially based on the annotation found in the vcf fil
 
 This file contains information which genomic regions can be linked to a gene. Eg: a gene is linked to its exons, CDs, transcript and also the regulatory features that overlap with the gene plus other regulatory features that overlap with variants that are known eQTLs of the gene (based on GTEx data). The following script takes all these information and combines it together using various sources: [GENCODE](http://www.gencodegenes.org/), [APPRIS](http://appris.bioinfo.cnio.es/#/), [Ensembl regulation](http://uswest.ensembl.org/info/genome/funcgen/index.html), [GTEx](gtexportal.org). Except GTEx, the data is accessed directly from the web, but the GTEx data has to be downloaded by the user and point to it when calling the script.
 
-**Requirements for this scrip:** bgzip, tabix, bedtools, liftOver.
-
 **Usage:** `./prepare_regions.sh -G <path to GTEx file> -o <Output folder>`
 
 **For more information:** `./prepare_regions.sh -h`
 
-``
-
 ### Generating the Phred-scaled Eigen scores:
 
-...
+... completing soon...
 
 ### Adjusting the config file used by the pipeline:
 
-Update the location of the score files, linked feature file, path to bigWigTools etc. in the config.txt file. The script checks the existence of these files, and if the test fails, the script exits.
+Update the location of the score files, linked feature file, path to bigWigTools etc. in the config.txt file. The script checks the existence of these files, and if a test fails, the script exits.
 
