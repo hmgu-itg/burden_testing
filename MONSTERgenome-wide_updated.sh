@@ -53,6 +53,7 @@ export signifThreshold=1e-5 # By default the hit threshold is 1e-5
 export keep_temp="No" # By default we are not keeping temporary files:
 export chunkCount=1 # By default we process all genes at one chunk.
 export chunkNo=1 # By default we are processing the first chunk.
+export MAF=0.05 # By default this is the upper minor allele frequency.
 if [[ $LSB_JOBINDEX > 0 ]]; then chunkNo=$LSB_JOBINDEX; fi # If jobindex is available, we set that as chunk number, it might be overridden by -c
 
 # --- print out help message and exit:

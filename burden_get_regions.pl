@@ -106,7 +106,7 @@ GetOptions(
 # Open config file:
 my %ConfFiles = %{&read_param($configFileName)};
 
-our $geneBedFile      = $ConfFiles{geneBedFile};
+our $geneBedFile      = $ConfFiles{Linked_features};
 our $liftoverPath     = $ConfFiles{liftoverPath};
 our $EigenPath        = $ConfFiles{EigenPath};
 our $caddPath         = $ConfFiles{caddPath};
@@ -673,7 +673,7 @@ sub liftover {
     }
 
     # Liftover query:
-    my $liftover_query = sprintf("%s %s %s/hg38ToHg19.over.chain.gz %s_GRCh37.bed %s_unmapped.bed  2> /dev/null", $liftoverPath, $tempFileName, $scriptdir, $gene_name, $gene_name);
+    my $liftover_query = sprintf("%s %s %s/hg38ToHg19.over.chain %s_GRCh37.bed %s_unmapped.bed  2> /dev/null", $liftoverPath, $tempFileName, $scriptdir, $gene_name, $gene_name);
 
     # Calling liftover:
     `bash -O extglob -c \'$liftover_query\'`;

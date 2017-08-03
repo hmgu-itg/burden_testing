@@ -1,43 +1,53 @@
-# Rare-variant burden testing
+# Mummy (the wrapped MONSTER)
 
-A collection a scripts to run a gene-based genome-wide burden tests using MONSTER v1.2 (released on June 26, 2015). For more information about MONSTER see: [website](http://www.stat.uchicago.edu/~mcpeek/software/MONSTER/) and the [publication](http://onlinelibrary.wiley.com/doi/10.1002/gepi.21775/abstract) of the McPeak group.
+A pipeline to run genome-wide burdent tests using [MONSTER](http://www.stat.uchicago.edu/~mcpeek/software/MONSTER/) (v1.3 released on December 17, 2016). MONSTER ( (Minimum P-value Optimized Nuisance parameter Score Test Extended to Relatives) is a method for detecting association between a set of rare variants and a quantitative trait in samples that contain related individuals. MONSTER is based on a mixed-effects model that includes additive and environmental components of variance and adjustment for covariates. It can handle essentially arbitrary combinations of related and unrelated individuals, including small outbred pedigrees and unrelated individuals, as well as large, complex inbred pedigrees (Duo Jiang and Mary Sara McPeek, [DOI: 10.1002/gepi.21775](http://onlinelibrary.wiley.com/doi/10.1002/gepi.21775/full)).
 
-
-This robust and highly customizable pipeline allows users to define which variants should be included in the association test based on the overlapping genomic feature (eg. GENCODE annotation, if the annotation belongs to a canoncial transcript, overlap with associated regulatory feature etc.), variant feature (MAF threshold, missingness threshold) and adds custom weights (CADD, phred-scaled CADD, Eigen, phred-scaled Eigen, GWAVA).
+Mummy robust and highly customizable pipeline that allows users to define which variants should be included in the association test based on the overlapping genomic feature (eg. GENCODE annotation, if the annotation belongs to a canoncial transcript, overlap with associated regulatory feature etc.), variant feature (MAF threshold, missingness threshold) and adds custom weights (CADD, phred-scaled CADD, Eigen, phred-scaled Eigen or Linsight scores).
 
 <b>WARNING: This pipeline is designed for GRCh38!!</b>
 
-### Prepartion
+## Requirements
 
-Before starting the runs, an annotation file is generated that allows the precise selection of genomic features.
+The following programs have to be in the path:
 
-__Usage:__
-```bash
-./prepare_regions.sh <target directory>
-```
-This file is created based on various sources
+* [liftOver](https://genome.sph.umich.edu/wiki/LiftOver)
+* [MONSTER](https://www.stat.uchicago.edu/~mcpeek/software/MONSTER/)
+* [tabix](http://www.htslib.org/doc/tabix.html)
+* [bedtools](http://bedtools.readthedocs.io/en/latest/)
 
-As an initial step, an annotation file is generated based on which we can select regions of interest in we consider overlapping variants. The annotation is gene based: the output [bed](http://www.ensembl.org/info/website/upload/bed.html) file has the coordinates of the genes, the 5th column contains the JSON formatted annotation of all possible associated features for that gene. These associated regions can be GENCODE features (transcripts, exons etc. of the given gene), or associated Ensembl regulatory features. A regulatory feautre is considered to be associated with a gene if
+The following items should be installed/downloaded:
 
-* it overlaps with the gene.
-* a variant overlaps with the regualtory feature that has been found to be an eQTL of that gene in the GTEx databse.
+* [bigWigTools](https://genome.ucsc.edu/goldenpath/help/bigWig.html)
+* [Linsight genome-wide scores](http://compgen.cshl.edu/~yihuang/LINSIGHT/)
+* [CADD genome-wide scores](http://cadd.gs.washington.edu/)
+* [Eigen scores computed genome-wide](http://www.columbia.edu/~ii2135/eigen.html) (The downloaded Eigen scores have to be processed... see details below)
+* linked features file (preparation of the file is detailed below.)
 
-(The annotation has further information that allows fine selection of the features.)
+The filtering of variants partially based on the annotation found in the vcf files. The following INFO fields have to be present:
 
-<b>usage:</b> *./prepare_regions.sh \<target directory\>*
+* **consequence** - the most severe [consequence](http://www.ensembl.org/info/genome/variation/predicted_data.html) assigned to the variant based on Ensembl [VEP](http://www.ensembl.org/info/docs/tools/vep/index.html)
+* **lof** - [loftee](https://github.com/konradjk/loftee) loss-of-function annotation (HC and LC for the high confidence and low confidence variants respectively)
+* **AN**, **AC** and **AF** for filtering for allele frequency and missingness.
 
-<b>Requirements:</b>
+## Setting up the pipeline:
 
-* [liftOver](http://genome.sph.umich.edu/wiki/LiftOver), [bedtools](http://bedtools.readthedocs.io/en/latest/content/installation.html), [bgzip and tabix](http://www.htslib.org/doc/tabix.html) in path
-* [Chainfile](http://hgdownload.cse.ucsc.edu/goldenpath/hg19/liftOver/) to lift over from hg18 to hg38 stored in the script dir.
+### Generating linked features file:
 
-### Parsing the output file
+This file contains information which genomic regions can be linked to a gene. Eg: a gene is linked to its exons, CDs, transcript and also the regulatory features that overlap with the gene plus other regulatory features that overlap with variants that are known eQTLs of the gene (based on GTEx data). The following script takes all these information and combines it together using various sources: [GENCODE](http://www.gencodegenes.org/), [APPRIS](http://appris.bioinfo.cnio.es/#/), [Ensembl regulation](http://uswest.ensembl.org/info/genome/funcgen/index.html), [GTEx](gtexportal.org). Except GTEx, the data is accessed directly from the web, but the GTEx data has to be downloaded by the user and point to it when calling the script.
 
-The 5th column of the *bed* file contains the annotation in a regularly formatted [JSON](https://en.wikipedia.org/wiki/JSON) string. In this section the stored information is explained. Each feature has a *source* key describing from which source a given feature is linked to the gene. The containing information depend on the source tag.
+**Requirements for this scrip:** bgzip, tabix, bedtools, liftOver.
 
+**Usage:** `./prepare_regions.sh -G <path to GTEx file> -o <Output folder>`
 
-<b>Features Sources:</b>
+**For more information:** `./prepare_regions.sh -h`
 
-* <b>GENCODE</b>: the region is a GENCODE feature of the gene, based on the "class" it could be exon/gene/transcript etc. The "appris" tag tells if the feature belongs to a principal transcript or not. The "chr", "start" and "end" tags give the GRCh38 coordinates of the feature.
-* <b>GTEx</b>: This is an Ensembl regulatory feature (Ensembl stabil ID is stored in the "regulatory_ID" tag). The "class" tag tells if it is an enhancer, promoter or something else. "Tissues" tag lists all the cell types and tissues in which the regulatory feature was found to be active. This regulatory region overlaps with a variant that was found to be an eQTL for this gene in the [GTEx](gtexportal.org/home/) database. The eQTLs are listed in the "GTEx_rsIDs". The list of tissues in which the eQTL was found is kept in "GTEx_tissues".
-* <b>Overlap</b>:  This is also an Ensembl regulatory feature that overlaps with the gene. The "class" tag tells if it is an enhancer, promoter or something else. "Tissues" tag lists all the cell types and tissues in which the regulatory feature was found to be active.
+``
+
+### Generating the Phred-scaled Eigen scores:
+
+...
+
+### Adjusting the config file used by the pipeline:
+
+The location of the score files, linked feature file, path to bigWigTools etc. 
+

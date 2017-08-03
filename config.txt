@@ -1,7 +1,7 @@
 ##
 ## This file contains all source files used by burden_get_regions_v2.1pl script
 ##
-## Last modified: 2016.09.10 - updated region file.
+## Last modified: 2017.08.03 - updated region file.
 ##
 ## Format:
 #### 1. Start comment lines with #
@@ -9,16 +9,12 @@
 ##
 ##
 ## The order of the entries does not matter.
-## The list can be further extended, but the Perl script has to be adjusted.
-##
+## The list can be further extended, also the Perl script has to be adjusted to.
+## acceppt and use the newly added items.
 ##
 
 ## This file contains coordinates of the gene related genomic features and annotation:
-geneBedFile=/lustre/scratch113/projects/helic/ds26/project_burden/2016.10.10/Linked_features.bed.gz
-
-## 15x vcf files and dir, it has to be updated if a new release was generated:
-vcfFile=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/release/postrelease_missingnessfilter/%s.missingfiltered-0.01_consequences.lof.vcf.gz
-vcfDir=/lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/release/postrelease_missingnessfilter/
+Linked_features=/lustre/scratch113/projects/helic/ds26/project_burden/2016.10.10/Linked_features.bed.gz
 
 ## To get CADD/Eigen/GERP scores, we have to lift over the coordinates. Path to liftover:
 liftoverPath=/nfs/users/nfs_d/ds26/bin/liftOver
@@ -31,9 +27,6 @@ EigenPath=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/eigen.p
 
 ## Path to CADD scores:
 caddPath=/lustre/scratch114/resources/cadd_scores/20150729-v1.3/whole_genome_SNVs_inclAnno.tsv.gz
-
-## Path to workig installation of GWAVA:
-GWAVA_DIR=/lustre/scratch113/teams/zeggini/users/ds26/GWAVA/gwava_release
 
 ## Path to bigWigTools to extract linsight scores:
 bigWigTools=/nfs/team144/software/bigWigTools
