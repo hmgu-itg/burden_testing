@@ -426,8 +426,7 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
     if [[ ! ${genoLines[0]} -ge 0 ]]; then
         failed "${gene} has failed, genotype file is empty. Gene skipped."
         continue
-    fi
-    if [[ ! -e ${gene}_output_variants ]]; then
+    elif [[ ! -e ${gene}_output_variants ]]; then
         failed "${gene} has failed, phenotype file was not generated. Gene skipped."
         continue
     fi
@@ -437,17 +436,19 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
     
     # The sample IDs also have to be mapped to numbers, so a mapping file has to be created when the first gene of the chunk is created:
     if [[ ! -e ${workingDir}/gene_set.${chunkNo}/sample_mapping.sed ]]; then
-        cat <(head -n1 ${gene}_output_genotype | tr "\t" "\n") \
+        cat <(head -n1 ${gene}_output_genotype | tr "\t" "\n" | tail -n+2) \
             <(tail -n+2  ${phenotypeFile} | cut -f1) \
             | sort -u | awk '{printf "s/%s/%s/g\n", $1, NR}' > ${workingDir}/gene_set.${chunkNo}/sample_mapping.sed
     fi
     
     # The IDs have to be adjusted, and the non-alphanumeric characters are also removed:
-    sed -f ${workingDir}/gene_set.${chunkNo}/sample_mapping.sed ${gene}_output_genotype | perl -lane '$F[0] =~ s/[^0-9a-z]//gi; print join "\t", @F'  > genotype.mod.txt
+    sed -f ${workingDir}/gene_set.${chunkNo}/sample_mapping.sed ${gene}_output_genotype | \
+        perl -lane '$F[0] =~ s/[^0-9a-z]//gi; print join "\t", @F'  > genotype.mod.txt
 
     # Preparing phenotype file
-    sed -f ${workingDir}/gene_set.${chunkNo}/sample_mapping.sed  ${phenotypeFile} | perl -lane 'next if $. == 1; next unless $_ =~ /^\d+/;
-        printf "1\t%s\t0\t0\t%s\t%s\t%s\n", $F[0], $F[1], $F[3]' > pheno.mod.txt # Adding sex as coveriate
+    sed -f ${workingDir}/gene_set.${chunkNo}/sample_mapping.sed ${phenotypeFile} | \
+        perl -lane 'next if $. == 1; next unless $_ =~ /^\d+/;
+            printf "1\t%s\t0\t0\t0\t%s\t%s\t%s\n", $F[0], $F[1], $F[3]' > pheno.mod.txt
 
     # Adjusting the order of the phenotype file according to the samples in the genotype file:
     head -n1 genotype.mod.txt | tr "\t" "\n" | tail -n+2 | perl -lane 'BEGIN {open $pf, "< pheno.mod.txt";
@@ -459,8 +460,8 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
                    <(head -n1 genotype.mod.txt | tr "\t" "\n" | tail -n+2))
 
     # cuting out the samples from genotype file:
-    head -n1 genotype.mod.txt | tr "\t" "\n" | perl -lane 'BEGIN {foreach $s ( split /\s/, $ENV{"samples"}){$h{$s} = 1;}}{
-        push @a, $. unless exists $h{$F[0]}} END{$s = sprintf("cut -f%s genotype.mod.txt > genotype.mod.filtered.txt",join(",", @a));`$s`}'
+    head -n1 genotype.mod.txt | tr "\t" "\n" | perl -lane 'BEGIN {foreach $s ( split /\s/, $ENV{"samples"}){
+        $h{$s} = 1;}}{push @a, $. unless exists $h{$F[0]}}END{$s = sprintf("cut -f%s genotype.mod.txt > genotype.mod.filtered.txt",join(",", @a));`$s`}'
 
     export samples=$( cat pheno.mod.ordered.txt | cut -f2 )
     LC_ALL=C cat ${kinshipFile} | perl -lane 'BEGIN{foreach $s ( split /\s/, $ENV{"samples"}){$h{$s} = 1;}
