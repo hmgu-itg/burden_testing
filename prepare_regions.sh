@@ -1,26 +1,32 @@
 #!/usr/local/bin/bash
 
 ## Description:
-# Creating a gene based genome annotation file based on various sources that
-# contain gene-linked regulatory features as well. The link between the regulatory
-# feature and the gene is made based on simple overlap between regulatory feat and
+# Creating a gene based genome annotation file using information from various sources,
+# that allows linking regulatory features to genes. The link between the regulatory
+# feature and the gene is based on simple overlap between regulatory features and
 # the gene, or a regulatory feature is considered to be associated with a gene
 # if the regulatory feature overlaps with a variant that has been found to be
 # and eQTL for the gene in the GTEx dataset.
-# The resulting file is also contains information if the
 
-# we are maintaining for burden testing. This file relies on a series of online sources:
+# The resulting file is also contains information if the given transcript, or exon, CDS
+# belong to a principal or minor transcript based on APPRIS annotation.
+
+# This script relies on a series of online sources:
 ## 1. Gencode
 ## 2. Ensembl Regulation
-## 3. GTEx
-## 4. Appris
-##
+## 3. Appris
+
+# The GTEx eQTL data should be specified uing the -G switch.
+
+# For reproductibility, both the GENCODE and the Ensembl versions are hardcoded.
+
+# Requirements: tabix, bgzip, bedtools in the path.
 
 ##
-## Warning: this version was modified for regressing to the older (V84) Ensembl release:
+## Warning: this version intentionally use the older (V84) Ensembl release:
 #### The V85 ensembl release contained a faulty regulatory build, which although was rich in
 #### cell types, the number of features were much fewer, there were only promoters and
-#### enhancers annotated as active. After a discussion with the Ensembl team we decided
+#### enhancers were annotated as active. After a discussion with the Ensembl team we decided
 #### to regress to V84. To use a newer version, the script has to be adjusted
 #### as data format of subsequent releases are quite different.
 

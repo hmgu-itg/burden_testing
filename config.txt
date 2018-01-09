@@ -19,9 +19,6 @@ Linked_features=/lustre/scratch113/projects/helic/ds26/project_burden/2016.10.10
 ## To get CADD/Eigen/GERP scores, we have to lift over the coordinates. Path to liftover:
 liftoverPath=/nfs/users/nfs_d/ds26/bin/liftOver
 
-## This is where the temporary bedfile will be generated:
-temporaryBedFile=./%s_GRCh38.bed
-
 ## Path to Eigen scores (in this release coding and non-coding variants are located in separate files):
 EigenPath=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/eigen.phred_v2.dat
 
