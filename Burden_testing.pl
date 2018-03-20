@@ -66,7 +66,7 @@ my ($inputFile, $outputFile, $help);
 GetOptions(
     # Which build are we using?
     'build=s' => \$parameters->{"build"},
-    
+
     # Input/Output:
     'input=s' => \$inputFile,
     'output=s' => \$outputFile,
@@ -156,22 +156,22 @@ open (my $SNPinfo, ">", $outputFile."_SNPinfo_file.txt") or die "[Error] Output 
 my $gene_count = 0;
 while ( my $ID = <$INPUT> ){
     chomp $ID;
-    
+
     # At first we have to extract all the associated genomic coordinates for the gene.
     my ($chr, $start, $end, $stable_ID, $name, $CollapsedBed);
-    
+
     # If the input is not a region a few extra steps will be taken:
     unless ($ID =~ /chr(\d+)_(\d+)-(\d+)/i){
         ($chr, $start, $end, $stable_ID, $name) = $GENCODE_data->GetCoordinates($ID);
-    
+
         # Skipping genes that were not found in the GENCODE dataset.
         if ($start eq "NA") {
             print "[Warning] Gene $ID was not found in the GENCODE data. Is it a valid gene name? This gene will be skipped! [NO_GENE]\n";
             next;
         }
-    
+
         print "\n\n[Info] Queried gene: $name (Ensembl ID: $stable_ID), Genomic location: chr$chr:$start-$end (Input: $ID)\n";
-        
+
         my $bedlines = &BedToolsQuery($chr, $start, $end, $stable_ID, $parameters->{"Linked_features"});
         $CollapsedBed = &FilterLines($bedlines, $stable_ID, $parameters);
 
@@ -181,7 +181,7 @@ while ( my $ID = <$INPUT> ){
             next;
         }
     }
-    
+
     # If the submitted input is a genomic region, we have to do something else:
     else {
         ($chr, $start, $end) = $ID =~ /(chr\d+)_(\d+)-(\d+)/i;
@@ -192,7 +192,7 @@ while ( my $ID = <$INPUT> ){
 
     # Once we have the genomic regions, the overlapping variants have to be extracted:
     my $variants = &GetVariants($CollapsedBed, $parameters->{"vcfFile"});
-    
+
     # Filtering variants based on the provided parameters:
     my ($hash, $genotypes) = &processVar($variants, $parameters);
     # printf STDERR "%s\t%s\t%s\n", $gene_count, total_size($hash)/1024, total_size($AddScore)/1024; # Debug line.
@@ -211,25 +211,25 @@ while ( my $ID = <$INPUT> ){
         undef $genotypes;
         next;
     }
-    
+
     # If we want we can add scores:
     $hash = $AddScore->AddScore($hash) if $parameters->{"score"} ne "NA";
-    
+
     if ($parameters->{"score"} ne "NA" && scalar keys %{$hash} <1){
 		print "[Warning] Gene $ID is skipped as no variants remaining post-scoring [NO_VAR_REMAIN].\n";
 	}
-    
+
     # We don't save anything unless there at least two variants:
     next unless scalar keys %{$hash} > 1;
-    
+
     # Once we have the scores we have to print out the SNP file:
     &print_SNPlist($hash, $ID, $SNPfile);
-    
+
     &print_SNP_info($hash, $ID, $SNPinfo, $gene_count, $parameters->{"build"});
     &print_genotypes($genotypes, $genotypeFile, $parameters, $gene_count);
-    
+
     $gene_count ++; # So the header will only printed out once.
-    
+
     # Some diagnostic functionality:
     #print Dumper $hash;  # Look at the snp container
     #print; # Memory usage of the main variables
@@ -243,14 +243,14 @@ close $SNPinfo;
 
 sub check_parameters {
     my $parameters = shift;
-    
+
     # checking build:
     die "[Error] Only GRCh37 and GRCh38 genome builds are supported (--build 37 or 38)." unless $parameters->{"build"} eq "37" || $parameters->{"build"} eq "38";
-    
+
     # Checking MAF (a float below 1):
-    
+
     # Checking MAC (a number):
-    
+
     # Checking missingness (a float below 1):
 }
 
@@ -347,7 +347,7 @@ sub readConfigFile {
 sub parseGENCODE {
     my %AcceptedFeatures = ( "gene" => 1, "exon" => 1, "transcript" => 1, "CDS" => 1, "UTR" => 1);
     my $parameters = $_[0];
-    
+
     foreach my $feature (split(",", $parameters->{"input"}->{"GENCODE"})){
 
         # Checking if the provided feature is exists or not:
@@ -365,7 +365,7 @@ sub parseRegulation {
     my %AcceptedFeatures = ( "promoter" => 1, "CTCF" => 1, "enhancer" => 1, "promoterFlank" => 1, "openChrom" => 1, "TF_bind" => 1, "allreg" => 1 );
     my $parameters = $_[0];
     my @reg_class = ("GTEx", "overlap");
-    
+
     foreach my $class (@reg_class){
         next unless exists $parameters->{"input"}->{$class};
         my %hash = ();
@@ -375,20 +375,20 @@ sub parseRegulation {
                 printf STDERR "[Error] The provided regulatory feature name is not supported: %s. Use these: %s\n", $feature, join(", ", keys %AcceptedFeatures);
                 next;
             }
-            
+
             $hash{'TF_binding_site'}   = 1 if "TF_bind" eq $feature;
             $hash{'CTCF_binding_site'} = 1 if "CTCF" eq $feature;
             $hash{'enhancer'}          = 1 if "enhancer" eq $feature;
             $hash{'Open chromatin'}    = 1 if "openChrom" eq $feature;
             $hash{'promoter'}          = 1 if "promoter" eq $feature;
             $hash{'allreg'}            = 1 if "allreg" eq $feature;
-            $hash{'promoter_flanking_region'} = 1 if "promoterFlank" eq $feature;            
-            
-            
+            $hash{'promoter_flanking_region'} = 1 if "promoterFlank" eq $feature;
+
+
         }
         $parameters->{$class} = \%hash;
     }
-    
+
     return $parameters;
 }
 
@@ -408,7 +408,7 @@ sub print_parameters {
     print "\tOnly severe variants will be included in the test.\n" if $parameters->{"lof"};
     print "\tOnly loss-of-function variants will be included in the test (loftee HC and LC).\n" if $parameters->{"loftee"};
     print "\tOnly high-confidence loss-of-function variants will be included in the test (loftee HC).\n" if $parameters->{"lofteeHC"};
-    
+
     print "\n[Info] Variant weighting:\n";
     printf "\tWeigthing method: %s\n", $parameters->{"score"};
     if ($parameters->{"score"} ne "NA"){
@@ -416,7 +416,7 @@ sub print_parameters {
         printf "\tScore floor applied: %s\n", $parameters->{"floor"};
         printf "\tScore shifted by: %s\n", $parameters->{"shift"};
     }
-    
+
 
 }
 
@@ -468,10 +468,10 @@ sub GetVariants {
 }
 sub FilterLines {
     my ($lines, $stable_ID, $parameters) = @_;
-    
+
     my @output_lines = ();
     my %hash = ();
-    
+
     # The following hashes read from the parameter set:
     my %GENCODE = exists $parameters->{"GENCODE"} ? %{$parameters->{"GENCODE"}} : ();
     my %GTEx = exists $parameters->{"GTEx"} ? %{$parameters->{"GTEx"}} : ();
@@ -546,7 +546,7 @@ sub FilterLines {
     }
     `sort -k1,1 -k2,2n filtered_regions.bed | sponge filtered_regions.bed`;
     close $tempbed;
-    
+
     # Collapsing overlapping features:
     my $queryString = "mergeBed -i filtered_regions.bed";
     my $merged = `bash -O extglob -c \'$queryString\'`;
@@ -556,15 +556,15 @@ sub FilterLines {
 sub processVar {
     my $variants   = $_[0]; # List of all overlapping variants
     my $parameters = $_[1]; # All the submitted parameters to filter variants.
-    
+
     my %hash = (); # SNP info container.
     my %genotypeContainer = (); # genotype information container.
 
     # Which build are we using?
     my $build = "GRCh".$parameters->{"build"};
-    
+
     print "[Info] Filtering variants:\n" if $verbose;
-    
+
     my @total_vars = split("\n", $variants);
     printf "[Info] Total number of overlapping variants: %s\n", scalar(@total_vars) if $verbose;
 
@@ -579,16 +579,16 @@ sub processVar {
         # Generating variant name (Sometimes the long allele names cause problems):
         my $short_a1 = length $a1 > 5 ? substr($a1,0,4) : $a1;
         my $short_a2 = length $a2 > 5 ? substr($a2,0,4) : $a2;
-        
+
         my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $short_a1, $short_a2);
 
         # Parsing info field for relevant information:
         (my $ac )= $info =~ /AC=(.+?)(;|\b)/;
         (my $an )= $info =~ /AN=(.+?)(;|\b)/;
-        (my $consequence )= $info =~ /consequence=(.+?)(;|\b)/;
+        (my $consequence ) = $info =~ /consequence=(.+?)(;|\b)/;
         # If AN and AC values are not found we skip the variant:
         next unless $an && $ac;
-        
+
         # We add NA if consequence was not found:
         $consequence = "NA" unless $consequence;
 
@@ -614,10 +614,10 @@ sub processVar {
 
         my $MAC = $ac;
         $MAC = $an - $ac if $MAC > $an / 2;
-        
+
         # Looking at the memory usage:
         # print STDERR total_size(\%hash), "\n";
-        
+
         # We don't consider indels if weights are used:
         if (( length($a2) > 1 or length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
             print  "[Warning] $SNPID will be omitted because indel! ($a1/$a2).\n";
@@ -638,17 +638,22 @@ sub processVar {
             printf "[Warning] $SNPID will be omitted because of low minor allele count ($ac, cutoff: %s).\n", $parameters->{'MAC'};
             next;
         }
-        # If loss of function variants are required, we skipp althose variants that are not LOf:
+        # If loss of function variants are required, we skip all those variants that are not LoF:
         if ( $parameters->{"lof"} && ! exists $parameters->{"lof_cons"}->{$consequence} ) {
             printf "[Warning] $SNPID will be omitted because of consequence is not lof (%s).\n", $consequence;
             next;
         }
+        # If loftee or lofteeHC are enabled, the script exits if no LoF_conf tag is present in the info field.
+        if (( $parameters->{"lofteeHC"} or $parameters->{"loftee"}) and $info !~ /LoF_conf/ ){
+            die "[Error] Based on the provided parameters, variant selection based on the loftee prediction was requested.\n\tHowever the provided vcf file does not contain the obligatory LoF_conf tag.\nExiting.";
+        }
+
         # If loftee is enabled, only low and high-confidence loss-of-function variants will be selected:
         if ( $parameters->{"loftee"} && $info =~ /LoF_conf\=-/ ) {
             printf "[Warning] $SNPID will be omitted because it is not a high- or low-confidence loss of function variant.\n";
             next;
         }
-        
+
         # If lofteeHC is enabled, only high-confidence loss-of-function variants will be selected:
         if ( $parameters->{"lofteeHC"} && $info !~ /LoF_conf\=HC/ ) {
             printf "[Warning] $SNPID will be omitted because it is not a high- confidence loss of function variant.\n";
@@ -710,20 +715,20 @@ sub print_SNPlist {
 }
 
 sub print_genotypes {
-    
+
     my %genotype      = %{$_[0]};
     my $outputhandler = $_[1];
     my $parameters    = $_[2];
     my $gene_counter  = $_[3];
-    
+
     my $vcfChrFile = $parameters->{"vcfFile"};
     $vcfChrFile =~ s/\%/11/g;
-    
+
     # Checking if the file exists or not:
     if (! -e $vcfChrFile ){
         print STDERR "[Error] The vcf file does not exists. $vcfChrFile\n";
     }
-    
+
     # Assembling header for the first gene:
     if ( $gene_counter == 0){
         # Get list of sample IDs:
@@ -746,14 +751,14 @@ sub print_SNP_info {
 
     # Extract variant names:
     my @variants = keys %hash;
-    
+
     # Assembling header for the first gene:
     if ( $gene_counter == 0){
         my $header = "Gene_name\tSNPID(GRCh${build})\trsID\tAlleles\tconsequences\tMAF\tAC\tmissigness";
         $header .= "\tScore" if exists $hash{$variants[0]}{"score"};
         print $outfilehandle $header,"\n";
     }
-    
+
     # printing out info for each gene and variant:
     foreach my $variant (values %hash){
 
