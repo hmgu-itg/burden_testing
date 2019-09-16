@@ -37,8 +37,8 @@ script_version=3.0
 last_modified=2019.09.16
 
 ## Built in versions:
-GENCODE_release=25
-Ensembl_release=84 
+GENCODE_release=31
+Ensembl_release=97 
 
 # Get script dir:
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -62,8 +62,8 @@ function usage {
     echo ""
     echo ""
     echo "Workflow:"
-    echo "  1: Downloads v25 GENCODE release."
-    echo "  2: Downloads V84 Ensembl Regulation release."
+    echo "  1: Downloads v31 GENCODE release."
+    echo "  2: Downloads V97 Ensembl Regulation release."
     echo "  3: Downloads newest APPRIS release"
     echo "  4: Adds Appris annotation to Gencode transcripts."
     echo "  5: Creates cell-specific regulatory features."
@@ -113,7 +113,7 @@ function checkCommand {
 }
 
 # We also run a test to check if the number of lines of a temporary file is zero or not.
-# If it is zero, the script exits, because it indicates there were some problem.
+# If it is zero, the script exits, because it indicates there were some problems.
 function testFileLines {
 
     # Check if file is zipped:
@@ -166,7 +166,7 @@ fi
 
 # Checking if GTEx file exists:
 if [[ -z "${GTExFile}" ]]; then
-    echo "[Error] The compressed GTEx file is needed! eg. GTEx_Analysis_V6_eQTLs.tar.gz"
+    echo "[Error] The compressed GTEx file is needed! eg. GTEx_Analysis_V8_eQTLs.tar.gz"
     exit 1
 elif [[ ! -e "${GTExFile}" ]]; then
     echo "[Error] The provided GTEx file (${GTExFile}) does not exist."
