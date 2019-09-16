@@ -31,10 +31,10 @@
 #### as data format of subsequent releases are quite different.
 
 ##
-## Date: 2017.08.03 by Daniel Suveges. ds26@sanger.ac.uk
+## Date: 2019.09.16 by Andrei Barysenka. andrei.barysenka@helmholtz-muenchen.de
 ##
-script_version=2.0
-last_modified=2017.08.03
+script_version=3.0
+last_modified=2019.09.16
 
 ## Built in versions:
 GENCODE_release=25
