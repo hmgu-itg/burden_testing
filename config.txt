@@ -17,7 +17,7 @@
 Linked_features=/lustre/scratch113/projects/helic/ds26/project_burden/2016.10.10/Linked_features.bed.gz
 
 ## To get CADD/Eigen/GERP scores, we have to lift over the coordinates. Path to liftover:
-liftoverPath=/nfs/users/nfs_d/ds26/bin/liftOver
+liftoverPath=/usr/local/bin/liftOver
 
 ## Path to Eigen scores (in this release coding and non-coding variants are located in separate files):
 EigenPath=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/eigen.phred_v2.dat
@@ -26,7 +26,7 @@ EigenPath=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/eigen.p
 caddPath=/lustre/scratch114/resources/cadd_scores/20150729-v1.3/whole_genome_SNVs_inclAnno.tsv.gz
 
 ## Path to bigWigTools to extract linsight scores:
-bigWigTools=/nfs/team144/software/bigWigTools
+bigWigTools=/usr/local/bin/BigWig-Tools
 
 ## Path to linsight file:
 Linsight=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/LINSIGHT/LINSIGHT.bw
