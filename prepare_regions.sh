@@ -328,7 +328,7 @@ for cell in ${CellTypes}; do
                 ($ID) = $_ =~ /regulatory_feature_stable_id=(ENSR\d+)/;
                 ($bstart) = $F[8] =~ /bound_start=(.+?);/;
                 ($bend) = $F[8] =~ /bound_end=(.+?);/;
-                print join "\t", $cell_type, $F[0], $start, $end, $ID, $type, $bstart, $bend;'
+                print join "\t", $cell_type, $F[0], $start-1, $end, $ID, $type, $bstart, $bend;' # $start - 1 as bed is 0-based
 # Now combining these lines in a fashion that each line will contain all active tissues:
 done | perl -F"\t" -lane '
     $x =shift @F;
