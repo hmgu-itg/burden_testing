@@ -39,6 +39,7 @@ last_modified=2019.09.16
 ## Built in versions:
 GENCODE_release=32
 Ensembl_release=97 
+GTExRelease=8
 
 # Get script dir:
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -578,7 +579,7 @@ info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} g
 # Backing up intermedier files:
 tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file   ${targetDir}/${today}/APPRIS  \
     ${targetDir}/${today}/EnsemblRegulation  ${targetDir}/${today}/failed  ${targetDir}/${today}/GENCODE  \
-    ${targetDir}/${today}/GTEx  ${targetDir}/${today}/processed
+    ${targetDir}/${today}/processed
 
 info "Intermedier files are backed in in ${targetDir}/${today}/${today}_annotation.backup.tar.gz\n" 
 
