@@ -216,17 +216,13 @@ if [ -z "${cells}" ]; then
     exit 1
 fi
 
-# Download all cell types:
+#Download all cell types:
 for cell in ${cells}; do
     echo -n "."
-#    echo $cell
-    # Download all cell type:
     wget -q ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz \
         -O ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
 
-    # Testing if the file is exists or not:
     testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
-
 done
 echo "Done."
 
@@ -234,7 +230,7 @@ echo "Done."
 cellTypeCount=$(ls -la ${targetDir}/${today}/EnsemblRegulation/*gff.gz | wc -l)
 info "Number of cell types downloaded: ${cellTypeCount}.\n\n"
 
-# Downloading APPRIS data:
+#Downloading APPRIS data:
 mkdir -p ${targetDir}/${today}/APPRIS
 info "Downloading APPRIS isoform data.\n"
 info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
@@ -246,7 +242,7 @@ testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
 
 info "Download complete.\n\n"
 
-## Combining APPRIS and GENCODE data
+#Combining APPRIS and GENCODE data
 info "Combining APPRIS and GENCODE data.. "
 mkdir -p ${targetDir}/${today}/processed
 export APPRIS_FILE=${targetDir}/${today}/APPRIS/appris_data.principal.txt
@@ -361,58 +357,76 @@ info "Number of cell specific regulatory features: $cellSpecFeatLines\n\n"
 
 # Instead of the single step we can generate a bedfile and run liftover
 # This step takes around 7 minutes.
-info "Mapping GTEx variants to GRCh38 build.\n"
-info "Creating temporary bed file (~9 minutes)... "
-zcat ${GTExFile}  | perl -F"\t" -lane '
-        if ($_ =~ /snpgenes/){
-            ($tissue) = $_ =~ /([A-Z]+.+)_Analysis.snpgenes/;
-            next;
-        }
-        ($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);
-        ($gene) = $F[1] =~ /(ENS.+)\./;
-        $rsID = $F[22];
+# info "Mapping GTEx variants to GRCh38 build.\n"
+# info "Creating temporary bed file (~9 minutes)... "
+# zcat ${GTExFile}  | perl -F"\t" -lane '
+#         if ($_ =~ /snpgenes/){
+#             ($tissue) = $_ =~ /([A-Z]+.+)_Analysis.snpgenes/;
+#             next;
+#         }
+#         ($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);
+#         ($gene) = $F[1] =~ /(ENS.+)\./;
+#         $rsID = $F[22];
 
-        $h{$rsID}{chr}= $chr;
-        $h{$rsID}{pos}= $pos;
-        push( @{$h{$rsID}{genes}{$gene}}, $tissue ) if $tissue;
+#         $h{$rsID}{chr}= $chr;
+#         $h{$rsID}{pos}= $pos;
+#         push( @{$h{$rsID}{genes}{$gene}}, $tissue ) if $tissue;
 
-        END {
-            foreach $rsID ( keys %h){
-                $chr = $h{$rsID}{chr};
-                $pos = $h{$rsID}{pos};
+#         END {
+#             foreach $rsID ( keys %h){
+#                 $chr = $h{$rsID}{chr};
+#                 $pos = $h{$rsID}{pos};
 
-                foreach $gene ( keys %{$h{$rsID}{genes}}){
-                    $tissues = join "|", @{$h{$rsID}{genes}{$gene}};
+#                 foreach $gene ( keys %{$h{$rsID}{genes}}){
+#                     $tissues = join "|", @{$h{$rsID}{genes}{$gene}};
 
-                    # Reporting problem if something comes upon:
+#                     # Reporting problem if something comes upon:
 
-                    printf "chr$chr\t%s\t$pos\tgene=$gene;rsID=$rsID;tissue=$tissues\n", $pos - 1 if $chr and $pos;
-                }
-            }
-        }
-    '  | sort -k1,1 -k2,2n > ${targetDir}/${today}/processed/GTEx_temp.bed
+#                     printf "chr$chr\t%s\t$pos\tgene=$gene;rsID=$rsID;tissue=$tissues\n", $pos - 1 if $chr and $pos;
+#                 }
+#             }
+#         }
+#     '  | sort -k1,1 -k2,2n > ${targetDir}/${today}/processed/GTEx_temp.bed
 
-# Testing if output file has lines:
-testFileLines ${targetDir}/${today}/processed/GTEx_temp.bed
+# # Testing if output file has lines:
+# testFileLines ${targetDir}/${today}/processed/GTEx_temp.bed
+
+# echo "Done."
+
+# info "Running liftOver (~2 minutes).... "
+# liftOver ${targetDir}/${today}/processed/GTEx_temp.bed ${scriptDir}/hg19ToHg38.over.chain \
+#     ${targetDir}/${today}/processed/GTEx_temp_GRCh38.bed \
+#     ${targetDir}/${today}/processed/GTEx_temp_failed_to_map.bed
+# echo "Done."
+
+# # Generate report:
+# failedMap=$(wc -l ${targetDir}/${today}/processed/GTEx_temp_failed_to_map.bed | awk '{print $1}')
+# Mapped=$(wc -l ${targetDir}/${today}/processed/GTEx_temp_GRCh38.bed | awk '{print $1}')
+# info "Successfully mapped GTEx variants: ${Mapped}, failed variants: ${failedMap}.\n\n"
+
+##
+## Step 8. Combine individual files from GTEx tar.gz file into one BED file
+##
+
+tmpGTEx=${targetDir}/${today}/processed/GTEx_tmp.bed
+info "Creating GTEx bed file ... "
+listOfGTExFiles=$(tar -ztf ${GTExFile} | grep "signif_variant")
+for f in ${listOfGTExFiles};do
+    g=$(basename ${f})
+    tissue=$(echo ${g}|perl -lne '$x="NA";if (/(.*)\.v8/){$x=$1;} print $x;')
+    export tissue
+    tar -zxf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENS.+)\./;$tissue=$ENV{tissue};$,="\t";print $tissue,$chr,$pos,$F[0],$gene;'
+done > ${tmpGTEx}
+
+cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$pos=$F[2];$ID=$F[3];$gene=$F[4];$H{$ID}{chr}=$chr;$H{$ID}{pos}=$pos;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$pos=$H{$id}{pos};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};printf "$chr\t%s\t$pos\tgene=$gene;rsID=$id;tissue=$tissues\n", $pos - 1;}}}' | sort -k1,1 -k2,2 > ${targetDir}/${today}/processed/GTEx.bed
 
 echo "Done."
-
-info "Running liftOver (~2 minutes).... "
-liftOver ${targetDir}/${today}/processed/GTEx_temp.bed ${scriptDir}/hg19ToHg38.over.chain \
-    ${targetDir}/${today}/processed/GTEx_temp_GRCh38.bed \
-    ${targetDir}/${today}/processed/GTEx_temp_failed_to_map.bed
-echo "Done."
-
-# Generate report:
-failedMap=$(wc -l ${targetDir}/${today}/processed/GTEx_temp_failed_to_map.bed | awk '{print $1}')
-Mapped=$(wc -l ${targetDir}/${today}/processed/GTEx_temp_GRCh38.bed | awk '{print $1}')
-info "Successfully mapped GTEx variants: ${Mapped}, failed variants: ${failedMap}.\n\n"
 
 ##
 ## Step 9. Using intersectbed. Find overlap between GTEx variations and regulatory regions
 ##
 info "Linking genes to regulatory features using GTEx data... "
-intersectBed -wb -a ${targetDir}/${today}/processed/GTEx_temp_GRCh38.bed -b ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz \
+intersectBed -wb -a ${targetDir}/${today}/processed/GTEx.bed -b ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz \
     | perl -MData::Dumper -MJSON -F"\t" -lane '
         # Name of the source is GTEx
         $source= "GTEx";
