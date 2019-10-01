@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#!/bin/bash
 
 ## Description:
 # Creating a gene based genome annotation file using information from various sources,
@@ -37,7 +37,7 @@ script_version=3.0
 last_modified=2019.09.16
 
 ## Built in versions:
-GENCODE_release=31
+GENCODE_release=32
 Ensembl_release=97 
 
 # Get script dir:
@@ -62,7 +62,7 @@ function usage {
     echo ""
     echo ""
     echo "Workflow:"
-    echo "  1: Downloads v31 GENCODE release."
+    echo "  1: Downloads v32 GENCODE release."
     echo "  2: Downloads V97 Ensembl Regulation release."
     echo "  3: Downloads newest APPRIS release"
     echo "  4: Adds Appris annotation to Gencode transcripts."
@@ -189,8 +189,8 @@ info "Working directory: ${targetDir}/${today}\n\n"
 
 # Get the most recent version of the data:
 mkdir -p ${targetDir}/${today}/GENCODE
-info "Downloading GENCODE annotation from http://www.gencodegenes.org/. Release version: ${GENCODE_release}... "
-wget -q ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz \
+info "Downloading GENCODE annotation from ftp://ftp.ebi.ac.uk/. Release version: ${GENCODE_release}... "
+wget -q ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz \
         -O ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 echo -e "done."
 
@@ -198,7 +198,7 @@ echo -e "done."
 testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
 
 # Counting genes in the dataset:
-genes=$(zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | awk '$3 == "gene"' | wc -l )
+genes=$(zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | awk 'BEGIN{FS="\t";}$3 == "gene"{print $3;}' | wc -l )
 info "Total number of genes in the GENCODE file: ${genes}\n\n"
 
 # prepare target directory:
@@ -206,14 +206,12 @@ mkdir -p ${targetDir}/${today}/EnsemblRegulation
 info "Downloading cell specific regulatory features from Ensembl.\n"
 
 # Get list of all cell types:
-cells=$(curl -s ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/ \
-          | grep gff.gz \
-          | perl -lane 'print $F[-1]')
+cells=$(curl -s ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/ | perl -lane 'print $F[-1]')
 
 # If there are no cell types present in the downloaded set, it means there were some problems. We are exiting.
 if [ -z "${cells}" ]; then
     echo "[Error] No cell types were found in the Ensembl regulation folder."
-    echo "[Error] URL: ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/regulatory_features/"
+    echo "[Error] URL: ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/regulatory_features/RegulatoryFeatureActivity/"
     echo "Exiting."
     exit 1
 fi
@@ -221,12 +219,13 @@ fi
 # Download all cell types:
 for cell in ${cells}; do
     echo -n "."
+#    echo $cell
     # Download all cell type:
-    wget -q ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/${cell} \
-        -O ${targetDir}/${today}/EnsemblRegulation/${cell}
+    wget -q ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz \
+        -O ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
 
     # Testing if the file is exists or not:
-    testFile "${targetDir}/${today}/EnsemblRegulation/${cell}"
+    testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
 
 done
 echo "Done."
@@ -238,7 +237,7 @@ info "Number of cell types downloaded: ${cellTypeCount}.\n\n"
 # Downloading APPRIS data:
 mkdir -p ${targetDir}/${today}/APPRIS
 info "Downloading APPRIS isoform data.\n"
-info "Download from the current release folder. Build: GRCh38, for GENCODE version: 24\n"
+info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
 wget -q http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
     -O ${targetDir}/${today}/APPRIS/appris_data.principal.txt
 
@@ -315,18 +314,18 @@ info "Number of Appris annotated GENCODE annotations: ${appris_lines}\n\n"
 ## Step 7. Pre-processing cell specific regulatory data
 ##
 info "Aggregate cell specific information of regulatory features... "
-CellTypes=$( ls -la ${targetDir}/${today}/EnsemblRegulation/ | perl -lane 'print $1 if  $F[-1] =~ /RegulatoryFeatures_(.+).gff.gz/ ' )
+#CellTypes=$( ls -la ${targetDir}/${today}/EnsemblRegulation/ | perl -lane 'print $1 if  $F[-1] =~ /RegulatoryFeatures_(.+).gff.gz/ ' )
+CellTypes=$( ls -la ${targetDir}/${today}/EnsemblRegulation/ | perl -lane 'print $1 if  $F[-1] =~ /(.+).gff.gz/ ' )
 for cell in ${CellTypes}; do
     export cell
     # parsing cell specific files (At this point we only consider active features. Although repressed regions might also be informative.):
-    zcat ${targetDir}/${today}/EnsemblRegulation/RegulatoryFeatures_${cell}.gff.gz | grep -i "=active" \
-        | perl -F"\t" -lane '$F[0] =~ s/^chr//;
-                next unless length($F[0]) < 3; # We skip irregular chromosome names.
+    zcat ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | grep -i "activity=active" \
+        | perl -F"\t" -lane 'next unless length($F[0]) < 3; # We skip irregular chromosome names.
                 $cell_type = $ENV{cell};
                 $start = $F[3];
                 $type = $F[2];
                 $end = $F[4];
-                ($ID) = $_ =~ /ID=(ENSR\d+)/;
+                ($ID) = $_ =~ /regulatory_feature_stable_id=(ENSR\d+)/;
                 ($bstart) = $F[8] =~ /bound_start=(.+?);/;
                 ($bend) = $F[8] =~ /bound_end=(.+?);/;
                 print join "\t", $cell_type, $F[0], $start, $end, $ID, $type, $bstart, $bend;'
