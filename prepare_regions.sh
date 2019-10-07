@@ -271,7 +271,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
                         ($exonID) = $F[8] =~ /(ENSE.+?)\./ ? $F[8] =~ /(ENSE.+?)\./ : "NA";
 
                         $appris = "NA";
-                        # Check if the given feature is belong to an annotated feature:
+                        # Check if current feature is belong to an annotated feature:
                         if( exists $h{$geneID} && $transcriptID ne "NA" ){
                             if (exists $h{$geneID}{$transcriptID}){
                                 $appris = $h{$geneID}{$transcriptID};
@@ -422,6 +422,7 @@ done > ${tmpGTEx}
 cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$pos=$F[2];$ID=$F[3];$gene=$F[4];$H{$ID}{chr}=$chr;$H{$ID}{pos}=$pos;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$pos=$H{$id}{pos};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};printf "$chr\t%s\t$pos\tgene=$gene;rsID=$id;tissue=$tissues\n", $pos - 1;}}}' | sort -k1,1 -k2,2 > ${targetDir}/${today}/processed/GTEx.bed
 
 echo "Done."
+#rm -f ${tmpGTEx}
 
 ##
 ## Step 9. Using intersectbed. Find overlap between GTEx variations and regulatory regions
@@ -434,7 +435,7 @@ intersectBed -wb -a ${targetDir}/${today}/processed/GTEx.bed -b ${targetDir}/${t
 
         # Parsing input:
         ($gene) = $F[3] =~ /gene=(ENSG.+?);/;
-        ($G_rsID) = $F[3] =~ /rsID=(rs.+?);/;
+        ($G_rsID) = $F[3] =~ /rsID=(.+?);/;
         ($G_tissues) = $F[3] =~ /tissue=(.+)/;
         $E_chr = $F[4];
         $E_start = $F[5];
@@ -557,7 +558,7 @@ cat <(echo -e "# Regions file for burden testing. Created: ${today}
 #
 # GENCODE version: v.${GENCODE_release}
 # Ensembl version: v.${Ensembl_release}
-# GTEx version: ${GTExRelease}
+# GTEx version: v.${GTExRelease}
 #
 # CHR\tSTART\tEND\tGENEID\tANNOTATION" ) ${targetDir}/${today}/Linked_features.bed | sponge ${targetDir}/${today}/Linked_features.bed
 
@@ -576,12 +577,12 @@ FailedGenes=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /(ENSG\d+)/;
 FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":"(.+?)"/; print $1' | sort | uniq | tr "\n" ", " )
 info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sournces: ${FailedSources}\n\n"
 
-# Backing up intermedier files:
+# Backing up intermediate files:
 tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file   ${targetDir}/${today}/APPRIS  \
     ${targetDir}/${today}/EnsemblRegulation  ${targetDir}/${today}/failed  ${targetDir}/${today}/GENCODE  \
     ${targetDir}/${today}/processed
 
-info "Intermedier files are backed in in ${targetDir}/${today}/${today}_annotation.backup.tar.gz\n" 
+info "Intermediate files are backed in in ${targetDir}/${today}/${today}_annotation.backup.tar.gz\n" 
 
 # Exit.
 info "Program finished.\n"
