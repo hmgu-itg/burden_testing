@@ -238,7 +238,7 @@ info "Download from the current release folder. Build: GRCh38, for GENCODE versi
 wget -q http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
     -O ${targetDir}/${today}/APPRIS/appris_data.principal.txt
 
-# Testing if the file is exists or not:
+# Testing if the file exists or not:
 testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
 
 info "Download complete.\n\n"
@@ -271,7 +271,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
                         ($exonID) = $F[8] =~ /(ENSE.+?)\./ ? $F[8] =~ /(ENSE.+?)\./ : "NA";
 
                         $appris = "NA";
-                        # Check if current feature is belong to an annotated feature:
+                        # Check if current feature belongs to an APPRIS annotated feature:
                         if( exists $h{$geneID} && $transcriptID ne "NA" ){
                             if (exists $h{$geneID}{$transcriptID}){
                                 $appris = $h{$geneID}{$transcriptID};

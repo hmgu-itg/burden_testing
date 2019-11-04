@@ -7,7 +7,7 @@ package Scoring;
 # Initialize:
 #
 # use Scoring;
-# my $Soring = Scoring->new(\%ConfFiles, $parameters);
+# my $Scoring = Scoring->new(\%ConfFiles, $parameters);
 
 # Adding scores:
 # $hash = $Scoring->AddScore($hash);
@@ -22,7 +22,7 @@ sub new {
     my $self = {};
     bless( $self, $class );
     
-    # Storing all the inportant data:
+    # Storing all the important data:
     $self->{"score"} = $parameters->{"score"};
     $self->{"shift"} = $parameters->{"shift"};
     $self->{"cutoff"} = $parameters->{"cutoff"};

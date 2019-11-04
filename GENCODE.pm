@@ -22,6 +22,7 @@ sub new {
     
     bless( $self, $class );
     
+    # TODO: remove hardcoded names
     
     my $GENCODE_filename = sprintf("%s/gencode_genes_V25_GRCh%s.tsv.gz", $parameters->{"scriptDir"}, $parameters->{"build"});
     $self->_initialize($GENCODE_filename);
@@ -40,6 +41,9 @@ sub _initialize {
     open(my $FILE, "zcat $gencodeFile | ");
     while (my $line = <$FILE>) {
         next if $line =~ /^#/;
+	
+	# TODO: skip empty lines
+	
         chomp $line;
         my ($chr, $start, $end, $name, $ID) = split("\t", $line);
         $chr =~ s/^chr//i;
@@ -62,6 +66,8 @@ sub GetCoordinates {
     my $ID = shift;
     my ($chr, $start, $end, $stable_ID, $name) = ('NA') x 5;
 
+# TODO: just IDs ?
+    
     # If Stable ID is given:
     if ( exists $self->{"gene_names"}->{$ID} ) {
         $chr        = $self->{"gene_names"}->{$ID}->{chr};

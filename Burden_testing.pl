@@ -92,7 +92,7 @@ GetOptions(
     # specifying config file:
     'configFile=s' => \$parameters->{"configFileName"},
 
-    # Which score we need:
+    # Which score do we need:
     'score=s' => \$parameters->{"score"},
 
     # Do we need only loss of function:
@@ -196,7 +196,7 @@ while ( my $ID = <$INPUT> ){
     # Filtering variants based on the provided parameters:
     my ($hash, $genotypes) = &processVar($variants, $parameters);
     # printf STDERR "%s\t%s\t%s\n", $gene_count, total_size($hash)/1024, total_size($AddScore)/1024; # Debug line.
-    # The gene will be skipped if there are not suitable variations left:
+    # Gene will be skipped if there are no suitable variations left:
     if (scalar keys %{$hash} < 2){
         print "[Warning] Gene $ID is skipped as not enough variants left to test [NOT_ENOUGH_VAR].\n";
         undef $hash;
@@ -423,7 +423,9 @@ sub print_parameters {
 sub BedToolsQuery {
     my ($chr, $start, $end, $stable_ID, $geneBedFile) = @_;
     my $queryString = sprintf("intersectBed -wb -a <(echo -e \"chr%s\\t%s\\t%s\\t%s\") -b %s -sorted | cut -f9-",
-                                $chr, $start, $end, $stable_ID, $geneBedFile, $stable_ID);
+			      $chr, $start, $end, $stable_ID, $geneBedFile, $stable_ID);
+    #TODO: remove last stable_ID
+    
     print "[Info] IntersectBed query string: $queryString\n" if $verbose;
     my $query = `bash -O extglob -c \'$queryString\'`;
     return $query;
