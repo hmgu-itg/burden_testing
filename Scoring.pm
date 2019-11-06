@@ -12,6 +12,9 @@ package Scoring;
 # Adding scores:
 # $hash = $Scoring->AddScore($hash);
 
+# ASSUMING ALL SCORES ARE 37 BASED
+# TODO: REMOVE TEMP FILES
+
 use strict;
 use warnings;
 use Data::Dumper;
@@ -32,10 +35,10 @@ sub new {
     $self->{"scriptDir"} = $parameters->{"scriptDir"};
     
     # Storing paths:
-    $self->{"liftoverPath"} = $parameters->{"liftoverPath"};
+#    $self->{"liftoverPath"} = $parameters->{"liftoverPath"};
     $self->{"EigenPath"} = $parameters->{"EigenPath"};
     $self->{"caddPath"} = $parameters->{"caddPath"};
-    $self->{"bigWigTools"} = $parameters->{"bigWigTools"};
+#    $self->{"bigWigTools"} = $parameters->{"bigWigTools"};
     $self->{"Linsight"} = $parameters->{"Linsight"};
     
     print Dumper $self;
@@ -219,7 +222,7 @@ sub _get_Eigen_Score {
     return \%hash
 }
 
-# liftOver from 38 to 37
+# liftOver variant coordinates from 38 to 37
 sub _liftover {
     my $self = $_[0];
     my %hash = %{$_[1]};
@@ -235,7 +238,7 @@ sub _liftover {
     }
 
     # Liftover query:
-    my $liftover_query = sprintf("%s %s %s/hg38ToHg19.over.chain temp_GRCh37.bed temp_unmapped.bed  2> /dev/null", $self->{"liftoverPath"}, $tempFileName, $self->{"scriptDir"});
+    my $liftover_query = sprintf("liftOver %s %s/hg38ToHg19.over.chain temp_GRCh37.bed temp_unmapped.bed  2> /dev/null", $tempFileName, $self->{"scriptDir"});
     
     # Calling liftover:
     `bash -O extglob -c \'$liftover_query\'`;
@@ -298,13 +301,12 @@ sub _get_linsight {
     my $self = $_[0];
     my %hash = %{$_[1]};
 
-    # just sayin'
     print  "[Info] Adding Linsight scores for variants.\n" if $self->{"verbose"};
 
     # Calling BigWig tools to get the scores:
     #./bigWigAverageOverBed /lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/LINSIGHT/LINSIGHT.bw APOC3_GRCh37.bed  out.tab
     my $linsightOut = "temp_GRCh37_linsight.tab";
-    my $bigwigQuery = sprintf("%s/bigWigAverageOverBed %s temp_GRCh37.bed %s", $self->{"bigWigTools"}, $self->{"Linsight"}, $linsightOut);
+    my $bigwigQuery = sprintf("bigWigAverageOverBed %s temp_GRCh37.bed %s", $self->{"Linsight"}, $linsightOut);
     print $bigwigQuery,"\n" if $self->{"verbose"};
     `$bigwigQuery`;
 

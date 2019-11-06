@@ -24,7 +24,7 @@ sub new {
     
     # TODO: remove hardcoded names
     
-    my $GENCODE_filename = sprintf("%s/gencode_genes_V25_GRCh%s.tsv.gz", $parameters->{"scriptDir"}, $parameters->{"build"});
+    my $GENCODE_filename = $parameters->{"gencode_file"};
     $self->_initialize($GENCODE_filename);
     return $self;
 }

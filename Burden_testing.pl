@@ -7,7 +7,7 @@ use JSON;
 use DateTime;
 use File::Basename;
 use Getopt::Long qw(GetOptions);
-use Data::Types
+use Data::Types;
 
 # For debugging:
 use Devel::Size qw(total_size);
@@ -20,10 +20,19 @@ our $scriptDir = dirname(__FILE__);
 
 use lib dirname(__FILE__);
 
+$\="\n";
+
+##-----------------------------------------------------------------------------------------------------------
+#                                   ASSUMING ALL SCORES ARE 37 BASED
+# TODO: --tempdir, save it in $parameters
+#
+##-----------------------------------------------------------------------------------------------------------
+
+
 # Loading custom modules:
 use GENCODE;
 use Scoring;
-use GetVariant;
+#use GetVariant;
 
 # Status report:
 print "[Info] Script version: $version\n";
@@ -33,7 +42,7 @@ printf "\n[Info] The script was called with the following parameters:\n%s\n\n", 
 # In the new version, all the parameters will be stored in a hash reference:
 my $parameters = {
     "scriptDir" => $scriptDir,
-    "build"   => "NA",
+    "build"   => "38", # !!! HARDCODED BUILD !!!
     "extend"  => 0, # Basepairs with which the GENCODE features will be extended.
     "MAF"     => 0.05, # The upper threshold of the minor allel frequency.
     "MAC"     => 0, # The lower threshold of the minor allele count.
@@ -65,8 +74,7 @@ my ($inputFile, $outputFile, $help);
 
 # Parsing command line options:
 GetOptions(
-    # Which build are we using?
-    'build=s' => \$parameters->{"build"},
+    #'build=s' => \$parameters->{"build"},
 
     # Input/Output:
     'input=s' => \$inputFile,
@@ -80,6 +88,9 @@ GetOptions(
     # Extending regions with a defined length:
     'extend=s' => \$parameters->{"extend"},
 
+    # GENCODE file
+    'gencode-file=s' => \$parameters->{"gencode_file"},
+    
     # Skipping minor transcripts by APPRIS:
     'SkipMinor' => \$parameters->{"minor"},
 
@@ -110,13 +121,13 @@ GetOptions(
     'floor=s'  => \$parameters->{"floor"},  # How do we want to floor Eigen values:
 
     # vcf File:
-    'vcfFile=s' => \$parameters->{"vcfFile"}, # In the updated version, the vcf file is no longer read from the config file.
+    'vcfFile=s' => \$parameters->{"vcfFile"},
 
     # Asking for help:
     'help|h' => \$help
 );
 
-if ($help){
+if ($help || !defined($inputFile) || !defined($outputFile) || !defined($parameters->{"vcfFile"}) || !defined($parameters->{"gencode_file"})){
     &usage();
     exit(1);
 }
@@ -198,7 +209,7 @@ while ( my $ID = <$INPUT> ){
     }
 
     # Once we have the genomic regions, the overlapping variants have to be extracted:
-    my $variants = &GetVariants($CollapsedBed, $parameters->{"vcfFile"});
+    my $variants = &getVariants($CollapsedBed, $parameters->{"vcfFile"});
 
     # Filtering variants based on the provided parameters:
     my ($hash, $genotypes) = &processVar($variants, $parameters);
@@ -256,18 +267,20 @@ sub check_parameters {
     die "[Error] Only GRCh37 and GRCh38 genome builds are supported (--build 37 or 38)." unless $parameters->{"build"} eq "37" || $parameters->{"build"} eq "38";
 
     # Checking MAF (a float below 1):
-    die "[Error] ".$parameters->{"MAF"}." must be a float number < 1" unless is_float($parameters->{"MAF"}) && $parameters->{"MAF"}<1
+    my $maf=$parameters->{"MAF"};
+    die "[Error] $maf must be a float number < 1" unless defined($maf) && is_float($maf) && $maf<1;
 
     # Checking MAC (a number):
-    die "[Error] ".$parameters->{"MAC"}." must be an integer number > 0" unless is_int($parameters->{"MAC"}) && $parameters->{"MAC"}>0
+    my $mac=$parameters->{"MAC"};
+    die "[Error] $mac must be an integer number > 0" unless defined($mac) && is_int($mac) && $mac>0;
 
     # Checking missingness (a float below 1):
-    die "[Error] ".$parameters->{"missingthreshold"}." must be a float number < 1" unless is_float($parameters->{"missingthreshold"}) && $parameters->{"missingthreshold"}<1
-
+    my $miss=$parameters->{"missingthreshold"};
+    die "[Error] $miss must be a float number < 1" unless defined($miss) && is_float($miss) && $miss<1;
 }
 
 sub check_scores {
-    my $parameters = $_[0];
+    my $params = $_[0];
 
     # Check if the specified score is a valid, supported score:
     my %acceptedScores = ("CADD" => 1,
@@ -279,70 +292,67 @@ sub check_scores {
                       "Mixed" => 1);
 
     # Let's report if the specified score is not supported:
-    unless (exists $acceptedScores{$parameters->{"score"}}){
+    unless (exists $acceptedScores{$params->{"score"}}){
         print "[Info] Supported weighting options: ", join(", ", keys %acceptedScores), "\n";
-        printf "[Warning] The specified score (%s) is currently not supported.\n", $parameters->{"score"};
+        printf "[Warning] The specified score (%s) is currently not supported.\n", $params->{"score"};
         print "[Warning] No weighting will be applied.\n";
-        $parameters->{"score"} = "NA";
-        return $parameters;
+        $params->{"score"} = "NA";
+        return $params;
     }
     # Now, let's check if the requirements of the specified weighting methods are satisified.
-    if ($parameters->{"score"} eq "CADD" ){
-        if( ! exists $parameters->{"caddPath"}){
+    if ($params->{"score"} eq "CADD" ){
+        if( ! exists $params->{"caddPath"}){
             print "[Warning] The config file has not entry for 'caddPath', pointing to the genome-wide CADD scores.\n";
             print "[Warning] CADD scores as weight cannot be used. No weights will be applied.\n";
-            $parameters->{"score"} = "NA";
-            return $parameters;
+            $params->{"score"} = "NA";
+            return $params;
         }
-        elsif (! -e $parameters->{"caddPath"}){
-            printf "[Warning] The specified genome-wide CADD scores are not available %s.\n", $parameters->{"caddPath"};
+        elsif (! -e $params->{"caddPath"}){
+            printf "[Warning] The specified genome-wide CADD scores are not available %s.\n", $params->{"caddPath"};
             print "[Warning] CADD scores as weight cannot be used. No weights will be applied.\n";
-            $parameters->{"score"} = "NA";
-            return $parameters;
+            $params->{"score"} = "NA";
+            return $params;
         }
     }
-    elsif ($parameters->{"score"} =~ /eigen/i){
-        if (! exists $parameters->{"EigenPath"} ) {
+    elsif ($params->{"score"} =~ /eigen/i){
+        if (! exists $params->{"EigenPath"} ) {
             print "[Warning] The config file has not entry for 'EigenPath', pointing to the genome-wide Eigen scores.\n";
             print "[Warning] Eigen scores as weight cannot be used. No weights will be applied.\n";
-            $parameters->{"score"} = "NA";
-            return $parameters;
+            $params->{"score"} = "NA";
+            return $params;
         }
-        elsif (! -e $parameters->{"EigenPath"}){
-            printf "[Warning] The specified genome-wide Eigen scores are not available %s.\n", $parameters->{"EigenPath"};
+        elsif (! -e $params->{"EigenPath"}){
+            printf "[Warning] The specified genome-wide Eigen scores are not available %s.\n", $params->{"EigenPath"};
             print "[Warning] Eigen scores as weight cannot be used. No weights will be applied.\n";
-            $parameters->{"score"} = "NA";
-            return $parameters;
+            $params->{"score"} = "NA";
+            return $params;
         }
 
     }
-    elsif ( $parameters->{"score"} eq "Linsight"){
-        if (! exists $parameters->{"bigWigTools"} ||
-            ! exists $parameters->{"Linsight"}) {
-            print "[Warning] To use linsight scores the config file has to have 'bigWigTools' and 'Linsight' entries.\n";
+    elsif ( $params->{"score"} eq "Linsight"){
+        if (! exists $params->{"Linsight"}) {
+            print "[Warning] To use linsight scores the config file has to have 'Linsight' entry.\n";
             print "[Warning] No weights will be applied.\n";
-            $parameters->{"score"} = "NA";
-            return $parameters;
+            $params->{"score"} = "NA";
+            return $params;
         }
-        elsif ( ! -e $parameters->{"bigWigTools"} ||
-            ! -e $parameters->{"Linsight"}){
-            printf "[Warning] The specified bigWigTools directory or the genome-wide linsight scores don't exist.\n";
+        elsif ( ! -e $params->{"Linsight"}){
             print "[Warning] Linsight scores as weight cannot be used. No weights will be applied.\n";
-            $parameters->{"score"} = "NA";
-            return $parameters;
+            $params->{"score"} = "NA";
+            return $params;
         }
     }
-    return $parameters;
+    return $params;
 }
 
 
 sub readConfigFile {
-    my $parameters = $_[0];
+    my $params = $_[0];
 
-    printf "[Info] Config file: %s\n", $parameters->{"configFileName"};
+    printf "[Info] Config file: %s\n", $params->{"configFileName"};
 
     # Reading file:
-    open(my $CONF, "<", $parameters->{"configFileName"}) or die "[Error] Config file could not be oppended. Exiting.\n";
+    open(my $CONF, "<", $params->{"configFileName"}) or die "[Error] Config file could not be oppended. Exiting.\n";
 
     # Reading file:
     while ( my $line = <$CONF>) {
@@ -351,9 +361,9 @@ sub readConfigFile {
         next if $line =~ /^#/;
 
         my ($key, $value) = $line =~ /^(\S+)=(\S+)/;
-        $parameters->{$key} = $value if $key && $value;
+        $params->{$key} = $value if $key && $value;
     }
-    return $parameters;
+    return $params;
 }
 
 sub parseGENCODE {
@@ -449,7 +459,7 @@ sub formatLines {
     my $ext = $_[1] // 0;
     return sprintf("%s\t%s\t%s\t%s", $hash{"chr"}, $hash{"start"} - $ext, $hash{"end"} + $ext, encode_json(\%hash))
 }
-sub GetVariants {
+sub getVariants {
     my ($merged, $inputvcfpattern) = @_;
     my $distance = 0;
 
@@ -798,10 +808,14 @@ sub print_SNP_info {
 ###
 
 sub usage {
-    print "Available options:";
-    print("          --build <genome build; default: 38>");
+    print "Usage::";
+    print("      Required:");
     print("          --input <input file>");
     print("          --output <output prefix>");
+    print("          --vcfFile <input VCF>");
+    print("          --gencode-file <GENCODE file>");
+    print("      Optional:");    
+#    print("          --build <genome build; default: 38>");
     print("          --GENCODE <comma separated list of GENCODE features (gene, exon, transcript, CDS or UTR)>");
     print("          --GTEx <comma separated list of GTEx features (promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind or allreg)>");
     print("          --overlap <comma separated list of overlap features (promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind or allreg)>");
@@ -812,13 +826,12 @@ sub usage {
     print("          --verbose <increase verbosity>");
     print("          --configFile <config file>");
     print("          --score <which score to use to weight variants; one of: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred, Linsight, Mixed >");
-    print("          --lof <only select severe variants>");
+    print("          --lof <only select high impact variants: transcript_ablation, splice_acceptor_variant, splice_donor_variant, stop_gained, frameshift_variant, stop_lost, start_lost, transcript_amplification, inframe_insertion, inframe_deletion, splice_region_variant>");
     print("          --loftee <only select high and low confident loss of function variants>");
     print("          --lofteeHC <only select high confident loss of function variants>");
     print("          --missingness <missingness upper threshold>");
     print("          --shift <shift scores by this value>");
     print("          --cutoff <score threshold below which the variants will be removed>");
     print("          --floor <scores below this threshold will be set to this value>");
-    print("          --vcfFile <input VCF>");
     print("          --help <this help>");
 }
