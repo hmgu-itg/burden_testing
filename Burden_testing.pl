@@ -7,12 +7,13 @@ use JSON;
 use DateTime;
 use File::Basename;
 use Getopt::Long qw(GetOptions);
+use Data::Types
 
 # For debugging:
 use Devel::Size qw(total_size);
 
 # Version information:
-our $version = "v5.0 Last modified: 2017.08.05";
+our $version = "v5.1 Last modified: 05.Nov.2019";
 
 # Get script directory:
 our $scriptDir = dirname(__FILE__);
@@ -115,7 +116,13 @@ GetOptions(
     'help|h' => \$help
 );
 
-# Exit unless the absolute necessary input files are exists and specified:
+if ($help){
+    &usage();
+    exit(1);
+}
+
+
+# Exit unless the absolute necessary input files are exists or specified:
 die "[Error] Gene list input file has to be specified with the --input option. Exiting.\n" unless $inputFile;
 die "[Error] Output file has to be specified with the --output option. Exiting.\n" unless $outputFile;
 die "[Error] VCF file has to be specified with the --vcfFile option. Exiting.\n" unless $parameters->{"vcfFile"};
@@ -147,9 +154,9 @@ my $AddScore = Scoring->new($parameters);
 
 # Open files:
 open (my $INPUT, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened. Exiting.\n";
-open (my $SNPfile, ">", $outputFile."_variant_file.txt") or die "[Error] Output file could not opened.\n";
+open (my $SNPfile, ">", $outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.\n";
 open (my $genotypeFile, ">", $outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.\n";
-open (my $SNPinfo, ">", $outputFile."_SNPinfo_file.txt") or die "[Error] Output file could not opened.\n";
+open (my $SNPinfo, ">", $outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.\n";
 
 # Processing the input file gene by gene:
 # looping through all the genes in the list:
@@ -204,6 +211,7 @@ while ( my $ID = <$INPUT> ){
         next;
     }
 
+    # TODO max number of variants per gene as input parameter
     # The gene will be skipped if there are too many variants (1000):
     if (scalar keys %{$hash} > 1000){
         print "[Warning] Gene $ID is skipped as more than 1000 variants are in the set [TOO_MANY_VAR].\n";
@@ -228,7 +236,7 @@ while ( my $ID = <$INPUT> ){
     &print_SNP_info($hash, $ID, $SNPinfo, $gene_count, $parameters->{"build"});
     &print_genotypes($genotypes, $genotypeFile, $parameters, $gene_count);
 
-    $gene_count ++; # So the header will only printed out once.
+    $gene_count ++; # So the header will only be printed once.
 
     # Some diagnostic functionality:
     #print Dumper $hash;  # Look at the snp container
@@ -248,10 +256,14 @@ sub check_parameters {
     die "[Error] Only GRCh37 and GRCh38 genome builds are supported (--build 37 or 38)." unless $parameters->{"build"} eq "37" || $parameters->{"build"} eq "38";
 
     # Checking MAF (a float below 1):
+    die "[Error] ".$parameters->{"MAF"}." must be a float number < 1" unless is_float($parameters->{"MAF"}) && $parameters->{"MAF"}<1
 
     # Checking MAC (a number):
+    die "[Error] ".$parameters->{"MAC"}." must be an integer number > 0" unless is_int($parameters->{"MAC"}) && $parameters->{"MAC"}>0
 
     # Checking missingness (a float below 1):
+    die "[Error] ".$parameters->{"missingthreshold"}." must be a float number < 1" unless is_float($parameters->{"missingthreshold"}) && $parameters->{"missingthreshold"}<1
+
 }
 
 sub check_scores {
@@ -360,6 +372,8 @@ sub parseGENCODE {
     }
     return $parameters
 }
+
+
 sub parseRegulation {
     # Accepted features: promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind, allreg
     my %AcceptedFeatures = ( "promoter" => 1, "CTCF" => 1, "enhancer" => 1, "promoterFlank" => 1, "openChrom" => 1, "TF_bind" => 1, "allreg" => 1 );
@@ -578,12 +592,14 @@ sub processVar {
         # line: CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	EGAN00001033155
         my ($chr, $pos, $id, $a1, $a2, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
 
+	# TODO ?
         # Generating variant name (Sometimes the long allele names cause problems):
         my $short_a1 = length $a1 > 5 ? substr($a1,0,4) : $a1;
         my $short_a2 = length $a2 > 5 ? substr($a2,0,4) : $a2;
 
         my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $short_a1, $short_a2);
 
+	# TODO ?
         # Parsing info field for relevant information:
         (my $ac )= $info =~ /AC=(.+?)(;|\b)/;
         (my $an )= $info =~ /AN=(.+?)(;|\b)/;
@@ -596,17 +612,17 @@ sub processVar {
 
         # We don't consider multialleleic sites this time.
         if ( $a2 =~ /,/){
-            print  "[Warning] $SNPID will be omitted because of multiallelic! ($a2).\n";
+            print  "[Warning] $SNPID will be omitted because it's multiallelic! ($a2).\n";
             next;
         }
 
-        print "\n\nWARNING: $variant\n\n" if $ac eq "NA";
+        print "\n\nWARNING: $variant has no AC\n\n" if $ac eq "NA";
 
         # Calculating values for filtering:
         my $missingness = (scalar(@genotypes)*2 - $an)/(scalar(@genotypes)*2);
         my $MAF = $ac/$an;
 
-        # This flag shows if the non-ref allele is the major:
+        # This flag shows if the non-ref allele is the major one:
         my $genotypeFlip = 0; #
         if ( $MAF > 0.5 ){
             print "[Info] MAF of $SNPID is $MAF is greater then 0.5, genotype is flipped.\n";
@@ -622,7 +638,7 @@ sub processVar {
 
         # We don't consider indels if weights are used:
         if (( length($a2) > 1 or length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
-            print  "[Warning] $SNPID will be omitted because indel! ($a1/$a2).\n";
+            print  "[Warning] $SNPID will be omitted because it' an indel! ($a1/$a2).\n";
             next;
         }
         # Filter out variants because of high missingness:
@@ -780,3 +796,29 @@ sub print_SNP_info {
 
 }
 ###
+
+sub usage {
+    print "Available options:";
+    print("          --build <genome build; default: 38>");
+    print("          --input <input file>");
+    print("          --output <output prefix>");
+    print("          --GENCODE <comma separated list of GENCODE features (gene, exon, transcript, CDS or UTR)>");
+    print("          --GTEx <comma separated list of GTEx features (promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind or allreg)>");
+    print("          --overlap <comma separated list of overlap features (promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind or allreg)>");
+    print("          --extend <by how many basepairs the GENCODE features should be extended.>");
+    print("          --MAF <MAF upper threshold>");
+    print("          --MAC <MAC lower threshold>");
+    print("          --SkipMinor <skip minor transcripts by APPRIS>");
+    print("          --verbose <increase verbosity>");
+    print("          --configFile <config file>");
+    print("          --score <which score to use to weight variants; one of: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred, Linsight, Mixed >");
+    print("          --lof <only select severe variants>");
+    print("          --loftee <only select high and low confident loss of function variants>");
+    print("          --lofteeHC <only select high confident loss of function variants>");
+    print("          --missingness <missingness upper threshold>");
+    print("          --shift <shift scores by this value>");
+    print("          --cutoff <score threshold below which the variants will be removed>");
+    print("          --floor <scores below this threshold will be set to this value>");
+    print("          --vcfFile <input VCF>");
+    print("          --help <this help>");
+}

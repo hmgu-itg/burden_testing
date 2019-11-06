@@ -170,16 +170,18 @@ sub _get_CADD_GERP {
     print("[Warning] No variants remaining after liftover. \n") if($fflag);
     return \%hash
 }
+
 sub _get_Eigen_Score {
     my $self = $_[0];
     my %hash = %{$_[1]};
 
     # just sayin'
-    print  "[Info] Adding Eigen scores for variants.\n" if $self->{"verbose"};
+    print  "[Info] Adding Eigen scores\n" if $self->{"verbose"};
 
     # Looping throuh all variants and return the Eigen score for all:
     foreach my $var (keys %hash){
         my $EigenFile = $self->{"EigenPath"};
+
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
 
         # Two tabix queries will be submitted regardless of the output...
@@ -217,6 +219,7 @@ sub _get_Eigen_Score {
     return \%hash
 }
 
+# liftOver from 38 to 37
 sub _liftover {
     my $self = $_[0];
     my %hash = %{$_[1]};
