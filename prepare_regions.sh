@@ -388,59 +388,6 @@ cellSpecFeatLines=$(zcat ${targetDir}/${today}/processed/Cell_spec_regulatory_fe
 info "Number of cell specific regulatory features: $cellSpecFeatLines\n\n"
 
 
-##
-## Step 8. Adding GRCh38 coordinates to GTEx data. (based on rsID)
-##
-
-# Instead of the single step we can generate a bedfile and run liftover
-# This step takes around 7 minutes.
-# info "Mapping GTEx variants to GRCh38 build.\n"
-# info "Creating temporary bed file (~9 minutes)... "
-# zcat ${GTExFile}  | perl -F"\t" -lane '
-#         if ($_ =~ /snpgenes/){
-#             ($tissue) = $_ =~ /([A-Z]+.+)_Analysis.snpgenes/;
-#             next;
-#         }
-#         ($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);
-#         ($gene) = $F[1] =~ /(ENS.+)\./;
-#         $rsID = $F[22];
-
-#         $h{$rsID}{chr}= $chr;
-#         $h{$rsID}{pos}= $pos;
-#         push( @{$h{$rsID}{genes}{$gene}}, $tissue ) if $tissue;
-
-#         END {
-#             foreach $rsID ( keys %h){
-#                 $chr = $h{$rsID}{chr};
-#                 $pos = $h{$rsID}{pos};
-
-#                 foreach $gene ( keys %{$h{$rsID}{genes}}){
-#                     $tissues = join "|", @{$h{$rsID}{genes}{$gene}};
-
-#                     # Reporting problem if something comes upon:
-
-#                     printf "chr$chr\t%s\t$pos\tgene=$gene;rsID=$rsID;tissue=$tissues\n", $pos - 1 if $chr and $pos;
-#                 }
-#             }
-#         }
-#     '  | sort -k1,1 -k2,2n > ${targetDir}/${today}/processed/GTEx_temp.bed
-
-# # Testing if output file has lines:
-# testFileLines ${targetDir}/${today}/processed/GTEx_temp.bed
-
-# echo "Done."
-
-# info "Running liftOver (~2 minutes).... "
-# liftOver ${targetDir}/${today}/processed/GTEx_temp.bed ${scriptDir}/hg19ToHg38.over.chain \
-#     ${targetDir}/${today}/processed/GTEx_temp_GRCh38.bed \
-#     ${targetDir}/${today}/processed/GTEx_temp_failed_to_map.bed
-# echo "Done."
-
-# # Generate report:
-# failedMap=$(wc -l ${targetDir}/${today}/processed/GTEx_temp_failed_to_map.bed | awk '{print $1}')
-# Mapped=$(wc -l ${targetDir}/${today}/processed/GTEx_temp_GRCh38.bed | awk '{print $1}')
-# info "Successfully mapped GTEx variants: ${Mapped}, failed variants: ${failedMap}.\n\n"
-
 #=============================================================================================
 
 ##

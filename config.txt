@@ -14,7 +14,7 @@
 ##
 
 ## This file contains coordinates of the gene related genomic features and annotation:
-Linked_features=/usr/local/bin/burden_testing/test_dir/2019.10.01/Linked_features.bed.gz
+Linked_features=/usr/local/bin/burden_testing/test2/2019.11.07/Linked_features.bed.gz
 
 ## To get CADD/Eigen/GERP scores, we have to lift over the coordinates. Path to liftover:
 #liftoverPath=/usr/local/bin/liftOver

@@ -34,10 +34,17 @@ use GENCODE;
 use Scoring;
 #use GetVariant;
 
+sub backticks_bash {
+  open(my $pipe, '-|', '/bin/bash', '-c', $_[0])
+     or return;
+  local $/ = wantarray ? $/ : undef;
+  <$pipe>
+}
+
 # Status report:
-print "[Info] Script version: $version\n";
-printf "[Info] Run date: %s\n", DateTime->now->strftime("%Y. %b %d %H:%M");
-printf "\n[Info] The script was called with the following parameters:\n%s\n\n", join(" ", $0, @ARGV);
+print "[Info] Script version: $version";
+printf "[Info] Run date: %s", DateTime->now->strftime("%Y. %b %d %H:%M");
+printf "[Info] The script was called with the following parameters:\n%s\n", join(" ", $0, @ARGV);
 
 # In the new version, all the parameters will be stored in a hash reference:
 my $parameters = {
@@ -52,6 +59,7 @@ my $parameters = {
     "cutoff"  => 0, # Score threshold below which the variants will be removed.
     "floor"   => 0, # All the scores below this threshold will be set to this value.
     "shift"   => 0, # A value with which the scores of the variants will be shifted.
+"chr_prefix" => "chr" # Chromosome prefix for VCF files	
 };
 
 # This is the list of those consequences that will be retained upon switching on --lof
@@ -119,6 +127,7 @@ GetOptions(
     'shift=s'  => \$parameters->{"shift"},  # The value used to shift eigen scores:
     'cutoff=s' => \$parameters->{"cutoff"}, # hard threshold that will be applied on scores:
     'floor=s'  => \$parameters->{"floor"},  # How do we want to floor Eigen values:
+    'chromosome-prefix=s'  => \$parameters->{"chr_prefix"},  # Chromosome prefix in VCF files
 
     # vcf File:
     'vcfFile=s' => \$parameters->{"vcfFile"},
@@ -134,10 +143,10 @@ if ($help || !defined($inputFile) || !defined($outputFile) || !defined($paramete
 
 
 # Exit unless the absolute necessary input files are exists or specified:
-die "[Error] Gene list input file has to be specified with the --input option. Exiting.\n" unless $inputFile;
-die "[Error] Output file has to be specified with the --output option. Exiting.\n" unless $outputFile;
-die "[Error] VCF file has to be specified with the --vcfFile option. Exiting.\n" unless $parameters->{"vcfFile"};
-die "[Error] The specified input gene list does not exists. Exiting.\n" unless -e $inputFile;
+die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
+die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
+die "[Error] VCF file has to be specified with the --vcfFile option. Exiting." unless $parameters->{"vcfFile"};
+die "[Error] The specified input gene list does not exists. Exiting." unless -e $inputFile;
 
 # Check stuffs:
 #&check_parameters($parameters);
@@ -164,10 +173,10 @@ my $GENCODE_data = GENCODE->new($parameters);
 my $AddScore = Scoring->new($parameters);
 
 # Open files:
-open (my $INPUT, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened. Exiting.\n";
-open (my $SNPfile, ">", $outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.\n";
-open (my $genotypeFile, ">", $outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.\n";
-open (my $SNPinfo, ">", $outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.\n";
+open (my $INPUT, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened. Exiting.";
+open (my $SNPfile, ">", $outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.";
+open (my $genotypeFile, ">", $outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.";
+open (my $SNPinfo, ">", $outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
 
 # Processing the input file gene by gene:
 # looping through all the genes in the list:
@@ -179,44 +188,44 @@ while ( my $ID = <$INPUT> ){
     my ($chr, $start, $end, $stable_ID, $name, $CollapsedBed);
 
     # If the input is not a region a few extra steps will be taken:
-    unless ($ID =~ /chr(\d+)_(\d+)-(\d+)/i){
+    unless ($ID =~ /(\d+)_(\d+)-(\d+)/i){
         ($chr, $start, $end, $stable_ID, $name) = $GENCODE_data->GetCoordinates($ID);
-
+	#print "DATA FROM GENCODE FOR $ID: $chr, $start, $end, $stable_ID, $name" if $verbose;
         # Skipping genes that were not found in the GENCODE dataset.
         if ($start eq "NA") {
-            print "[Warning] Gene $ID was not found in the GENCODE data. Is it a valid gene name? This gene will be skipped! [NO_GENE]\n";
+            print "[Warning] Gene $ID was not found in the GENCODE data. Is it a valid gene name? This gene will be skipped! [NO_GENE]";
             next;
         }
 
-        print "\n\n[Info] Queried gene: $name (Ensembl ID: $stable_ID), Genomic location: chr$chr:$start-$end (Input: $ID)\n";
+        print "[Info] Queried gene: $name (Ensembl ID: $stable_ID), Genomic location: $chr:$start-$end (Input: $ID)";
 
         my $bedlines = &BedToolsQuery($chr, $start, $end, $stable_ID, $parameters->{"Linked_features"});
         $CollapsedBed = &FilterLines($bedlines, $stable_ID, $parameters);
 
         # This should never be a problem, but still be tested:
         unless ( $CollapsedBed ){
-            print "[Error] Gene $name did not yield any regions. Skipped. [NO_REGION].\n";
+            print "[Error] Gene $name did not yield any regions. Skipped. [NO_REGION].";
             next;
         }
     }
 
     # If the submitted input is a genomic region, we have to do something else:
     else {
-        ($chr, $start, $end) = $ID =~ /(chr\d+)_(\d+)-(\d+)/i;
+        ($chr, $start, $end) = $ID =~ /(\d+)_(\d+)-(\d+)/i;
         $CollapsedBed = join("\t", $chr, $start, $end);
         $name = $ID;
-        printf "\n\n[Info] Queried region: %s:%s-%s\n", $chr, $start, $end;
+        printf "\n[Info] Queried region: %s:%s-%s", $chr, $start, $end;
     }
 
     # Once we have the genomic regions, the overlapping variants have to be extracted:
-    my $variants = &getVariants($CollapsedBed, $parameters->{"vcfFile"});
+    my $variants = &getVariants($CollapsedBed, $parameters->{"vcfFile"},$parameters->{"chr_prefix"});
 
     # Filtering variants based on the provided parameters:
     my ($hash, $genotypes) = &processVar($variants, $parameters);
-    # printf STDERR "%s\t%s\t%s\n", $gene_count, total_size($hash)/1024, total_size($AddScore)/1024; # Debug line.
+    # printf STDERR "%s\t%s\t%s", $gene_count, total_size($hash)/1024, total_size($AddScore)/1024; # Debug line.
     # Gene will be skipped if there are no suitable variations left:
     if (scalar keys %{$hash} < 2){
-        print "[Warning] Gene $ID is skipped as not enough variants left to test [NOT_ENOUGH_VAR].\n";
+        print "[Warning] Gene $ID is skipped as not enough variants left to test [NOT_ENOUGH_VAR].";
         undef $hash;
         undef $genotypes;
         next;
@@ -225,7 +234,7 @@ while ( my $ID = <$INPUT> ){
     # TODO max number of variants per gene as input parameter
     # The gene will be skipped if there are too many variants (1000):
     if (scalar keys %{$hash} > 1000){
-        print "[Warning] Gene $ID is skipped as more than 1000 variants are in the set [TOO_MANY_VAR].\n";
+        print "[Warning] Gene $ID is skipped as more than 1000 variants are in the set [TOO_MANY_VAR].";
         undef $hash;
         undef $genotypes;
         next;
@@ -235,7 +244,7 @@ while ( my $ID = <$INPUT> ){
     $hash = $AddScore->AddScore($hash) if $parameters->{"score"} ne "NA";
 
     if ($parameters->{"score"} ne "NA" && scalar keys %{$hash} <1){
-		print "[Warning] Gene $ID is skipped as no variants remaining post-scoring [NO_VAR_REMAIN].\n";
+		print "[Warning] Gene $ID is skipped as no variants remaining post-scoring [NO_VAR_REMAIN].";
 	}
 
     # We don't save anything unless there at least two variants:
@@ -293,37 +302,37 @@ sub check_scores {
 
     # Let's report if the specified score is not supported:
     unless (exists $acceptedScores{$params->{"score"}}){
-        print "[Info] Supported weighting options: ", join(", ", keys %acceptedScores), "\n";
-        printf "[Warning] The specified score (%s) is currently not supported.\n", $params->{"score"};
-        print "[Warning] No weighting will be applied.\n";
+        print "[Info] Supported weighting options: ", join(", ", keys %acceptedScores), "";
+        printf "[Warning] The specified score (%s) is currently not supported.", $params->{"score"};
+        print "[Warning] No weighting will be applied.";
         $params->{"score"} = "NA";
         return $params;
     }
     # Now, let's check if the requirements of the specified weighting methods are satisified.
     if ($params->{"score"} eq "CADD" ){
         if( ! exists $params->{"caddPath"}){
-            print "[Warning] The config file has not entry for 'caddPath', pointing to the genome-wide CADD scores.\n";
-            print "[Warning] CADD scores as weight cannot be used. No weights will be applied.\n";
+            print "[Warning] The config file has not entry for 'caddPath', pointing to the genome-wide CADD scores.";
+            print "[Warning] CADD scores as weight cannot be used. No weights will be applied.";
             $params->{"score"} = "NA";
             return $params;
         }
         elsif (! -e $params->{"caddPath"}){
-            printf "[Warning] The specified genome-wide CADD scores are not available %s.\n", $params->{"caddPath"};
-            print "[Warning] CADD scores as weight cannot be used. No weights will be applied.\n";
+            printf "[Warning] The specified genome-wide CADD scores are not available %s.", $params->{"caddPath"};
+            print "[Warning] CADD scores as weight cannot be used. No weights will be applied.";
             $params->{"score"} = "NA";
             return $params;
         }
     }
     elsif ($params->{"score"} =~ /eigen/i){
         if (! exists $params->{"EigenPath"} ) {
-            print "[Warning] The config file has not entry for 'EigenPath', pointing to the genome-wide Eigen scores.\n";
-            print "[Warning] Eigen scores as weight cannot be used. No weights will be applied.\n";
+            print "[Warning] The config file has not entry for 'EigenPath', pointing to the genome-wide Eigen scores.";
+            print "[Warning] Eigen scores as weight cannot be used. No weights will be applied.";
             $params->{"score"} = "NA";
             return $params;
         }
         elsif (! -e $params->{"EigenPath"}){
-            printf "[Warning] The specified genome-wide Eigen scores are not available %s.\n", $params->{"EigenPath"};
-            print "[Warning] Eigen scores as weight cannot be used. No weights will be applied.\n";
+            printf "[Warning] The specified genome-wide Eigen scores are not available %s.", $params->{"EigenPath"};
+            print "[Warning] Eigen scores as weight cannot be used. No weights will be applied.";
             $params->{"score"} = "NA";
             return $params;
         }
@@ -331,13 +340,13 @@ sub check_scores {
     }
     elsif ( $params->{"score"} eq "Linsight"){
         if (! exists $params->{"Linsight"}) {
-            print "[Warning] To use linsight scores the config file has to have 'Linsight' entry.\n";
-            print "[Warning] No weights will be applied.\n";
+            print "[Warning] To use linsight scores the config file has to have 'Linsight' entry.";
+            print "[Warning] No weights will be applied.";
             $params->{"score"} = "NA";
             return $params;
         }
         elsif ( ! -e $params->{"Linsight"}){
-            print "[Warning] Linsight scores as weight cannot be used. No weights will be applied.\n";
+            print "[Warning] Linsight scores as weight cannot be used. No weights will be applied.";
             $params->{"score"} = "NA";
             return $params;
         }
@@ -349,10 +358,10 @@ sub check_scores {
 sub readConfigFile {
     my $params = $_[0];
 
-    printf "[Info] Config file: %s\n", $params->{"configFileName"};
+    printf "[Info] Config file: %s", $params->{"configFileName"};
 
     # Reading file:
-    open(my $CONF, "<", $params->{"configFileName"}) or die "[Error] Config file could not be oppended. Exiting.\n";
+    open(my $CONF, "<", $params->{"configFileName"}) or die "[Error] Config file could not be oppended. Exiting.";
 
     # Reading file:
     while ( my $line = <$CONF>) {
@@ -377,7 +386,7 @@ sub parseGENCODE {
             $parameters->{"GENCODE"}->{$feature} = 1;
         }
         else {
-            printf STDERR "[Error] The provided GENCODE feature name is not supported: %s. Use these: %s\n", $feature, join(", ", keys %AcceptedFeatures);
+            printf STDERR "[Error] The provided GENCODE feature name is not supported: %s. Use these: %s", $feature, join(", ", keys %AcceptedFeatures);
         }
     }
     return $parameters
@@ -396,7 +405,7 @@ sub parseRegulation {
         # Looping through all the submitted features:
         foreach my $feature (split(",",$parameters->{"input"}->{$class})){
             unless (exists $AcceptedFeatures{$feature}){
-                printf STDERR "[Error] The provided regulatory feature name is not supported: %s. Use these: %s\n", $feature, join(", ", keys %AcceptedFeatures);
+                printf STDERR "[Error] The provided regulatory feature name is not supported: %s. Use these: %s", $feature, join(", ", keys %AcceptedFeatures);
                 next;
             }
 
@@ -419,26 +428,26 @@ sub parseRegulation {
 sub print_parameters {
     $parameters = $_[0];
     printf "\n[Info] Current genome build: GRCh%s", $parameters->{"build"};
-    print "\n[Info] Selected features:\n";
-    printf "\tThe following GENCODE features are considered: %s\n", join (", ", keys %{$parameters->{"GENCODE"}}) if exists $parameters->{"GENCODE"};
-    printf "\tGENCODE features are extended by: %sbp\n", $parameters->{"extend"} if exists $parameters->{"GENCODE"};
-    printf "\tThe following GTEx linked regulatory features are considered: %s\n", join (", ", keys %{$parameters->{"GTEx"}}) if exists $parameters->{"GTEx"};
-    printf "\tThe following overlapping regulatory features are considered: %s\n", join (", ", keys %{$parameters->{"overlap"}}) if exists $parameters->{"overlap"};
+    print "\n[Info] Selected features:";
+    printf "\tThe following GENCODE features are considered: %s", join (", ", keys %{$parameters->{"GENCODE"}}) if exists $parameters->{"GENCODE"};
+    printf "\tGENCODE features are extended by: %sbp", $parameters->{"extend"} if exists $parameters->{"GENCODE"};
+    printf "\tThe following GTEx linked regulatory features are considered: %s", join (", ", keys %{$parameters->{"GTEx"}}) if exists $parameters->{"GTEx"};
+    printf "\tThe following overlapping regulatory features are considered: %s", join (", ", keys %{$parameters->{"overlap"}}) if exists $parameters->{"overlap"};
 
-    print "\n[Info] Variant filters:\n";
-    printf "\tUpper MAF threshold: %s\n", $parameters->{"MAF"};
-    printf "\tLower MAC threshold: %s\n", $parameters->{"MAC"};
-    printf "\tUpper missingness threshold: %s\n", $parameters->{"missingthreshold"};
-    print "\tOnly severe variants will be included in the test.\n" if $parameters->{"lof"};
-    print "\tOnly loss-of-function variants will be included in the test (loftee HC and LC).\n" if $parameters->{"loftee"};
-    print "\tOnly high-confidence loss-of-function variants will be included in the test (loftee HC).\n" if $parameters->{"lofteeHC"};
+    print "\n[Info] Variant filters:";
+    printf "\tUpper MAF threshold: %s", $parameters->{"MAF"};
+    printf "\tLower MAC threshold: %s", $parameters->{"MAC"};
+    printf "\tUpper missingness threshold: %s", $parameters->{"missingthreshold"};
+    print "\tOnly severe variants will be included in the test." if $parameters->{"lof"};
+    print "\tOnly loss-of-function variants will be included in the test (loftee HC and LC)." if $parameters->{"loftee"};
+    print "\tOnly high-confidence loss-of-function variants will be included in the test (loftee HC)." if $parameters->{"lofteeHC"};
 
-    print "\n[Info] Variant weighting:\n";
-    printf "\tWeigthing method: %s\n", $parameters->{"score"};
+    print "\n[Info] Variant weighting:";
+    printf "\tWeigthing method: %s", $parameters->{"score"};
     if ($parameters->{"score"} ne "NA"){
-        printf "\tScore lower cutoff: %s\n", $parameters->{"cutoff"};
-        printf "\tScore floor applied: %s\n", $parameters->{"floor"};
-        printf "\tScore shifted by: %s\n", $parameters->{"shift"};
+        printf "\tScore lower cutoff: %s", $parameters->{"cutoff"};
+        printf "\tScore floor applied: %s", $parameters->{"floor"};
+        printf "\tScore shifted by: %s", $parameters->{"shift"};
     }
 
 
@@ -446,29 +455,31 @@ sub print_parameters {
 
 sub BedToolsQuery {
     my ($chr, $start, $end, $stable_ID, $geneBedFile) = @_;
-    my $queryString = sprintf("intersectBed -wb -a <(echo -e \"chr%s\\t%s\\t%s\\t%s\") -b %s -sorted | cut -f9-",
-			      $chr, $start, $end, $stable_ID, $geneBedFile, $stable_ID);
-    #TODO: remove last stable_ID
+    my $queryString = sprintf("intersectBed -wb -a <(echo -e \"%s\\t%s\\t%s\\t%s\") -b %s -sorted | cut -f9-",$chr, $start, $end, $stable_ID, $geneBedFile);
     
-    print "[Info] IntersectBed query string: $queryString\n" if $verbose;
-    my $query = `bash -O extglob -c \'$queryString\'`;
+    print "[Info] IntersectBed query string: $queryString" if $verbose;
+    my $query =backticks_bash($queryString);
+    #print("RETURN FROM BEDTOOLSQUERY");
     return $query;
 }
+
 sub formatLines {
     my %hash = %{$_[0]};
     my $ext = $_[1] // 0;
     return sprintf("%s\t%s\t%s\t%s", $hash{"chr"}, $hash{"start"} - $ext, $hash{"end"} + $ext, encode_json(\%hash))
 }
+
 sub getVariants {
-    my ($merged, $inputvcfpattern) = @_;
+    my ($merged, $inputvcfpattern,$prefix) = @_;
     my $distance = 0;
 
     # Finding out which chromosome are we on:
-    my ($chr) = $merged =~ /(chr.+?)\t/;
+    my ($chr) = $merged =~ /^(.+?)\t/;  # TODO: WATCHOUT !
 
+    print("GETVARIANTS CHR=$chr");
+    
     # Print info:
-    print  "\n[Info] Extracting variants from vcf files:\n" if $verbose;
-    $chr =~ s/chr//;
+    print  "\n[Info] Extracting variants from vcf files:" if $verbose;
     (my $vcfFile = $inputvcfpattern ) =~ s/\%/$chr/g;
     my $bcftoos_query = sprintf("tabix %s ", $vcfFile);
 
@@ -476,19 +487,18 @@ sub getVariants {
     foreach my $line (split("\n", $merged)){
         my ($chr, $start, $end) = split("\t", $line);
         $distance += $end - $start;
-        $bcftoos_query .= sprintf(" %s:%s-%s", $chr, $start, $end);
+        $bcftoos_query .= sprintf(" %s%s:%s-%s", $prefix, $chr, $start, $end);
     }
 
     # Extract overlapping variants:
-    #foreach my $line (split("\n", $merged)){
+    #foreach my $line (split("", $merged)){
     #    my ($chr, $start, $end) = split("\t", $line);
     #    $distance += $end - $start;
     #    my $bcftoos_query = sprintf("tabix %s %s:%s-%s", $vcfFile, $chr, $start, $end);
-    print  "$bcftoos_query\n" if $verbose;
-    my $variations = `bash -O extglob -c \'$bcftoos_query\'`;
+    print  "$bcftoos_query" if $verbose;
+    my $variations = backticks_bash($bcftoos_query);
 
-    print sprintf("[Info] Total covered genomic regions: %s bp\n", $distance) if $verbose;
-    print  "\n" if $verbose;
+    print sprintf("[Info] Total covered genomic regions: %s bp", $distance) if $verbose;
 
     return $variations;
 }
@@ -545,37 +555,38 @@ sub FilterLines {
             foreach my $feature (keys %{$hash{GENCODE}}){
                 $report .= "$feature: $hash{GENCODE}{$feature}, ";
             }
-            print  "\n[Info] From the GENCODE dataset the following features were extracted: $report\n" if $verbose;
+            print  "[Info] From the GENCODE dataset the following features were extracted: $report" if $verbose;
         }
         if (exists $hash{GTEx}) {
             my $report = '';
             foreach my $feature (keys %{$hash{GTEx}}){
                 $report .= "$feature: $hash{GTEx}{$feature}, ";
             }
-            print  "[Info] The following regulatory features were linked to the gene: $report\n" if $verbose;
+            print  "[Info] The following regulatory features were linked to the gene: $report" if $verbose;
         }
         if (exists $hash{overlap}) {
             my $report = '';
             foreach my $feature (keys %{$hash{overlap}}){
                 $report .= "$feature: $hash{overlap}{$feature}, ";
             }
-            print  "[Info] The following overlapping regulatory features were extracted: $report\n"  if $verbose;
+            print  "[Info] The following overlapping regulatory features were extracted: $report"  if $verbose;
         }
     }
     # Report:
-    print "[Info] Selected lines:\n", join("\n", @output_lines),"\n" if $verbose;
+    print "[Info] Selected lines:\n", join("\n", @output_lines),"" if $verbose;
 
     # Saving temporary bedfile:
     open (my $tempbed, "> filtered_regions.bed");
     foreach my $line (@output_lines){
-        print $tempbed $line, "\n";
+        print $tempbed $line, "";
     }
     `sort -k1,1 -k2,2n filtered_regions.bed | sponge filtered_regions.bed`;
     close $tempbed;
 
     # Collapsing overlapping features:
     my $queryString = "mergeBed -i filtered_regions.bed";
-    my $merged = `bash -O extglob -c \'$queryString\'`;
+    #my $merged = `bash -O extglob -c \'$queryString\'`;
+    my $merged = backticks_bash($queryString);
     return $merged;
 }
 
@@ -589,7 +600,7 @@ sub processVar {
     # Which build are we using?
     my $build = "GRCh".$parameters->{"build"};
 
-    print "[Info] Filtering variants:\n" if $verbose;
+    print "[Info] Filtering variants:" if $verbose;
 
     my @total_vars = split("\n", $variants);
     printf "[Info] Total number of overlapping variants: %s\n", scalar(@total_vars) if $verbose;
@@ -622,11 +633,11 @@ sub processVar {
 
         # We don't consider multialleleic sites this time.
         if ( $a2 =~ /,/){
-            print  "[Warning] $SNPID will be omitted because it's multiallelic! ($a2).\n";
+            print  "[Warning] $SNPID will be omitted because it's multiallelic! ($a2).";
             next;
         }
 
-        print "\n\nWARNING: $variant has no AC\n\n" if $ac eq "NA";
+        print "WARNING: $variant has no AC" if $ac eq "NA";
 
         # Calculating values for filtering:
         my $missingness = (scalar(@genotypes)*2 - $an)/(scalar(@genotypes)*2);
@@ -635,7 +646,7 @@ sub processVar {
         # This flag shows if the non-ref allele is the major one:
         my $genotypeFlip = 0; #
         if ( $MAF > 0.5 ){
-            print "[Info] MAF of $SNPID is $MAF is greater then 0.5, genotype is flipped.\n";
+            print "[Info] MAF of $SNPID is $MAF is greater then 0.5, genotype is flipped.";
             $MAF = 1 - $MAF;
             $genotypeFlip = 1;
         }
@@ -648,43 +659,43 @@ sub processVar {
 
         # We don't consider indels if weights are used:
         if (( length($a2) > 1 or length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
-            print  "[Warning] $SNPID will be omitted because it' an indel! ($a1/$a2).\n";
+            print  "[Warning] $SNPID will be omitted because it' an indel! ($a1/$a2).";
             next;
         }
         # Filter out variants because of high missingness:
         if ( $missingness > $parameters->{"missingthreshold"} ){
-            print  "[Warning] $SNPID will be omitted because of high missingness ($missingness).\n";
+            print  "[Warning] $SNPID will be omitted because of high missingness ($missingness).";
             next;
         }
         # Filter out variant because of high MAF (regardless of the applied weight):
         if ( $MAF > $parameters->{'MAF'} ){
-            printf "[Warning] $SNPID will be omitted because of high MAF (%.3f, cutoff: %s).\n", $MAF, $parameters->{'MAF'};
+            printf "[Warning] $SNPID will be omitted because of high MAF (%.3f, cutoff: %s)\n", $MAF, $parameters->{'MAF'};
             next;
         }
         # Filter out variant because of high MAF:
         if ( $ac < $parameters->{'MAC'} ){
-            printf "[Warning] $SNPID will be omitted because of low minor allele count ($ac, cutoff: %s).\n", $parameters->{'MAC'};
+            printf "[Warning] $SNPID will be omitted because of low minor allele count ($ac, cutoff: %s)\n", $parameters->{'MAC'};
             next;
         }
         # If loss of function variants are required, we skip all those variants that are not LoF:
         if ( $parameters->{"lof"} && ! exists $parameters->{"lof_cons"}->{$consequence} ) {
-            printf "[Warning] $SNPID will be omitted because of consequence is not lof (%s).\n", $consequence;
+            printf "[Warning] $SNPID will be omitted because of consequence is not lof (%s)\n", $consequence;
             next;
         }
         # If loftee or lofteeHC are enabled, the script exits if no LoF_conf tag is present in the info field.
         if (( $parameters->{"lofteeHC"} or $parameters->{"loftee"}) and $info !~ /LoF_conf/ ){
-            die "[Error] Based on the provided parameters, variant selection based on the loftee prediction was requested.\n\tHowever the provided vcf file does not contain the obligatory LoF_conf tag.\nExiting.";
+            die "[Error] Based on the provided parameters, variant selection based on the loftee prediction was requested.\n\tHowever the provided vcf file does not contain the obligatory LoF_conf tag.Exiting.";
         }
 
         # If loftee is enabled, only low and high-confidence loss-of-function variants will be selected:
         if ( $parameters->{"loftee"} && $info =~ /LoF_conf\=-/ ) {
-            printf "[Warning] $SNPID will be omitted because it is not a high- or low-confidence loss of function variant.\n";
+            print "[Warning] $SNPID will be omitted because it is not a high- or low-confidence loss of function variant";
             next;
         }
 
         # If lofteeHC is enabled, only high-confidence loss-of-function variants will be selected:
         if ( $parameters->{"lofteeHC"} && $info !~ /LoF_conf\=HC/ ) {
-            printf "[Warning] $SNPID will be omitted because it is not a high- confidence loss of function variant.\n";
+            print "[Warning] $SNPID will be omitted because it is not a high- confidence loss of function variant";
             next;
         }
 
@@ -724,7 +735,7 @@ sub print_SNPlist {
     my $flag = $hash{$snpIDs[0]}{"score"} ? 1 : 0;
 
     # The line with the snps will be written any ways:
-    print $outputhandle "$gene_name\t$flag\t", join("\t", @snpIDs),"\n";
+    print $outputhandle "$gene_name\t$flag\t", join("\t", @snpIDs),"";
 
     # We return if the flag is 0, so there is no scores given:
     return 1 if $flag == 0;
@@ -737,7 +748,7 @@ sub print_SNPlist {
         # push (@scores, $hash{$snpid}{"score"}{"processed_eigen"}) if $score eq "Eigen";
         push (@scores, $hash{$snpid}{"score"});
     }
-    print $outputhandle join("\t", @scores),"\n";
+    print $outputhandle join("\t", @scores),"";
 
     return 1;
 }
@@ -750,11 +761,11 @@ sub print_genotypes {
     my $gene_counter  = $_[3];
 
     my $vcfChrFile = $parameters->{"vcfFile"};
-    $vcfChrFile =~ s/\%/11/g;
+    $vcfChrFile =~ s/\%/11/g; # TODO ???
 
     # Checking if the file exists or not:
     if (! -e $vcfChrFile ){
-        print STDERR "[Error] The vcf file does not exists. $vcfChrFile\n";
+        print STDERR "[Error] The vcf file does not exists. $vcfChrFile";
     }
 
     # Assembling header for the first gene:
@@ -766,7 +777,7 @@ sub print_genotypes {
 
     # Saving data:
     for my $var (keys %genotype){
-        print $outputhandler "$var\t", join("\t", @{$genotype{$var}}), "\n";
+        print $outputhandler "$var\t", join("\t", @{$genotype{$var}});
     }
 }
 
@@ -784,7 +795,7 @@ sub print_SNP_info {
     if ( $gene_counter == 0){
         my $header = "Gene_name\tSNPID(GRCh${build})\trsID\tAlleles\tconsequences\tMAF\tAC\tmissigness";
         $header .= "\tScore" if exists $hash{$variants[0]}{"score"};
-        print $outfilehandle $header,"\n";
+        print $outfilehandle $header;
     }
 
     # printing out info for each gene and variant:
@@ -801,7 +812,7 @@ sub print_SNP_info {
         my $SNPID = $variant->{'GRCh'.$build}->[0].":".$variant->{'GRCh'.$build}->[2];
         my $line = join ("\t", $gene_name, $SNPID, $rsID, $alleleString, $consequence, $MAF, $AC, $missingness);
         $line .= "\t$weight" if exists $variant->{"score"};
-        print $outfilehandle $line, "\n";
+        print $outfilehandle $line;
     }
 
 }
@@ -833,5 +844,7 @@ sub usage {
     print("          --shift <shift scores by this value>");
     print("          --cutoff <score threshold below which the variants will be removed>");
     print("          --floor <scores below this threshold will be set to this value>");
+    print("          --chromosome-prefix <chromosome prefix in VCF files; default: \"chr\">");
     print("          --help <this help>");
 }
+
