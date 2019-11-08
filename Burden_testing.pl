@@ -127,16 +127,20 @@ GetOptions(
     'shift=s'  => \$parameters->{"shift"},  # The value used to shift eigen scores:
     'cutoff=s' => \$parameters->{"cutoff"}, # hard threshold that will be applied on scores:
     'floor=s'  => \$parameters->{"floor"},  # How do we want to floor Eigen values:
+
     'chromosome-prefix=s'  => \$parameters->{"chr_prefix"},  # Chromosome prefix in VCF files
 
     # vcf File:
     'vcfFile=s' => \$parameters->{"vcfFile"},
 
+    # TEMP DIR
+    'tempdir=s' => \$parameters->{"tempdir"},
+    
     # Asking for help:
     'help|h' => \$help
 );
 
-if ($help || !defined($inputFile) || !defined($outputFile) || !defined($parameters->{"vcfFile"}) || !defined($parameters->{"gencode_file"})){
+if ($help || !defined($inputFile) || !defined($outputFile) || !defined($parameters->{"vcfFile"}) || !defined($parameters->{"gencode_file"}) || !defined($parameters->{"tempdir"})){
     &usage();
     exit(1);
 }
@@ -146,7 +150,8 @@ if ($help || !defined($inputFile) || !defined($outputFile) || !defined($paramete
 die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
 die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
 die "[Error] VCF file has to be specified with the --vcfFile option. Exiting." unless $parameters->{"vcfFile"};
-die "[Error] The specified input gene list does not exists. Exiting." unless -e $inputFile;
+die "[Error] The specified input gene list does not exist. Exiting." unless -e $inputFile;
+die "[Error] The specified temp dir does not exist. Exiting." unless -d $parameters->{"tempdir"};
 
 # Check stuffs:
 #&check_parameters($parameters);
@@ -578,7 +583,7 @@ sub FilterLines {
     # Saving temporary bedfile:
     open (my $tempbed, "> filtered_regions.bed");
     foreach my $line (@output_lines){
-        print $tempbed $line, "";
+        print $tempbed $line;
     }
     `sort -k1,1 -k2,2n filtered_regions.bed | sponge filtered_regions.bed`;
     close $tempbed;
@@ -825,6 +830,7 @@ sub usage {
     print("          --output <output prefix>");
     print("          --vcfFile <input VCF>");
     print("          --gencode-file <GENCODE file>");
+    print("          --tempdir <TEMP DIR>");
     print("      Optional:");    
 #    print("          --build <genome build; default: 38>");
     print("          --GENCODE <comma separated list of GENCODE features (gene, exon, transcript, CDS or UTR)>");
