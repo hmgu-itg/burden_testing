@@ -41,7 +41,7 @@ sub new {
 #    $self->{"bigWigTools"} = $parameters->{"bigWigTools"};
     $self->{"Linsight"} = $parameters->{"Linsight"};
     
-    print Dumper $self;
+#    print Dumper $self;
     return $self;
 }
 

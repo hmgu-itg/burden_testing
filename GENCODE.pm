@@ -22,8 +22,6 @@ sub new {
     
     bless( $self, $class );
     
-    # TODO: remove hardcoded names
-    
     my $GENCODE_filename = $parameters->{"gencode_file"};
     $self->_initialize($GENCODE_filename);
     return $self;
@@ -34,6 +32,8 @@ sub _initialize {
     my $self = shift;
     my $gencodeFile = shift;
 
+
+    print("FILENAME: $gencodeFile\n");
     # Reading the file and create and return two hashes. Each contain the chromosome and
     # coordinate of the genes. Keys:
     

@@ -55,10 +55,10 @@ function usage {
     echo "Version: ${script_version}, Last modified: ${last_modified}"
     echo ""
     echo "Requirements:"
-    echo "  bgzip, tabix in path"
-    echo "  liftOver in path"
-    echo "  hg19ToHg38.over.chain chain file in script dir"
-    echo "  bedtools in path"
+    echo "  bgzip, tabix in PATH"
+#    echo "  liftOver in path"
+#    echo "  hg19ToHg38.over.chain chain file in script dir"
+    echo "  bedtools in PATH"
     echo "  downloaded GTEx datafile with the single eQTLs (eg. GTEx_Analysis_V6_eQTLs.tar.gz)"
     echo ""
     echo ""
@@ -174,7 +174,6 @@ elif [[ ! -e "${GTExFile}" ]]; then
     exit 1
 fi
 
-
 # Checking required commands:
 checkCommand tabix
 checkCommand liftOver
@@ -188,11 +187,12 @@ today=$(date "+%Y.%m.%d")
 info "Current date: ${today}\n"
 info "Working directory: ${targetDir}/${today}\n\n"
 
+#=================================== GENCODE =================================================
+
 # Get the most recent version of the data:
 mkdir -p ${targetDir}/${today}/GENCODE
 info "Downloading GENCODE annotation from ftp://ftp.ebi.ac.uk/. Release version: ${GENCODE_release}... "
-wget -q ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz \
-        -O ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+wget -q ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -O ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 echo -e "done."
 
 # Testing if the file is exists or not:
@@ -201,6 +201,8 @@ testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.g
 # Counting genes in the dataset:
 genes=$(zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | awk 'BEGIN{FS="\t";}$3 == "gene"{print $3;}' | wc -l )
 info "Total number of genes in the GENCODE file: ${genes}\n\n"
+
+#=================================== REGULATION ==============================================
 
 # prepare target directory:
 mkdir -p ${targetDir}/${today}/EnsemblRegulation
@@ -220,9 +222,7 @@ fi
 #Download all cell types:
 for cell in ${cells}; do
     echo -n "."
-    wget -q ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz \
-        -O ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
-
+    wget -q ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -O ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
 done
 echo "Done."
@@ -230,6 +230,8 @@ echo "Done."
 # Printing out report of the downloaded cell types:
 cellTypeCount=$(ls -la ${targetDir}/${today}/EnsemblRegulation/*gff.gz | wc -l)
 info "Number of cell types downloaded: ${cellTypeCount}.\n\n"
+
+#=================================== APPRIS ==================================================
 
 #Downloading APPRIS data:
 mkdir -p ${targetDir}/${today}/APPRIS
@@ -243,7 +245,9 @@ testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
 
 info "Download complete.\n\n"
 
+#=============================================================================================
 #Combining APPRIS and GENCODE data
+
 info "Combining APPRIS and GENCODE data.. "
 mkdir -p ${targetDir}/${today}/processed
 export APPRIS_FILE=${targetDir}/${today}/APPRIS/appris_data.principal.txt
@@ -254,7 +258,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
                     open($APP, "<", $af);
                     while ($line = <$APP>){
                         chomp $line;
-                        $line =~ /(ENSG.+?)\s+(ENST.+?)\s.+?\s+(\S+)\:/;
+                        $line =~ /(ENSG\S+)\s+(ENST\S+)\s+\S+\s+(\S+):/;
                         $h{$1}{$2} = $3;
                     }
                 }{
@@ -283,7 +287,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 
                         # Saving output in json format:
                         %hash = (
-                            "chr" => "chr".$F[0],
+                            "chr" => $F[0],
                             "start" => $start,
                             "end" => $end,
                             "source" => "GENCODE",
@@ -301,11 +305,31 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 # Test if output is empty or not:
 testFileLines  ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz
 
+# OUTPUT:
+#
+#{"source":"GENCODE","gene_ID":"ENSG00000186092","appris":"NA","start":"65419","chr":"1","strand":"+","class":"gene","end":"71585"}
+#{"transcript_ID":"ENST00000641515","end":"71585","class":"transcript","strand":"+","appris":"Minor","start":"65419","chr":"1","source":"GENCODE","gene_ID":"ENSG00000186092"}
+#{"strand":"+","start":"65419","chr":"1","appris":"Minor","gene_ID":"ENSG00000186092","exon_ID":"ENSE00003812156","source":"GENCODE","transcript_ID":"ENST00000641515","end":"65433","class":"exon"}
+#{"appris":"Minor","chr":"1","start":"65520","strand":"+","source":"GENCODE","exon_ID":"ENSE00003813641","gene_ID":"ENSG00000186092","transcript_ID":"ENST00000641515","end":"65573","class":"exon"}
+#{"class":"CDS","transcript_ID":"ENST00000641515","end":"65573","gene_ID":"ENSG00000186092","exon_ID":"ENSE00003813641","source":"GENCODE","strand":"+","start":"65565","chr":"1","appris":"Minor"}
+#{"gene_ID":"ENSG00000186092","source":"GENCODE","exon_ID":"ENSE00003813949","chr":"1","start":"69037","appris":"Minor","strand":"+","class":"exon","transcript_ID":"ENST00000641515","end":"71585"}
+#{"end":"70005","transcript_ID":"ENST00000641515","class":"CDS","strand":"+","appris":"Minor","start":"69037","chr":"1","exon_ID":"ENSE00003813949","source":"GENCODE","gene_ID":"ENSG00000186092"}
+#{"gene_ID":"ENSG00000186092","exon_ID":"ENSE00003812156","source":"GENCODE","strand":"+","start":"65419","chr":"1","appris":"Minor","class":"UTR","end":"65433","transcript_ID":"ENST00000641515"}
+#{"gene_ID":"ENSG00000186092","exon_ID":"ENSE00003813641","source":"GENCODE","strand":"+","start":"65520","chr":"1","appris":"Minor","class":"UTR","end":"65564","transcript_ID":"ENST00000641515"}
+#{"end":"71585","transcript_ID":"ENST00000641515","class":"UTR","strand":"+","chr":"1","start":"70006","appris":"Minor","gene_ID":"ENSG00000186092","exon_ID":"ENSE00003813949","source":"GENCODE"}
+#{"source":"GENCODE","gene_ID":"ENSG00000186092","strand":"+","appris":"PRINCIPAL","chr":"1","start":"69055","class":"transcript","transcript_ID":"ENST00000335137","end":"70108"}
+#{"appris":"PRINCIPAL","chr":"1","start":"69055","strand":"+","source":"GENCODE","exon_ID":"ENSE00002319515","gene_ID":"ENSG00000186092","transcript_ID":"ENST00000335137","end":"70108","class":"exon"}
+#{"appris":"PRINCIPAL","chr":"1","start":"69091","strand":"+","source":"GENCODE","exon_ID":"ENSE00002319515","gene_ID":"ENSG00000186092","transcript_ID":"ENST00000335137","end":"70005","class":"CDS"}
+#{"class":"UTR","end":"69090","transcript_ID":"ENST00000335137","gene_ID":"ENSG00000186092","source":"GENCODE","exon_ID":"ENSE00002319515","chr":"1","start":"69055","appris":"PRINCIPAL","strand":"+"}
+#{"source":"GENCODE","exon_ID":"ENSE00002319515","gene_ID":"ENSG00000186092","appris":"PRINCIPAL","chr":"1","start":"70006","strand":"+","class":"UTR","transcript_ID":"ENST00000335137","end":"70108"}
+
 echo "Done."
 
 # Print out report:
 appris_lines=$(zcat ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz | wc -l | awk '{print $1}')
 info "Number of Appris annotated GENCODE annotations: ${appris_lines}\n\n"
+
+#=============================================================================================
 
 ##
 ## Step 7. Pre-processing cell specific regulatory data
@@ -317,7 +341,8 @@ for cell in ${CellTypes}; do
     export cell
     # parsing cell specific files (At this point we only consider active features. Although repressed regions might also be informative.):
     zcat ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | grep -i "activity=active" \
-        | perl -F"\t" -lane 'next unless length($F[0]) < 3; # We skip irregular chromosome names.
+        | perl -F"\t" -lane 'next unless length($F[0]) < 3 || $F[0]=~/^chr/; # We skip irregular chromosome names.
+                $F[0]=~s/^chr//;
                 $cell_type = $ENV{cell};
                 $start = $F[3];
                 $type = $F[2];
@@ -334,12 +359,23 @@ done | perl -F"\t" -lane '
     END {
         foreach $ID (keys %h){
             $cells = join "|", @{$h{$ID}{cells}};
-            printf "chr%s\t%s\t%s\t%s\tchr=%s;start=%s;end=%s;class=%s;regulatory_ID=%s;Tissues=%s\n",
+            printf "%s\t%s\t%s\t%s\tchr=%s;start=%s;end=%s;class=%s;regulatory_ID=%s;Tissues=%s\n",
                 $h{$ID}{line}[0], $h{$ID}{line}[1], $h{$ID}{line}[2], $h{$ID}{line}[3], $h{$ID}{line}[0],
                 $h{$ID}{line}[1], $h{$ID}{line}[2], $h{$ID}{line}[4], $h{$ID}{line}[3], $cells
         }
     }
 ' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz
+
+
+# OUTPUT:
+#
+#1    9800    10400   ENSR00000344264 chr=1;start=9800;end=10400;class=CTCF_binding_site;regulatory_ID=ENSR00000344264;Tissues=HUVEC|HeLa_S3|mammary_epithelial_1
+#1    13400   13600   ENSR00000344265 chr=1;start=13400;end=13600;class=CTCF_binding_site;regulatory_ID=ENSR00000344265;Tissues=HUVEC|NHLF|keratinocyte
+#1    15400   16600   ENSR00000344266 chr=1;start=15400;end=16600;class=CTCF_binding_site;regulatory_ID=ENSR00000344266;Tissues=A549|B|H1_hESC_3|HCT116|HSMM|HeLa_S3|HepG2|K562|MCF_7|MM_1S|PC_3|PC_9|SK_N_|astrocyte|bipolar_neuron|cardiac_muscle|dermal_fibroblast|mammary_epithelial_1|osteoblast
+#1    16102   16451   ENSR00000918273 chr=1;start=16102;end=16451;class=TF_binding_site;regulatory_ID=ENSR00000918273;Tissues=DND_41|K562|PC_3|bipolar_neuron
+#1    24600   25000   ENSR00000344268 chr=1;start=24600;end=25000;class=CTCF_binding_site;regulatory_ID=ENSR00000344268;Tissues=A549|H1_hESC_3|HepG2|MCF_7
+#1    25600   26400   ENSR00000344269 chr=1;start=25600;end=26400;class=CTCF_binding_site;regulatory_ID=ENSR00000344269;Tissues=A549|A673|B|GM12878|H1_hESC_3|HCT116|HSMM|HUVEC|HeLa_S3|HepG2|K562|MCF_7|MM_1S|NHLF|PC_3|astrocyte|cardiac_muscle|dermal_fibroblast|mammary_epithelial_1|osteoblast
+
 
 # Test if output is empty or not:
 testFileLines ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz
@@ -405,6 +441,8 @@ info "Number of cell specific regulatory features: $cellSpecFeatLines\n\n"
 # Mapped=$(wc -l ${targetDir}/${today}/processed/GTEx_temp_GRCh38.bed | awk '{print $1}')
 # info "Successfully mapped GTEx variants: ${Mapped}, failed variants: ${failedMap}.\n\n"
 
+#=============================================================================================
+
 ##
 ## Step 8. Combine individual files from GTEx tar.gz file into one BED file
 ##
@@ -414,15 +452,27 @@ info "Creating GTEx bed file ... "
 listOfGTExFiles=$(tar -ztf ${GTExFile} | grep "signif_variant")
 for f in ${listOfGTExFiles};do
     g=$(basename ${f})
-    tissue=$(echo ${g}|perl -lne '$x="NA";if (/(.*)\.v8/){$x=$1;} print $x;')
+    tissue=$(echo ${g}|perl -lne '$x="NA";if (/^([^.]+)\./){$x=$1;} print $x;')
     export tissue
-    tar -zxf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENS.+)\./;$tissue=$ENV{tissue};$,="\t";print $tissue,$chr,$pos,$F[0],$gene;'
+    tar -zxf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENS.+)\./;$tissue=$ENV{tissue};$,="\t";$chr=~s/^chr//;print $tissue,$chr,$pos,$F[0],$gene;'
 done > ${tmpGTEx}
 
 cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$pos=$F[2];$ID=$F[3];$gene=$F[4];$H{$ID}{chr}=$chr;$H{$ID}{pos}=$pos;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$pos=$H{$id}{pos};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};printf "$chr\t%s\t$pos\tgene=$gene;rsID=$id;tissue=$tissues\n", $pos - 1;}}}' | sort -k1,1 -k2,2 > ${targetDir}/${today}/processed/GTEx.bed
 
 echo "Done."
-#rm -f ${tmpGTEx}
+rm -f ${tmpGTEx}
+
+# OUTPUT:
+#
+#1    10000043        10000044        gene=ENSG00000054523;rsID=chr1_10000044_A_T_b38;tissue=Adipose_Visceral_Omentum|Artery_Tibial|Breast_Mammary_Tissue|Cells_Cultured_fibroblasts|Nerve_Tibial|Skin_Not_Sun_Exposed_Suprapubic|Skin_Sun_Exposed_Lower_leg
+#1    10000043        10000044        gene=ENSG00000130939;rsID=chr1_10000044_A_T_b38;tissue=Esophagus_Mucosa
+#1    10000043        10000044        gene=ENSG00000175279;rsID=chr1_10000044_A_T_b38;tissue=Artery_Aorta|Artery_Tibial|Esophagus_Mucosa|Lung|Skin_Not_Sun_Exposed_Suprapubic
+#1    100000722       100000723       gene=ENSG00000117620;rsID=chr1_100000723_G_A_b38;tissue=Brain_Cortex|Cells_Cultured_fibroblasts|Lung|Nerve_Tibial|Skin_Not_Sun_Exposed_Suprapubic|Skin_Sun_Exposed_Lower_leg|Stomach|Testis
+#1    100000722       100000723       gene=ENSG00000122435;rsID=chr1_100000723_G_A_b38;tissue=Skin_Sun_Exposed_Lower_leg
+#1    100000722       100000723       gene=ENSG00000122477;rsID=chr1_100000723_G_A_b38;tissue=Adipose_Subcutaneous|Adipose_Visceral_Omentum|Brain_Cerebellar_Hemisphere|Brain_Cerebellum|Breast_Mammary_Tissue|Colon_Transverse|Esophagus_Muscularis|Liver|Thyroid
+
+
+#=============================================================================================
 
 ##
 ## Step 9. Using intersectbed. Find overlap between GTEx variations and regulatory regions
@@ -433,16 +483,26 @@ intersectBed -wb -a ${targetDir}/${today}/processed/GTEx.bed -b ${targetDir}/${t
         # Name of the source is GTEx
         $source= "GTEx";
 
+# OUTPUT OF INTERSECTBED
+#
+#1    100034322       100034323       gene=ENSG00000122435;rsID=chr1_100034323_TG_T_b38;tissue=Muscle_Skeletal        1    100034200       100035200       ENSR00000253249 chr=1;start=100034200;end=100035200;class=CTCF_binding_site;regulatory_ID=ENSR00000253249;Tissues=A549|A673|B|CD14_monocyte_1|DND_41|GM12878|HCT116|HSMM|HUVEC|HeLa_S3|HepG2|K562|MM_1S|NHLF|PC_3|PC_9|SK_N_|astrocyte|bipolar_neuron|cardiac_muscle|dermal_fibroblast|keratinocyte|myotube|osteoblast
+#1    100034322       100034323       gene=ENSG00000122477;rsID=chr1_100034323_TG_T_b38;tissue=Adipose_Subcutaneous|Adipose_Visceral_Omentum|Artery_Aorta|Artery_Tibial|Brain_Cerebellar_Hemisphere|Brain_Cerebellum|Brain_Cortex|Breast_Mammary_Tissue|Cells_Cultured_fibroblasts|Colon_Transverse|Esophagus_Gastroesophageal_Junction|Esophagus_Muscularis|Liver|Lung|Nerve_Tibial|Ovary|Pancreas|Skin_Not_Sun_Exposed_Suprapubic|Skin_Sun_Exposed_Lower_leg|Spleen|Stomach|Thyroid|Whole_Blood     1    100034200       100035200       ENSR00000253249 chr=1;start=100034200;end=100035200;class=CTCF_binding_site;regulatory_ID=ENSR00000253249;Tissues=A549|A673|B|CD14_monocyte_1|DND_41|GM12878|HCT116|HSMM|HUVEC|HeLa_S3|HepG2|K562|MM_1S|NHLF|PC_3|PC_9|SK_N_|astrocyte|bipolar_neuron|cardiac_muscle|dermal_fibroblast|keratinocyte|myotube|osteoblast
+#1    100034326       100034327       gene=ENSG00000122435;rsID=chr1_100034327_T_A_b38;tissue=Muscle_Skeletal 1    100034200       100035200       ENSR00000253249 chr=1;start=100034200;end=100035200;class=CTCF_binding_site;regulatory_ID=ENSR00000253249;Tissues=A549|A673|B|CD14_monocyte_1|DND_41|GM12878|HCT116|HSMM|HUVEC|HeLa_S3|HepG2|K562|MM_1S|NHLF|PC_3|PC_9|SK_N_|astrocyte|bipolar_neuron|cardiac_muscle|dermal_fibroblast|keratinocyte|myotube|osteoblast
+#1    100034326       100034327       gene=ENSG00000122477;rsID=chr1_100034327_T_A_b38;tissue=Adipose_Subcutaneous|Adipose_Visceral_Omentum|Artery_Aorta|Artery_Tibial|Brain_Cerebellar_Hemisphere|Brain_Cerebellum|Brain_Cortex|Breast_Mammary_Tissue|Cells_Cultured_fibroblasts|Colon_Transverse|Esophagus_Gastroesophageal_Junction|Esophagus_Muscularis|Liver|Lung|Nerve_Tibial|Ovary|Pancreas|Skin_Not_Sun_Exposed_Suprapubic|Skin_Sun_Exposed_Lower_leg|Spleen|Stomach|Thyroid|Whole_Blood      1    100034200       100035200       ENSR00000253249 chr=1;start=100034200;end=100035200;class=CTCF_binding_site;regulatory_ID=ENSR00000253249;Tissues=A549|A673|B|CD14_monocyte_1|DND_41|GM12878|HCT116|HSMM|HUVEC|HeLa_S3|HepG2|K562|MM_1S|NHLF|PC_3|PC_9|SK_N_|astrocyte|bipolar_neuron|cardiac_muscle|dermal_fibroblast|keratinocyte|myotube|osteoblast
+#1    100034329       100034330       gene=ENSG00000122435;rsID=chr1_100034330_A_G_b38;tissue=Muscle_Skeletal 1    100034200       100035200       ENSR00000253249 chr=1;start=100034200;end=100035200;class=CTCF_binding_site;regulatory_ID=ENSR00000253249;Tissues=A549|A673|B|CD14_monocyte_1|DND_41|GM12878|HCT116|HSMM|HUVEC|HeLa_S3|HepG2|K562|MM_1S|NHLF|PC_3|PC_9|SK_N_|astrocyte|bipolar_neuron|cardiac_muscle|dermal_fibroblast|keratinocyte|myotube|osteoblast
+#1    100034329       100034330       gene=ENSG00000122477;rsID=chr1_100034330_A_G_b38;tissue=Adipose_Subcutaneous|Adipose_Visceral_Omentum|Artery_Aorta|Artery_Tibial|Brain_Cerebellar_Hemisphere|Brain_Cerebellum|Brain_Cortex|Breast_Mammary_Tissue|Cells_Cultured_fibroblasts|Colon_Transverse|Esophagus_Gastroesophageal_Junction|Esophagus_Muscularis|Liver|Lung|Nerve_Tibial|Ovary|Pancreas|Skin_Not_Sun_Exposed_Suprapubic|Skin_Sun_Exposed_Lower_leg|Spleen|Stomach|Thyroid|Whole_Blood      1    100034200       100035200       ENSR00000253249 chr=1;start=100034200;end=100035200;class=CTCF_binding_site;regulatory_ID=ENSR00000253249;Tissues=A549|A673|B|CD14_monocyte_1|DND_41|GM12878|HCT116|HSMM|HUVEC|HeLa_S3|HepG2|K562|MM_1S|NHLF|PC_3|PC_9|SK_N_|astrocyte|bipolar_neuron|cardiac_muscle|dermal_fibroblast|keratinocyte|myotube|osteoblast
+
+
         # Parsing input:
         ($gene) = $F[3] =~ /gene=(ENSG.+?);/;
         ($G_rsID) = $F[3] =~ /rsID=(.+?);/;
-        ($G_tissues) = $F[3] =~ /tissue=(.+)/;
+        ($G_tissues) = $F[3] =~ /tissue=(\S+)/;
         $E_chr = $F[4];
         $E_start = $F[5];
         $E_end = $F[6];
         $E_ID = $F[7];
         ($E_class) = $F[8] =~ /class=(.+?);/;
-        ($E_tissues) = $F[8] =~ /Tissues=(.+)/;
+        ($E_tissues) = $F[8] =~ /Tissues=(\S+)/;
 
         # Building hash:
         $h{$gene."_".$E_ID}{gene_ID} = $gene;
@@ -475,14 +535,22 @@ intersectBed -wb -a ${targetDir}/${today}/processed/GTEx.bed -b ${targetDir}/${t
         }
     ' | gzip > ${targetDir}/${today}/processed/GTEx_Regulation_linked.txt.gz
 
+# OUTPUT
+# we don't know which of the rsIDs corresponds to which GTEx tissue
+#{"chr":"chr2","GTEx_rsIDs":[...],"gene_ID":"ENSG00000235584","GTEx_tissues":["Thyroid","Lung"],"class":"open_chromatin_region","Tissues":["MM_1S"],"source":"GTEx","start":"96131175","regulatory_ID":"ENSR00000613314","end":"96131863"}
+
 # Testing if output file has lines:
 testFileLines ${targetDir}/${today}/processed/GTEx_Regulation_linked.txt.gz
-
 echo "Done."
+
 
 # Generate report:
 GTExLinkedFeatures=$( zcat ${targetDir}/${today}/processed/GTEx_Regulation_linked.txt.gz | wc -l | awk '{print $1}')
 info "Number of GTEx linked regulatory features: ${GTExLinkedFeatures}\n\n"
+
+
+#=============================================================================================
+
 
 ##
 ## Step 10. Using intersectbed. Find overlap between genes and regulatory regions
@@ -491,17 +559,23 @@ info "Linking genes to regulatory features based on overlap... "
 # generating a file.
 zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | awk '$3 == "gene"' | perl -lane '
         ($g_name) = $_ =~ /gene_name "(.+?)";/;
-        ($g_ID) = $_ =~ /gene_id "(.+?)";/;
+        ($g_ID) = $_ =~ /gene_id "(.+?)\.*";/;
+        $F[0]=~s/^chr//;
         printf "$F[0]\t$F[3]\t$F[4]\tID:$g_ID;Name:$g_name\n";
     ' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/genes.bed.gz
 
+# OUTPUT:
+#
+#1    11869   14409   ID:ENSG00000223972;Name:DDX11L1
+
+
 # Intersect bed run.
-# chr1	16048	29570	ID:ENSG00000227232.5;Name:WASH7P	chr1	16048	30847	ENSR00000528774	chr=1;start=16048;end=30847;class=CTCF_binding_site;regulatory_ID=ENSR00000528774;Tissues=DND-41|HMEC|HSMMtube|IMR90|K562|MultiCell|NHDF-AD
+# 1	16048	29570	ID:ENSG00000227232;Name:WASH7P	1	16048	30847	ENSR00000528774	chr=1;start=16048;end=30847;class=CTCF_binding_site;regulatory_ID=ENSR00000528774;Tissues=DND-41|HMEC|HSMMtube|IMR90|K562|MultiCell|NHDF-AD
 intersectBed -wb -a ${targetDir}/${today}/processed/genes.bed.gz -b ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz -sorted \
     | perl -MData::Dumper -MJSON -F"\t" -lane '
         # Parsing gene info:
-        ($g_ID) = $F[3] =~ /ID:(ENSG\d+)/;
-        ($g_name) = $F[3] =~ /Name:(.+)/;
+        ($g_ID) = $F[3] =~ /ID:(ENSG\d+?)/;
+        ($g_name) = $F[3] =~ /Name:(\S+)/;
 
         # Parsing regulatory feature info:
         ($r_chr, $r_start, $r_end, $r_ID) = ($F[4], $F[5], $F[6], $F[7]);
@@ -524,15 +598,34 @@ intersectBed -wb -a ${targetDir}/${today}/processed/genes.bed.gz -b ${targetDir}
     ' | bgzip -f > ${targetDir}/${today}/processed/overlapping_features.txt.gz
 echo "Done."
 
+# OUTPUT:
+#
+#{"start":"13400","chr":"1","gene_name":"DDX11L1","gene_ID":"ENSG00000223972","regulatory_ID":"ENSR00000344265","class":"CTCF_binding_site","source":"overlap","Tissues":["HUVEC","NHLF","keratinocyte"],"end":"13600"}
+
 # Generate report:
 OverlapLinkedFeatures=$( zcat ${targetDir}/${today}/processed/overlapping_features.txt.gz | wc -l | awk '{print $1}')
 info "Number of regulatory features linked by overlap: ${OverlapLinkedFeatures}\n\n"
+
+
+#=============================================================================================
 
 ##
 ## Step 11. Merging all the components together create compressed, sorted bedfile.
 ##
 info "Merging GENCODE, GTEx and overlap data together into an indexed bedfile. "
 export gene_file=${targetDir}/${today}/processed/genes.bed.gz # make sure file readable from within the perl script
+
+#GENES
+#
+#1    11869   14409   ID:ENSG00000223972.5;Name:DDX11L1
+
+#INPUT:
+#
+#{"start":"13400","chr":"chr1","gene_name":"DDX11L1","gene_ID":"ENSG00000223972","regulatory_ID":"ENSR00000344265","class":"CTCF_binding_site","source":"overlap","Tissues":["HUVEC","NHLF","keratinocyte"],"end":"13600"}
+#{"chr":"chr2","GTEx_rsIDs":[null],"gene_ID":"ENSG00000235584","GTEx_tissues":["Thyroid","Lung"],"class":"open_chromatin_region","Tissues":["MM_1S"],"source":"GTEx","start":"96131175","regulatory_ID":"ENSR00000613314","end":"96131863"}
+#{"appris":"NA","start":"11869","chr":"chr1","strand":"+","source":"GENCODE","gene_ID":"ENSG00000223972","end":"14409","class":"gene"}
+
+
 zcat ${targetDir}/${today}/processed/overlapping_features.txt.gz \
      ${targetDir}/${today}/processed/GTEx_Regulation_linked.txt.gz \
      ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz  \
@@ -578,11 +671,11 @@ FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":
 info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sournces: ${FailedSources}\n\n"
 
 # Backing up intermediate files:
-tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file   ${targetDir}/${today}/APPRIS  \
-    ${targetDir}/${today}/EnsemblRegulation  ${targetDir}/${today}/failed  ${targetDir}/${today}/GENCODE  \
-    ${targetDir}/${today}/processed
-
-info "Intermediate files are backed in in ${targetDir}/${today}/${today}_annotation.backup.tar.gz\n" 
+#tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file   ${targetDir}/${today}/APPRIS  \
+#    ${targetDir}/${today}/EnsemblRegulation  ${targetDir}/${today}/failed  ${targetDir}/${today}/GENCODE  \
+#    ${targetDir}/${today}/processed
+#
+#info "Intermediate files are backed in in ${targetDir}/${today}/${today}_annotation.backup.tar.gz\n" 
 
 # Exit.
 info "Program finished.\n"
