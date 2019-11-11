@@ -13,7 +13,6 @@ package Scoring;
 # $hash = $Scoring->AddScore($hash);
 
 # ASSUMING ALL SCORES ARE 37 BASED
-# TODO: REMOVE TEMP FILES
 
 use strict;
 use warnings;
@@ -33,12 +32,11 @@ sub new {
     $self->{"build"} = $parameters->{"build"};
     $self->{"verbose"} = $parameters->{"verbose"};
     $self->{"scriptDir"} = $parameters->{"scriptDir"};
+    $self->{"tempdir"} = $parameters->{"tempdir"};
     
     # Storing paths:
-#    $self->{"liftoverPath"} = $parameters->{"liftoverPath"};
     $self->{"EigenPath"} = $parameters->{"EigenPath"};
     $self->{"caddPath"} = $parameters->{"caddPath"};
-#    $self->{"bigWigTools"} = $parameters->{"bigWigTools"};
     $self->{"Linsight"} = $parameters->{"Linsight"};
     
 #    print Dumper $self;
@@ -237,10 +235,15 @@ sub _get_Eigen_Score {
 sub _liftover {
     my $self = $_[0];
     my %hash = %{$_[1]};
-    my $tempFileName = "temp_GRCH38.bed";
+    my $tempFileName = $self->{"tempdir"}."/temp_GRCH38.bed";
+    my $tempFileName37 = $self->{"tempdir"}."/temp_GRCH37.bed";
+    my $tempFileNameU = $self->{"tempdir"}."/temp_unmapped.bed";
+    
     
     # Checking if the file exists, in which case we delete it:
     `rm $tempFileName` if -e $tempFileName; 
+    `rm $tempFileName37` if -e $tempFileName37; 
+    `rm $tempFileNameU` if -e $tempFileNameU; 
     
     # Saving the GRCh38 coordinates:
     open( my $tempbed, ">", $tempFileName) or die "[Error] Temporary bedfile could not be opened for writing: $tempFileName\n";
@@ -249,14 +252,14 @@ sub _liftover {
     }
 
     # Liftover query:
-    my $liftover_query = sprintf("liftOver %s %s/hg38ToHg19.over.chain temp_GRCh37.bed temp_unmapped.bed  2> /dev/null", $tempFileName, $self->{"scriptDir"});
+    my $liftover_query = sprintf("liftOver %s %s/hg38ToHg19.over.chain %s %s  2> /dev/null", $tempFileName, $self->{"scriptDir"},$tempFileName37,$tempFilenameU);
     
     # Calling liftover:
      backticks_bash($liftover_query);
 
-
     # Reading mapped file:
-    open(my $lifted, "< temp_GRCh37.bed") or die "[Error] After liftover run, the mapped file could not be opened.\n";
+    open(my $lifted, "< $tempFilename37") or die "[Error] After liftover run, the mapped file could not be opened.\n";
+    
     my $liftedVarNo  = 0;
     
     # Adding GRCh37
@@ -317,8 +320,10 @@ sub _get_linsight {
 
     # Calling BigWig tools to get the scores:
     #./bigWigAverageOverBed /lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/LINSIGHT/LINSIGHT.bw APOC3_GRCh37.bed  out.tab
-    my $linsightOut = "temp_GRCh37_linsight.tab";
-    my $bigwigQuery = sprintf("bigWigAverageOverBed %s temp_GRCh37.bed %s", $self->{"Linsight"}, $linsightOut);
+    my $linsightOut = $self->{"tempdir"}."/temp_GRCh37_linsight.tab";
+    my $tempFileName37 = $self->{"tempdir"}."/temp_GRCH37.bed";
+
+    my $bigwigQuery = sprintf("bigWigAverageOverBed %s %s %s", $self->{"Linsight"},$tempFileName37,$linsightOut);
     print $bigwigQuery,"\n" if $self->{"verbose"};
     `$bigwigQuery`;
 
