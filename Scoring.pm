@@ -94,6 +94,7 @@ sub _get_mixed {
         # If the consequence is severe, we use cadd:
         if ( $consequence =~ /intron|intergenic|regulatory|non_coding|upstream|downstream/i ){
             my $EigenFile = $self->{"EigenPath"};
+	    $EigenFile=~s/%/$chr/i;
             my $tabix_query = sprintf("tabix %s %s:%s-%s | grep %s", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
             printf "[Info] %s is a %s so EigenPhred scores are used.\n", $var, $consequence;
             print "$tabix_query\n" if $self->{"verbose"};
@@ -151,7 +152,6 @@ sub _get_mixed {
     return \%hash
 }
 
-
 sub _get_CADD_GERP {
     my $self = $_[0];
     my %hash = %{$_[1]};
@@ -161,7 +161,6 @@ sub _get_CADD_GERP {
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
         my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f1-5,25-28,115-", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
         print "[Info] $tabix_query\n" if $self->{"verbose"};
-        #my $lines = `bash -O extglob -c \'$tabix_query\'`;
 	my $lines=backticks_bash($tabix_query);
         $hash{$var}{"score"} = "NA";
 
@@ -196,11 +195,11 @@ sub _get_Eigen_Score {
         my $EigenFile = $self->{"EigenPath"};
 
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
+	$EigenFile=~s/%/$chr/i;
 
         # Two tabix queries will be submitted regardless of the output...
         my $tabix_query = sprintf("tabix %s %s:%s-%s | grep %s", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
         print "$tabix_query\n" if $self->{"verbose"};
-        #my $lines = `bash -O extglob -c \'$tabix_query\'`;
 	my $lines=backticks_bash($tabix_query);
 
         $hash{$var}{"score"} = "NA"; # Initialize Eigen score.
@@ -253,7 +252,6 @@ sub _liftover {
     my $liftover_query = sprintf("liftOver %s %s/hg38ToHg19.over.chain temp_GRCh37.bed temp_unmapped.bed  2> /dev/null", $tempFileName, $self->{"scriptDir"});
     
     # Calling liftover:
-    #`bash -O extglob -c \'$liftover_query\'`;
      backticks_bash($liftover_query);
 
 
