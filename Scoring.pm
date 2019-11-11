@@ -45,6 +45,13 @@ sub new {
     return $self;
 }
 
+sub backticks_bash {
+  open(my $pipe, '-|', '/bin/bash', '-c', $_[0])
+     or return;
+  local $/ = wantarray ? $/ : undef;
+  <$pipe>
+}
+
 sub AddScore {
     my $self = shift;
     my $hash = shift;
@@ -90,7 +97,8 @@ sub _get_mixed {
             my $tabix_query = sprintf("tabix %s %s:%s-%s | grep %s", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
             printf "[Info] %s is a %s so EigenPhred scores are used.\n", $var, $consequence;
             print "$tabix_query\n" if $self->{"verbose"};
-            my $lines = `bash -O extglob -c \'$tabix_query\'`;
+	    my $lines=backticks_bash($tabix_query);
+            #my $lines = `bash -O extglob -c \'$tabix_query\'`;
 
             foreach my $line (split("\n", $lines)){
                 chomp $line;
@@ -112,7 +120,8 @@ sub _get_mixed {
             # Tabixing for CADD score:
             my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f1-5,25-28,115-", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
             print "[Info] $tabix_query\n";
-            my $lines = `bash -O extglob -c \'$tabix_query\'`;
+            #my $lines = `bash -O extglob -c \'$tabix_query\'`;
+	    my $lines=backticks_bash($tabix_query);
 
             # Looping through all ouput lines:
             foreach my $line (split("\n", $lines)){
@@ -152,7 +161,8 @@ sub _get_CADD_GERP {
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
         my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f1-5,25-28,115-", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
         print "[Info] $tabix_query\n" if $self->{"verbose"};
-        my $lines = `bash -O extglob -c \'$tabix_query\'`;
+        #my $lines = `bash -O extglob -c \'$tabix_query\'`;
+	my $lines=backticks_bash($tabix_query);
         $hash{$var}{"score"} = "NA";
 
         foreach my $line (split("\n", $lines)){
@@ -190,7 +200,9 @@ sub _get_Eigen_Score {
         # Two tabix queries will be submitted regardless of the output...
         my $tabix_query = sprintf("tabix %s %s:%s-%s | grep %s", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
         print "$tabix_query\n" if $self->{"verbose"};
-        my $lines = `bash -O extglob -c \'$tabix_query\'`;
+        #my $lines = `bash -O extglob -c \'$tabix_query\'`;
+	my $lines=backticks_bash($tabix_query);
+
         $hash{$var}{"score"} = "NA"; # Initialize Eigen score.
 
         foreach my $line (split("\n", $lines)){
@@ -241,7 +253,9 @@ sub _liftover {
     my $liftover_query = sprintf("liftOver %s %s/hg38ToHg19.over.chain temp_GRCh37.bed temp_unmapped.bed  2> /dev/null", $tempFileName, $self->{"scriptDir"});
     
     # Calling liftover:
-    `bash -O extglob -c \'$liftover_query\'`;
+    #`bash -O extglob -c \'$liftover_query\'`;
+     backticks_bash($liftover_query);
+
 
     # Reading mapped file:
     open(my $lifted, "< temp_GRCh37.bed") or die "[Error] After liftover run, the mapped file could not be opened.\n";

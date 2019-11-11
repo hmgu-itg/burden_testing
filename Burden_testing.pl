@@ -145,7 +145,6 @@ if ($help || !defined($inputFile) || !defined($outputFile) || !defined($paramete
     exit(1);
 }
 
-
 # Exit unless the absolute necessary input files are exists or specified:
 die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
 die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;

@@ -72,7 +72,7 @@ function usage {
     echo "  7: Links regulatory features to genes based on GTEx data."
     echo "  8: Links regulatory features to genes based on overlapping."
     echo "  9: Combined GENCODE, GTEx and Overlap data together into a single bedfile."
-    echo "  10: Tabix output, cleaning up."
+    echo "  11: Tabix output"
     echo ""
     echo ""
     echo "The output is a bed file, where the first 4 columns are the chromosome, start/end
@@ -145,10 +145,11 @@ if [[ $# == 0 ]]; then usage; fi
 
 # Processing command line options:
 OPTIND=1
-while getopts "G:t:h" optname; do
+while getopts "G:t:e:h" optname; do
     case "$optname" in
         "G" ) GTExFile="${OPTARG}" ;;
         "t" ) targetDir="${OPTARG}" ;;
+        "e" ) eigenFiles="${OPTARG}" ;;
         "h" ) usage ;;
         "?" ) usage ;;
         *) usage ;;
