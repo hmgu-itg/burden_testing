@@ -24,7 +24,6 @@ $\="\n";
 
 ##-----------------------------------------------------------------------------------------------------------
 #                                   ASSUMING ALL SCORES ARE 37 BASED
-# TODO: check if tempdir exists
 # TODO: --config <config.txt>
 ##-----------------------------------------------------------------------------------------------------------
 
@@ -32,14 +31,6 @@ $\="\n";
 # Loading custom modules:
 use GENCODE;
 use Scoring;
-#use GetVariant;
-
-sub backticks_bash {
-  open(my $pipe, '-|', '/bin/bash', '-c', $_[0])
-     or return;
-  local $/ = wantarray ? $/ : undef;
-  <$pipe>
-}
 
 # Status report:
 print "[Info] Script version: $version";
@@ -138,7 +129,9 @@ GetOptions(
     
     # Asking for help:
     'help|h' => \$help
-);
+    );
+
+print "SCORE: ".$parameters->{"score"};
 
 if ($help || !defined($inputFile) || !defined($outputFile) || !defined($parameters->{"vcfFile"}) || !defined($parameters->{"gencode_file"}) || !defined($parameters->{"tempdir"})){
     &usage();
@@ -334,12 +327,12 @@ sub check_scores {
             $params->{"score"} = "NA";
             return $params;
         }
-        elsif (! -e $params->{"EigenPath"}){
-            printf "[Warning] The specified genome-wide Eigen scores are not available %s.", $params->{"EigenPath"};
-            print "[Warning] Eigen scores as weight cannot be used. No weights will be applied.";
-            $params->{"score"} = "NA";
-            return $params;
-        }
+        # elsif (! -e $params->{"EigenPath"}){
+        #     printf "[Warning] The specified genome-wide Eigen scores are not available %s.", $params->{"EigenPath"};
+        #     print "[Warning] Eigen scores as weight cannot be used. No weights will be applied.";
+        #     $params->{"score"} = "NA";
+        #     return $params;
+        # }
 
     }
     elsif ( $params->{"score"} eq "Linsight"){
@@ -447,7 +440,7 @@ sub print_parameters {
     print "\tOnly high-confidence loss-of-function variants will be included in the test (loftee HC)." if $parameters->{"lofteeHC"};
 
     print "\n[Info] Variant weighting:";
-    printf "\tWeigthing method: %s", $parameters->{"score"};
+    printf "\tWeighting method: %s\n", $parameters->{"score"};
     if ($parameters->{"score"} ne "NA"){
         printf "\tScore lower cutoff: %s", $parameters->{"cutoff"};
         printf "\tScore floor applied: %s", $parameters->{"floor"};
@@ -462,7 +455,7 @@ sub BedToolsQuery {
     my $queryString = sprintf("intersectBed -wb -a <(echo -e \"%s\\t%s\\t%s\\t%s\") -b %s -sorted | cut -f9-",$chr, $start, $end, $stable_ID, $geneBedFile);
     
     print "[Info] IntersectBed query string: $queryString" if $verbose;
-    my $query =backticks_bash($queryString);
+    my $query =Scoring::backticks_bash($queryString);
     #print("RETURN FROM BEDTOOLSQUERY");
     return $query;
 }
@@ -500,7 +493,7 @@ sub getVariants {
     #    $distance += $end - $start;
     #    my $bcftoos_query = sprintf("tabix %s %s:%s-%s", $vcfFile, $chr, $start, $end);
     print  "$bcftoos_query" if $verbose;
-    my $variations = backticks_bash($bcftoos_query);
+    my $variations = Scoring::backticks_bash($bcftoos_query);
 
     print sprintf("[Info] Total covered genomic regions: %s bp", $distance) if $verbose;
 
@@ -590,7 +583,7 @@ sub FilterLines {
     # Collapsing overlapping features:
     my $queryString = "mergeBed -i filtered_regions.bed";
     #my $merged = `bash -O extglob -c \'$queryString\'`;
-    my $merged = backticks_bash($queryString);
+    my $merged = Scoring::backticks_bash($queryString);
     return $merged;
 }
 

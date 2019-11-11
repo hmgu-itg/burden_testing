@@ -92,7 +92,7 @@ sub _get_mixed {
         # If the consequence is severe, we use cadd:
         if ( $consequence =~ /intron|intergenic|regulatory|non_coding|upstream|downstream/i ){
             my $EigenFile = $self->{"EigenPath"};
-	    $EigenFile=~s/%/$chr/i;
+	    $EigenFile=~s/\%/$chr/i;
             my $tabix_query = sprintf("tabix %s %s:%s-%s | grep %s", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
             printf "[Info] %s is a %s so EigenPhred scores are used.\n", $var, $consequence;
             print "$tabix_query\n" if $self->{"verbose"};
@@ -158,7 +158,7 @@ sub _get_CADD_GERP {
     foreach my $var (keys %hash){
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
         my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f1-5,25-28,115-", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
-        print "[Info] $tabix_query\n" if $self->{"verbose"};
+        print "[Info] $tabix_query" if $self->{"verbose"};
 	my $lines=backticks_bash($tabix_query);
         $hash{$var}{"score"} = "NA";
 
@@ -193,11 +193,13 @@ sub _get_Eigen_Score {
         my $EigenFile = $self->{"EigenPath"};
 
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
-	$EigenFile=~s/%/$chr/i;
+	$EigenFile=~s/\%/$chr/i;
+
+	print "EIGENFILE=$EigenFile" if $self->{"verbose"};
 
         # Two tabix queries will be submitted regardless of the output...
-        my $tabix_query = sprintf("tabix %s %s:%s-%s | grep %s", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
-        print "$tabix_query\n" if $self->{"verbose"};
+        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,30-33 | grep %s | ", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
+        print "$tabix_query" if $self->{"verbose"};
 	my $lines=backticks_bash($tabix_query);
 
         $hash{$var}{"score"} = "NA"; # Initialize Eigen score.
@@ -220,7 +222,7 @@ sub _get_Eigen_Score {
 
         # Reporting if no score has been found for the variant:
         if ( $hash{$var}{"score"} eq "NA") {
-            printf ( "[Warning] %s score was not found for variant %s in the non-coding set! Removing variant.\n", $self->{"score"}, $var);
+            printf ( "[Warning] %s score was not found for variant %s in the non-coding set! Removing variant.\n\n", $self->{"score"}, $var);
             delete $hash{$var};
         }
     }
@@ -252,13 +254,13 @@ sub _liftover {
     }
 
     # Liftover query:
-    my $liftover_query = sprintf("liftOver %s %s/hg38ToHg19.over.chain %s %s  2> /dev/null", $tempFileName, $self->{"scriptDir"},$tempFileName37,$tempFilenameU);
+    my $liftover_query = sprintf("liftOver %s %s/hg38ToHg19.over.chain %s %s  2> /dev/null", $tempFileName, $self->{"scriptDir"},$tempFileName37,$tempFileNameU);
     
     # Calling liftover:
      backticks_bash($liftover_query);
 
     # Reading mapped file:
-    open(my $lifted, "< $tempFilename37") or die "[Error] After liftover run, the mapped file could not be opened.\n";
+    open(my $lifted, "< $tempFileName37") or die "[Error] After liftover run, the mapped file could not be opened.\n";
     
     my $liftedVarNo  = 0;
     
@@ -296,15 +298,18 @@ sub _process_score {
         # Shifting scores if it has been set:
         $hash{$var}{"score"} = $hash{$var}{"score"} + $self->{"shift"} if $self->{"shift"} != 0;
 
+	# TODO: clarify precedence of floor vs cutoff
         # How to deal with variants that are below the cutoff:
-        if ( $self->{"floor"} ne 0 && $hash{$var}{"score"} <= $self->{"cutoff"} ) {
-            printf "[Warning] score of %s is set to %s, because %s score is below threshold: %s!\n",
-                    $var, $self->{"floor"}, $self->{"score"}, $hash{$var}{"score"};
+        #if ( $self->{"floor"} ne 0 && $hash{$var}{"score"} <= $self->{"cutoff"} ) {
+        if ( $hash{$var}{"score"} < $self->{"floor"} ) {
+            printf "[Warning] score of %s is set to %s, because %s score is below the floor threshold: %s < %s!\n",
+                    $var, $self->{"floor"}, $self->{"score"}, $hash{$var}{"score"}, $hash{$var}{"floor"};
             $hash{$var}{"score"} = $self->{"floor"};
         }
         # Removing variants:
-        elsif ($self->{"floor"} != 0 && $hash{$var}{"score"} <= $self->{"cutoff"}){
-            printf "[Warning] %s is deleted, because %s score is below threshold: %s!\n", $var, $self->{"score"}, $hash{$var}{"score"};
+        #elsif ($self->{"floor"} != 0 && $hash{$var}{"score"} < $self->{"cutoff"}){
+        elsif ($hash{$var}{"score"} < $self->{"cutoff"}){
+            printf "[Warning] %s is deleted, because %s score is below the cutoff threshold: %s < %s!\n", $var, $self->{"score"}, $hash{$var}{"score"}, $hash{$var}{"cutoff"};
             delete $hash{$var};
         }
         # If the score is above cutoff, we don't do anything.

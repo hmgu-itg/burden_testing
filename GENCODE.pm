@@ -33,7 +33,6 @@ sub _initialize {
     my $gencodeFile = shift;
 
 
-    print("FILENAME: $gencodeFile\n");
     # Reading the file and create and return two hashes. Each contain the chromosome and
     # coordinate of the genes. Keys:
     
