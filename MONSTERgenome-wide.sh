@@ -3,7 +3,7 @@
 # A wrapper script to automate genome-wide burden testing using MONSTER.
 # For more information on the applied method see: http://www.stat.uchicago.edu/~mcpeek/software/MONSTER/
 
-# In this version when the script founds a significant gene, it tests if the association is
+# In this version when the script finds a significant gene, it tests if the association is
 ## driven by a single variant or more by repeating the test with removing a variant
 ## each time.
 
@@ -37,8 +37,6 @@ geneListFile="${scriptDir}/gene_list.lst"
 # singlePointDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/single_point/output
 # singlePointDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/single_point/output/missing_chunks
 
-# Path to MONSTER executable: # No longer hardwired, expected to be in the path.<- not sure about this though...
-# MONSTER=/nfs/team144/software/MONSTER_v1.3/MONSTER
 MONSTER=$(which MONSTER)
 missing_cutoff=1 # Above the set missingness threshold, variants will be excluded. Below the missing genotype will be imputed.
 imputation_method='-A' # The default imputation method is BLUP, slowest, but the most accurate. For other options, see documentation.
@@ -376,7 +374,7 @@ echo "[Info] Variant filtering options:"
 echo -e "\tvcf file: ${vcfFile}"
 echo -e "\tGENCODE feaures: ${gencode:--}"
 echo -e "\tGTEx feaures: ${gtex:--}"
-echo -e "\tOverlapping reg.feaures: ${overlap:-NA}"
+echo -e "\tOverlapping reg.features: ${overlap:-NA}"
 echo -e "\tFeatures are extended by ${xtend:-0}bp"
 echo -e "\tUpper minor allele frequency: ${MAF:-1}"
 echo ""
