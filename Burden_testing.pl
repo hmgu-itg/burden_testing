@@ -105,6 +105,8 @@ GetOptions(
 
     # Which score do we need:
     'score=s' => \$parameters->{"score"},
+    
+    'maxVars=s' => \$parameters->{"maxVars"},
 
     # Do we need only loss of function:
     'lof' => \$parameters->{"lof"},
@@ -137,6 +139,8 @@ if ($help || !defined($inputFile) || !defined($outputFile) || !defined($paramete
     &usage();
     exit(1);
 }
+
+$parameters->{"maxVars"}=1000 unless $parameters->{"maxVars"}
 
 # Exit unless the absolute necessary input files are exists or specified:
 die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
@@ -233,8 +237,8 @@ while ( my $ID = <$INPUT> ){
     }
 
     # TODO max number of variants per gene as input parameter
-    # The gene will be skipped if there are too many variants (1000):
-    if (scalar keys %{$hash} > 1000){
+    # The gene will be skipped if there are too many variants:
+    if (scalar keys %{$hash} > $parameters->{"maxVars"}){
         print "[Warning] Gene $ID is skipped as more than 1000 variants are in the set [TOO_MANY_VAR].";
         undef $hash;
         undef $genotypes;
@@ -839,6 +843,7 @@ sub usage {
     print("          --extend <by how many basepairs the GENCODE features should be extended.>");
     print("          --MAF <MAF upper threshold>");
     print("          --MAC <MAC lower threshold>");
+    print("          --maxVars <max number of variants in a gene (default: 1000)>");
     print("          --SkipMinor <skip minor transcripts by APPRIS>");
     print("          --verbose <increase verbosity>");
     print("          --score <which score to use to weight variants; one of: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred, Linsight, Mixed >");
