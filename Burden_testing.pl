@@ -239,7 +239,7 @@ while ( my $ID = <$INPUT> ){
     # TODO max number of variants per gene as input parameter
     # The gene will be skipped if there are too many variants:
     if (scalar keys %{$hash} > $parameters->{"maxVars"}){
-        print "[Warning] Gene $ID is skipped as more than 1000 variants are in the set [TOO_MANY_VAR].";
+        print "[Warning] Gene $ID is skipped as more than ".$parameters->{"maxVars"}." variants are in the set [TOO_MANY_VAR].";
         undef $hash;
         undef $genotypes;
         next;
@@ -768,19 +768,14 @@ sub print_genotypes {
     my $parameters    = $_[2];
     my $gene_counter  = $_[3];
 
-    my $vcfChrFile = $parameters->{"vcfFile"};
-    $vcfChrFile =~ s/\%/11/g; # TODO ???
-
-    # Checking if the file exists or not:
-    if (! -e $vcfChrFile ){
-        print STDERR "[Error] The vcf file does not exists. $vcfChrFile";
-    }
+    my $vcfChrFile = &getVCF($parameters->{"vcfFile"});
 
     # Assembling header for the first gene:
     if ( $gene_counter == 0){
         # Get list of sample IDs:
         my $samples = `zgrep -m1 "#CHROM"  $vcfChrFile | cut -f10-`;
-        print $outputhandler "0\t$samples";
+	chomp($samples);
+        print $outputhandler "ID\t$samples";
     }
 
     # Saving data:
@@ -865,6 +860,18 @@ sub checkVCFs{
 	my $fname=$inputvcfpattern;
 	$fname=~s/\%/$_/;
 	return 1 if -e $fname;
+    }
+
+    return undef;
+}
+
+sub getVCF{
+    my $inputvcfpattern=$_;
+
+    for (1 .. 22){
+	my $fname=$inputvcfpattern;
+	$fname=~s/\%/$_/;
+	return $fname if -e $fname;
     }
 
     return undef;
