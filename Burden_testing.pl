@@ -45,7 +45,7 @@ my $parameters = {
     "MAF"     => 0.05, # The upper threshold of the minor allel frequency.
     "MAC"     => 0, # The lower threshold of the minor allele count.
     "missingthreshold" => 0.01, # The upper threshold of the missingness. (below which the the missingness will be imputed)
-    "configFileName" => "$scriptDir/config.txt", # The config file from which the source files will be read.
+#    "configFileName" => "$scriptDir/config.txt", # The config file from which the source files will be read.
     "score"   => "NA", # Applied score to weight variants.
     "cutoff"  => 0, # Score threshold below which the variants will be removed.
     "floor"   => 0, # All the scores below this threshold will be set to this value.
@@ -141,8 +141,12 @@ if ($help || !defined($inputFile) || !defined($outputFile) || !defined($paramete
 # Exit unless the absolute necessary input files are exists or specified:
 die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
 die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
-die "[Error] VCF file has to be specified with the --vcfFile option. Exiting." unless $parameters->{"vcfFile"};
+die "[Error] VCF files have to be specified with the --vcfFile option. Exiting." unless $parameters->{"vcfFile"};
+die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcfFile"});
 die "[Error] The specified input gene list does not exist. Exiting." unless -e $inputFile;
+die "[Error] No config file specified. Exiting." unless $parameters->{"configFileName"};
+die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configFileName"};
+die "[Error] No temp dir specified. Exiting." unless $parameters->{"tempdir"};
 die "[Error] The specified temp dir does not exist. Exiting." unless -d $parameters->{"tempdir"};
 
 # Check stuffs:
@@ -355,7 +359,7 @@ sub check_scores {
 sub readConfigFile {
     my $params = $_[0];
 
-    printf "[Info] Config file: %s", $params->{"configFileName"};
+#    printf "[Info] Config file: %s", $params->{"configFileName"};
 
     # Reading file:
     open(my $CONF, "<", $params->{"configFileName"}) or die "[Error] Config file could not be oppended. Exiting.";
@@ -444,7 +448,7 @@ sub print_parameters {
     if ($parameters->{"score"} ne "NA"){
         printf "\tScore lower cutoff: %s", $parameters->{"cutoff"};
         printf "\tScore floor applied: %s", $parameters->{"floor"};
-        printf "\tScore shifted by: %s", $parameters->{"shift"};
+        printf "\tScore shifted by: %s\n", $parameters->{"shift"};
     }
 
 
@@ -471,13 +475,14 @@ sub getVariants {
     my $distance = 0;
 
     # Finding out which chromosome are we on:
-    my ($chr) = $merged =~ /^(.+?)\t/;  # TODO: WATCHOUT !
+    my ($chr) = $merged =~ /^(.+?)\t/;  # WATCHOUT !
 
-    print("GETVARIANTS CHR=$chr");
+    print("GETVARIANTS CHR=$chr") if $verbose;
     
     # Print info:
     print  "\n[Info] Extracting variants from vcf files:" if $verbose;
     (my $vcfFile = $inputvcfpattern ) =~ s/\%/$chr/g;
+    return "" unless -e $vcfFile;
     my $bcftoos_query = sprintf("tabix %s ", $vcfFile);
 
     # looping through all lines:
@@ -487,17 +492,12 @@ sub getVariants {
         $bcftoos_query .= sprintf(" %s%s:%s-%s", $prefix, $chr, $start, $end);
     }
 
-    # Extract overlapping variants:
-    #foreach my $line (split("", $merged)){
-    #    my ($chr, $start, $end) = split("\t", $line);
-    #    $distance += $end - $start;
-    #    my $bcftoos_query = sprintf("tabix %s %s:%s-%s", $vcfFile, $chr, $start, $end);
-    print  "$bcftoos_query" if $verbose;
-    my $variations = Scoring::backticks_bash($bcftoos_query);
+    print  "$bcftools_query" if $verbose;
+    my $variants = Scoring::backticks_bash($bcftools_query);
 
     print sprintf("[Info] Total covered genomic regions: %s bp", $distance) if $verbose;
 
-    return $variations;
+    return $variants;
 }
 sub FilterLines {
     my ($lines, $stable_ID, $parameters) = @_;
@@ -610,21 +610,27 @@ sub processVar {
         # line: CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	EGAN00001033155
         my ($chr, $pos, $id, $a1, $a2, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
 
-	# TODO ?
         # Generating variant name (Sometimes the long allele names cause problems):
         my $short_a1 = length $a1 > 5 ? substr($a1,0,4) : $a1;
         my $short_a2 = length $a2 > 5 ? substr($a2,0,4) : $a2;
 
         my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $short_a1, $short_a2);
 
-	# TODO ?
         # Parsing info field for relevant information:
-        (my $ac )= $info =~ /AC=(.+?)(;|\b)/;
-        (my $an )= $info =~ /AN=(.+?)(;|\b)/;
-        (my $consequence ) = $info =~ /consequence=(.+?)(;|\b)/;
+        (my $ac )= $info =~ /AC=(.+?)[;\b]/;
+        (my $an )= $info =~ /AN=(.+?)[;\b]/;
+        (my $consequence ) = $info =~ /consequence=(.+?)[;\b]/;
         # If AN and AC values are not found we skip the variant:
-        next unless $an && $ac;
+	if (! $an){
+	    print "[Warning] $SNPID has no AN; skipping";
+	    next;
+	}
 
+	if (! $ac){
+	    print "[Warning] $SNPID has no AC; skipping";
+	    next;
+	}
+	
         # We add NA if consequence was not found:
         $consequence = "NA" unless $consequence;
 
@@ -635,6 +641,7 @@ sub processVar {
         }
 
         print "WARNING: $variant has no AC" if $ac eq "NA";
+        print "WARNING: $variant has no AN" if $an eq "NA";
 
         # Calculating values for filtering:
         my $missingness = (scalar(@genotypes)*2 - $an)/(scalar(@genotypes)*2);
@@ -823,6 +830,7 @@ sub usage {
     print("          --vcfFile <input VCF>");
     print("          --gencode-file <GENCODE file>");
     print("          --tempdir <TEMP DIR>");
+    print("          --configFile <config file>");
     print("      Optional:");    
 #    print("          --build <genome build; default: 38>");
     print("          --GENCODE <comma separated list of GENCODE features (gene, exon, transcript, CDS or UTR)>");
@@ -833,7 +841,6 @@ sub usage {
     print("          --MAC <MAC lower threshold>");
     print("          --SkipMinor <skip minor transcripts by APPRIS>");
     print("          --verbose <increase verbosity>");
-    print("          --configFile <config file>");
     print("          --score <which score to use to weight variants; one of: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred, Linsight, Mixed >");
     print("          --lof <only select high impact variants: transcript_ablation, splice_acceptor_variant, splice_donor_variant, stop_gained, frameshift_variant, stop_lost, start_lost, transcript_amplification, inframe_insertion, inframe_deletion, splice_region_variant>");
     print("          --loftee <only select high and low confident loss of function variants>");
@@ -846,3 +853,14 @@ sub usage {
     print("          --help <this help>");
 }
 
+sub checkVCFs{
+    my $inputvcfpattern=$_;
+
+    for (1 .. 22){
+	my $fname=$inputvcfpattern;
+	$fname=~s/\%/$_/;
+	return 1 if -e $fname;
+    }
+
+    return undef;
+}

@@ -1,5 +1,7 @@
 #!/usr/local/bin/bash
 
+# TODO: add output dir option
+
 # A wrapper script to automate genome-wide burden testing using MONSTER.
 # For more information on the applied method see: http://www.stat.uchicago.edu/~mcpeek/software/MONSTER/
 
@@ -27,8 +29,8 @@ export scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # phenotypeDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/phenotypes
 # phenotypeDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/phenotypes/correct_names.andmissing
 
-# Default f4ile with all the gene names (only on autosomes):
-geneListFile="${scriptDir}/gene_list.lst"
+# Default file with all the gene names:
+geneListFile="${scriptDir}/gene_list.txt"
 
 # Kinship matrix file: # No longer hardwired, accepted as command line parameter.
 # kinshipMatrix=/nfs/team144/ds26/burden_testing/kinship/2016.10.20_fix_diagonal/kinship.fixdiag.txt
