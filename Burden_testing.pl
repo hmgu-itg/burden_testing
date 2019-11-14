@@ -140,8 +140,7 @@ if ($help || !defined($inputFile) || !defined($outputFile) || !defined($paramete
     exit(1);
 }
 
-$parameters->{"maxVars"}=1000 unless $parameters->{"maxVars"}
-
+$parameters->{"maxVars"}=1000 unless $parameters->{"maxVars"};
 # Exit unless the absolute necessary input files are exists or specified:
 die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
 die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
@@ -487,13 +486,13 @@ sub getVariants {
     print  "\n[Info] Extracting variants from vcf files:" if $verbose;
     (my $vcfFile = $inputvcfpattern ) =~ s/\%/$chr/g;
     return "" unless -e $vcfFile;
-    my $bcftoos_query = sprintf("tabix %s ", $vcfFile);
+    my $bcftools_query = sprintf("tabix %s ", $vcfFile);
 
     # looping through all lines:
     foreach my $line (split("\n", $merged)){
         my ($chr, $start, $end) = split("\t", $line);
         $distance += $end - $start;
-        $bcftoos_query .= sprintf(" %s%s:%s-%s", $prefix, $chr, $start, $end);
+        $bcftools_query .= sprintf(" %s%s:%s-%s", $prefix, $chr, $start, $end);
     }
 
     print  "$bcftools_query" if $verbose;
@@ -854,11 +853,11 @@ sub usage {
 }
 
 sub checkVCFs{
-    my $inputvcfpattern=$_;
-
-    for (1 .. 22){
+    my $inputvcfpattern=$_[0];
+    print $inputvcfpattern;
+    for (my $i=1;$i<=22;$i++){
 	my $fname=$inputvcfpattern;
-	$fname=~s/\%/$_/;
+	$fname=~s/\%/$i/;
 	return 1 if -e $fname;
     }
 
@@ -866,11 +865,11 @@ sub checkVCFs{
 }
 
 sub getVCF{
-    my $inputvcfpattern=$_;
+    my $inputvcfpattern=$_[0];
 
-    for (1 .. 22){
+    for (my $i=1;$i<=22;$i++){
 	my $fname=$inputvcfpattern;
-	$fname=~s/\%/$_/;
+	$fname=~s/\%/$i/;
 	return $fname if -e $fname;
     }
 

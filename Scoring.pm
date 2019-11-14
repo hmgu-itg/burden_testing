@@ -198,7 +198,7 @@ sub _get_Eigen_Score {
 	print "EIGENFILE=$EigenFile" if $self->{"verbose"};
 
         # Two tabix queries will be submitted regardless of the output...
-        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,30-33 | grep %s | ", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
+        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,30-33 | grep %s ", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
         print "$tabix_query" if $self->{"verbose"};
 	my $lines=backticks_bash($tabix_query);
 
@@ -296,22 +296,26 @@ sub _process_score {
     foreach my $var ( keys %hash){
 
         # Shifting scores if it has been set:
-        $hash{$var}{"score"} = $hash{$var}{"score"} + $self->{"shift"} if $self->{"shift"} != 0;
+        $hash{$var}{"score"} = $hash{$var}{"score"} + $self->{"shift"} if $self->{"shift"};
 
 	# TODO: clarify precedence of floor vs cutoff
         # How to deal with variants that are below the cutoff:
         #if ( $self->{"floor"} ne 0 && $hash{$var}{"score"} <= $self->{"cutoff"} ) {
-        if ( $hash{$var}{"score"} < $self->{"floor"} ) {
-            printf "[Warning] score of %s is set to %s, because %s score is below the floor threshold: %s < %s!\n",
+	if ($self->{"floor"}){
+	    if ( $hash{$var}{"score"} < $self->{"floor"} ) {
+		printf "[Warning] score of %s is set to %s, because %s score is below the floor threshold: %s < %s!\n",
                     $var, $self->{"floor"}, $self->{"score"}, $hash{$var}{"score"}, $hash{$var}{"floor"};
-            $hash{$var}{"score"} = $self->{"floor"};
-        }
+		$hash{$var}{"score"} = $self->{"floor"};
+	    }
+	}
         # Removing variants:
         #elsif ($self->{"floor"} != 0 && $hash{$var}{"score"} < $self->{"cutoff"}){
-        elsif ($hash{$var}{"score"} < $self->{"cutoff"}){
-            printf "[Warning] %s is deleted, because %s score is below the cutoff threshold: %s < %s!\n", $var, $self->{"score"}, $hash{$var}{"score"}, $hash{$var}{"cutoff"};
-            delete $hash{$var};
-        }
+	if ($self->{"cutoff"}){
+	    if ($hash{$var}{"score"} < $self->{"cutoff"}){
+		printf "[Warning] %s is deleted, because %s score is below the cutoff threshold: %s < %s!\n", $var, $self->{"score"}, $hash{$var}{"score"}, $hash{$var}{"cutoff"};
+		delete $hash{$var};
+	    }
+	}
         # If the score is above cutoff, we don't do anything.
     }
     print "Done.\n" if $self->{"verbose"};
