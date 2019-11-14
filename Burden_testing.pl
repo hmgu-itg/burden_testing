@@ -24,7 +24,7 @@ $\="\n";
 
 ##-----------------------------------------------------------------------------------------------------------
 #                                   ASSUMING ALL SCORES ARE 37 BASED
-# TODO: --config <config.txt>
+#
 ##-----------------------------------------------------------------------------------------------------------
 
 
@@ -45,7 +45,6 @@ my $parameters = {
     "MAF"     => 0.05, # The upper threshold of the minor allel frequency.
     "MAC"     => 0, # The lower threshold of the minor allele count.
     "missingthreshold" => 0.01, # The upper threshold of the missingness. (below which the the missingness will be imputed)
-#    "configFileName" => "$scriptDir/config.txt", # The config file from which the source files will be read.
     "score"   => "NA", # Applied score to weight variants.
     "cutoff"  => 0, # Score threshold below which the variants will be removed.
     "floor"   => 0, # All the scores below this threshold will be set to this value.
@@ -88,7 +87,7 @@ GetOptions(
     'extend=s' => \$parameters->{"extend"},
 
     # GENCODE file
-    'gencode-file=s' => \$parameters->{"gencode_file"},
+    #'gencode-file=s' => \$parameters->{"gencode_file"},
     
     # Skipping minor transcripts by APPRIS:
     'SkipMinor' => \$parameters->{"minor"},
@@ -127,15 +126,13 @@ GetOptions(
     'vcfFile=s' => \$parameters->{"vcfFile"},
 
     # TEMP DIR
-    'tempdir=s' => \$parameters->{"tempdir"},
+    #'tempdir=s' => \$parameters->{"tempdir"},
     
     # Asking for help:
     'help|h' => \$help
     );
 
-print "SCORE: ".$parameters->{"score"};
-
-if ($help || !defined($inputFile) || !defined($outputFile) || !defined($parameters->{"vcfFile"}) || !defined($parameters->{"gencode_file"}) || !defined($parameters->{"tempdir"})){
+if ($help || !defined($inputFile) || !defined($outputFile) || !defined($parameters->{"vcfFile"})){
     &usage();
     exit(1);
 }
@@ -149,14 +146,18 @@ die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcfFile"});
 die "[Error] The specified input gene list does not exist. Exiting." unless -e $inputFile;
 die "[Error] No config file specified. Exiting." unless $parameters->{"configFileName"};
 die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configFileName"};
-die "[Error] No temp dir specified. Exiting." unless $parameters->{"tempdir"};
-die "[Error] The specified temp dir does not exist. Exiting." unless -d $parameters->{"tempdir"};
 
 # Check stuffs:
 #&check_parameters($parameters);
 
 # Open config file:
 $parameters = &readConfigFile($parameters);
+
+die "[Error] No temp dir specified in config file. Exiting." unless $parameters->{"tempdir"};
+die "[Error] The specified temp dir does not exist. Exiting." unless -d $parameters->{"tempdir"};
+die "[Error] No GENCODE file specified in config file. Exiting." unless $parameters->{"gencode_file"};
+die "[Error] The specified GENCODE file does not exist. Exiting." unless -f $parameters->{"gencode_file"};
+
 
 # If the score option is not empty, we have to check if it's a valid score, and the
 # required files are exists. If any problem found, the score parameter will be set to its
@@ -731,6 +732,7 @@ sub processVar {
 }
 
 sub print_SNPlist {
+    local $\=undef;
     my %hash = %{$_[0]};
     my $gene_name = $_[1];
     my $outputhandle = $_[2];
@@ -741,8 +743,8 @@ sub print_SNPlist {
     # Check if we have scores as well:
     my $flag = $hash{$snpIDs[0]}{"score"} ? 1 : 0;
 
-    # The line with the snps will be written any ways:
-    print $outputhandle "$gene_name\t$flag\t", join("\t", @snpIDs),"";
+    # The line with the snps will be written anyways:
+    print $outputhandle "$gene_name\t$flag\t", join("\t", @snpIDs),"\n";
 
     # We return if the flag is 0, so there is no scores given:
     return 1 if $flag == 0;
@@ -755,7 +757,7 @@ sub print_SNPlist {
         # push (@scores, $hash{$snpid}{"score"}{"processed_eigen"}) if $score eq "Eigen";
         push (@scores, $hash{$snpid}{"score"});
     }
-    print $outputhandle join("\t", @scores),"";
+    print $outputhandle join("\t", @scores),"\n";
 
     return 1;
 }
@@ -826,8 +828,6 @@ sub usage {
     print("          --input <input file>");
     print("          --output <output prefix>");
     print("          --vcfFile <input VCF>");
-    print("          --gencode-file <GENCODE file>");
-    print("          --tempdir <TEMP DIR>");
     print("          --configFile <config file>");
     print("      Optional:");    
 #    print("          --build <genome build; default: 38>");

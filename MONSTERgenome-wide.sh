@@ -39,6 +39,7 @@ export scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 MONSTER=$(which MONSTER)
 missing_cutoff=1 # Above the set missingness threshold, variants will be excluded. Below the missing genotype will be imputed.
 imputation_method='-A' # The default imputation method is BLUP, slowest, but the most accurate. For other options, see documentation.
+configFile=""
 
 # Testing if MONSTER is in the path, exiting if not:
 if [[ -z "${MONSTER}" ]]; then echo "[Error] MONSTER is not in the path. Exiting."; exit; fi
@@ -76,6 +77,7 @@ It pools results together within one chunk."
     echo "     -o  - exclude all non loss-of-function variants from the test (less than missense in severity)."
     echo "     -f  - include only HC and LC loftee variants."
     echo "     -j  - include only HC loftee variants."
+    echo "     -z  - config file for Burden_testing.pl."
     echo ""
     echo "Parameters to set up scores for variants:"
     echo "     -s  - turn weights on. Arguments: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred,"
@@ -156,7 +158,7 @@ if [ $# == 0 ]; then display_help; fi
 
 # Looping through all command line options:
 OPTIND=1
-while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:j" optname; do
+while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:jC:" optname; do
     case "$optname" in
       # Gene list related parameters:
         "L") geneListFile=${OPTARG} ;;
@@ -185,6 +187,7 @@ while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:j" optname; do
         "o") lof=1 ;;
         "f") loftee=1 ;;
         "j") lofteeHC=1 ;;
+        "C") configFile=${OPTARG} ;;
 
       # Other parameters:
         "w") rootDir=${OPTARG} ;;
@@ -196,6 +199,16 @@ while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:j" optname; do
 done
 
 #--- checking input files - if any of the tests fails, the script exits.---------
+
+if [[ -z "${configFile}" ]]; then
+    echo "[Error] Config file was not specified";
+    exit;
+fi
+
+if [[ ! -e "${configFile}" ]]; then
+    echo "[Error] Config file does not exist: $geneListFile";
+    exit;
+fi
 
 # Phenotype file (Is it set? Does it exists?):
 if [[ -z "${phenotypeFile}" ]]; then
@@ -213,6 +226,7 @@ elif [[ ! -e "${kinshipFile}" ]]; then
     exit;
 fi
 
+# TODO
 # vcf file (Is it set? Does it exists?):
 if [[ -z "${vcfFile}" ]]; then
     display_help "[Error] VCF file has to be specified!";
@@ -281,6 +295,8 @@ if [[ ! -z "$lof" ]]; then
     folder="${folder}.severe"
     commandOptions="${commandOptions} --lof "
 fi
+
+commandOptions="${commandOptions} --configFile ${configFile} "
 
 # Score - If score is not given we apply no score. Otherwise we test the submitted value:
 # Accepted scores:
@@ -499,13 +515,13 @@ echo "[Info] Changing IDs and variant names."
 sed -i -f sample.map.sed pheno.ordered.txt
 sed -i -f sample.map.sed genotype.filtered.txt
 
-# TODO: keep underscores too ?
+# TODO: keep underscores and capital letters too ?
 cat genotype.filtered.txt | perl -lane '$_ =~ s/[^0-9a-z\-\t\.]//gi; print $_'  > genotype.filtered.mod.txt
 cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9a-z\t\.]//gi; $_ =~ s/Inf/0.0001/g; ;print $_'  > snpfile.mod.txt
 
 # Filter out genes which have only monomorphic variants, as it might cause a crash:
 echo "[Info] Looking for monomorphic variants..."
-#tail -n+2 genotype.filtered.mod.txt | while read snp genotype ; do if [[ -z $( echo $genotype | awk '$0 ~ 1 || $0 ~ 2' ) ]]; then echo $snp; fi; done | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
+#tail -n+2 genotype.filtered.mod.txt | while read snp genotype ; do if [[ -z $( echo $genotype | awk '$0 ~ 1' ) ]]; then echo $snp; fi; done | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
 tail -n+2 genotype.filtered.mod.txt | perl -lne '@f=split(/\s+/);$\="\n";$s=shift(@f);foreach (@f){$H{$_}=1;}if (scalar(keys(%H))==1){print $s;}' | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
 
 echo "[Info] Removing monomorphic variants from the SNPs file."

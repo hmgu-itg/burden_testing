@@ -16,6 +16,10 @@
 ## This file contains coordinates of the gene related genomic features and annotation:
 Linked_features=/usr/local/bin/burden_testing/test2/2019.11.07/Linked_features.bed.gz
 
+gencode_file=/usr/local/bin/burden_testing/gencode.v32.basic.annotation.tsv.gz
+
+tempdir=/usr/local/bin/burden_testing/temp
+
 EigenPath=/usr/local/bin/burden_testing/scores/Eigen_hg19_noncoding_annot_chr%.tab.bgz
 
 ## Path to CADD scores:
