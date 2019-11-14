@@ -461,7 +461,6 @@ if [[ "$region_absent" != 0 ]]; then
         echo -e "[Warning] No region in gene [NO_REGION]:\t $(cat output.log | grep NO_REGION | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')"
 fi
 
-
 if [[ ! -e gene_set_output_genotype_file.txt ]]; then
     echo "[Error] Gene set ${chunkNo} has failed. No genotype file has been generated. Exiting."
     exit
@@ -510,11 +509,10 @@ cut -f2 pheno.ordered.txt > samples.to.keep.txt
 echo "[Info] Processing kinship file."
 R --slave -e 'library(data.table); mlong=fread("'$kinshipFile'"); tokeep=fread("samples.to.keep.txt", header=F)$V1; direct=mlong[(mlong$V2 %in% tokeep) & (mlong$V3 %in% tokeep),];  mapping = fread("sample.map.sed", sep="/", header=FALSE);direct$V3 = mapping[match(direct$V3, mapping$V2),]$V3; direct$V2 = mapping[match(direct$V2, mapping$V2),]$V3;write.table(direct, file="filtered_kinship.txt", quote=FALSE, sep=" ", col.names = FALSE, row.names=FALSE)'
 
-# Adjust IDs and remove special characters from the snp, phenotype and genotype files:
+# Remap IDs and remove special characters from the snp, phenotype and genotype files:
 echo "[Info] Changing IDs and variant names."
 sed -i -f sample.map.sed pheno.ordered.txt
 sed -i -f sample.map.sed genotype.filtered.txt
-
 # TODO: keep underscores and capital letters too ?
 cat genotype.filtered.txt | perl -lane '$_ =~ s/[^0-9a-z\-\t\.]//gi; print $_'  > genotype.filtered.mod.txt
 cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9a-z\t\.]//gi; $_ =~ s/Inf/0.0001/g; ;print $_'  > snpfile.mod.txt
