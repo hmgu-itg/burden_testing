@@ -97,7 +97,7 @@ It pools results together within one chunk."
     echo "     -p  - phenotype (required, no default)"
     echo "     -P  - phenotype file (required, no default)"
     echo "     -K  - Kinship file (required, no default)"
-    echo "     -V  - VCF file (required, no default, Use * character for chromosome name eg 'chr*.vcf.gz')"
+    echo "     -V  - VCF file (required, no default, Use % character for chromosome name eg 'chr%.vcf.gz')"
     echo ""
     echo "Other options:"
     echo "     -h  - print this help message and exit"
@@ -499,14 +499,14 @@ echo "[Info] Changing IDs and variant names."
 sed -i -f sample.map.sed pheno.ordered.txt
 sed -i -f sample.map.sed genotype.filtered.txt
 
-# TODO: keep nderscores too ?
+# TODO: keep underscores too ?
 cat genotype.filtered.txt | perl -lane '$_ =~ s/[^0-9a-z\-\t\.]//gi; print $_'  > genotype.filtered.mod.txt
 cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9a-z\t\.]//gi; $_ =~ s/Inf/0.0001/g; ;print $_'  > snpfile.mod.txt
 
 # Filter out genes which have only monomorphic variants, as it might cause a crash:
-# TODO: better filtering
 echo "[Info] Looking for monomorphic variants..."
-tail -n+2 genotype.filtered.mod.txt | while read snp genotype ; do if [[ -z $( echo $genotype | awk '$0 ~ 1' ) ]]; then echo $snp; fi; done | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
+#tail -n+2 genotype.filtered.mod.txt | while read snp genotype ; do if [[ -z $( echo $genotype | awk '$0 ~ 1 || $0 ~ 2' ) ]]; then echo $snp; fi; done | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
+tail -n+2 genotype.filtered.mod.txt | perl -lne '@f=split(/\s+/);$\="\n";$s=shift(@f);foreach (@f){$H{$_}=1;}if (scalar(keys(%H))==1){print $s;}' | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
 
 echo "[Info] Removing monomorphic variants from the SNPs file."
 sed -f mono_remove.sed snpfile.mod.txt > snpfile.nomono
