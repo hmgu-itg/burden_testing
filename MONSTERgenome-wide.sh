@@ -1,6 +1,7 @@
 #!/usr/local/bin/bash
 
 # TODO: add output dir option
+# TODO: floor ?
 
 # A wrapper script to automate genome-wide burden testing using MONSTER.
 # For more information on the applied method see: http://www.stat.uchicago.edu/~mcpeek/software/MONSTER/
@@ -30,14 +31,10 @@ export scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # phenotypeDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/phenotypes/correct_names.andmissing
 
 # Default file with all the gene names:
-geneListFile="${scriptDir}/gene_list.txt"
+#geneListFile="${scriptDir}/gene_list.txt"
 
 # Kinship matrix file: # No longer hardwired, accepted as command line parameter.
 # kinshipMatrix=/nfs/team144/ds26/burden_testing/kinship/2016.10.20_fix_diagonal/kinship.fixdiag.txt
-
-# Single point p-values are read from here: # Single point values are no longer needed.
-# singlePointDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/single_point/output
-# singlePointDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/single_point/output/missing_chunks
 
 MONSTER=$(which MONSTER)
 missing_cutoff=1 # Above the set missingness threshold, variants will be excluded. Below the missing genotype will be imputed.
@@ -60,7 +57,7 @@ if [[ $LSB_JOBINDEX > 0 ]]; then chunkNo=$LSB_JOBINDEX; fi # If jobindex is avai
 function display_help() {
     echo "$1"
     echo ""
-    echo "Genome-wide Monster wrapper!"
+    echo "Genome-wide Monster wrapper"
     echo "version: ${version}"
     echo ""
     echo "This script was written to run MONSTER genome wide. This script takes a series of arguments
@@ -87,7 +84,7 @@ It pools results together within one chunk."
     echo "     -k  - below the specified cutoff value, the variants will be excluded"
     echo ""
     echo "Gene list and chunking:"
-    echo "     -L  - list file with the gene names (default: ${geneListFile})."
+    echo "     -L  - list file with the gene IDs (required, no default)."
     echo "     -d  - chunk count: how many chunks the gene list should be split into (default: 1)."
     echo "     -c  - chunk number or jobindex (default: 1)."
     echo ""
@@ -103,9 +100,7 @@ It pools results together within one chunk."
     echo "     -V  - VCF file (required, no default, Use * character for chromosome name eg 'chr*.vcf.gz')"
     echo ""
     echo "Other options:"
-    echo "     -h  - print help message and exit"
-    echo ""
-    echo "More information: ds26@sanger.ac.uk"
+    echo "     -h  - print this help message and exit"
     echo ""
     echo ""
 
@@ -114,6 +109,9 @@ It pools results together within one chunk."
 
 # --- If a gene fails at some point, generate a report, and save files in a failed folder.
 function failed (){
+
+# TODO: $gene ?
+    
     message="${1}"
 
     echo "[Error] Gene has failed: ${gene}"
@@ -299,8 +297,8 @@ if [[ ! -z "${score}" ]]; then
         * )            score="noweight";;
     esac
 else
-    echo "[Warning] Submitted score is not recognized! Accepted scores: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred, Linsight or Mixed."
-    echo "[Warning] No scores are being applied."
+    echo "[Warning] Submitted score name is not recognized! Accepted scores: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred, Linsight or Mixed."
+    echo "[Warning] No scoreing will be applied."
     score="noweight"
 fi
 
@@ -315,7 +313,7 @@ if [[ ("${score}" == "Eigen") && (-z "${scoreshift}" ) ]]; then scoreshift=1; fi
 # Adjust dir name, noweight if no score is specified:
 folder="${folder}.${score}"
 
-# Exons might be etended with a given number of residues:
+# Exons might be extended with a given number of bps:
 if [[ ! -z "${xtend}" ]]; then
     folder="${folder}.Xtend.${xtend}"
     commandOptions="${commandOptions} --extend ${xtend}"
@@ -327,6 +325,7 @@ if [[ ! -z "${cutoff}" ]]; then
     commandOptions="${commandOptions} --cutoff ${cutoff}"
 fi
 
+# TODO: scoreshift, general vs Eigen ?
 # Setting score shift, a number that will be added to every scores (MONSTER does not accept scores <= 0!!):
 if [[ ! -z "${scoreshift}" ]]; then
     folder="${folder}.shift.${scoreshift}"
@@ -342,11 +341,11 @@ fi
 # Based on the size of the list and the chunk count we determine the size of each chunk:
 chunkSize=$(wc -l "${geneListFile}" | perl -lane 'print int($F[0]/$ENV{"chunkCount"}+0.5)')
 
-# Once everything is checked, print out the parameters, and ready to go:
+# Once everything is checked, print out the parameters:
 
 
 # Updating working dir, and create folder:
-folder=$( echo $folder | perl -lane '$_ =~ s/^\.//; print $_')
+folder=$( echo $folder | perl -lane '$_ =~ s/^\.//; print $_;')
 workingDir="${rootDir}/${folder}/Pheno.${phenotype}"
 mkdir -p "${rootDir}"
 
@@ -416,7 +415,7 @@ cd ${workingDir}/gene_set.${chunkNo};
 
 # Reporting call:
 echo "${scriptDir}/${regionSelector}  --build 38 --input input_gene.list --output gene_set_output ${commandOptions} --verbose > output.log"
-${scriptDir}/${regionSelector}  --build 38 --input input_gene.list --output gene_set_output ${commandOptions} --verbose > output.log
+${scriptDir}/${regionSelector}  --input input_gene.list --output gene_set_output ${commandOptions} --verbose > output.log
 
 # We are expecting to get 2 files: gene_set_output_genotype_file.txt & gene_set_output_SNPinfo_file.txt
 echo "[Info] Checking output..."
@@ -447,18 +446,6 @@ if [[ "$region_absent" != 0 ]]; then
 fi
 
 
-#~ skip=$(tail -1 output.log | grep -c skipped)
-#~ novar=$(grep -c NO_VAR_REMAIN output.log)
-#~ valid=$(grep GENCODE output.log | grep -c valid)
-#~ if [[ "$valid" != 0 ]]; then
-	#~ echo "[Warning] Name $gene not found in GENCODE database. Skipping this run."
-	#~ exit
-#~ elif [[ "$novar" != 0 ]]; then
-	#~ echo "[Warning] Not enough SNPs remaining after scoring. Skipping this run."
-	#~ exit
-#~ elif [[  "$skip" != 0 ]]; then
-	#~ echo "[Warning] Not enough SNPs remaining after selection. Skipping this run."
-	#~ exit
 if [[ ! -e gene_set_output_genotype_file.txt ]]; then
     echo "[Error] Gene set ${chunkNo} has failed. No genotype file has been generated. Exiting."
     exit
@@ -476,19 +463,22 @@ fi
 # At this point the we have to process the above created files to syncronize wi/nfs/team144/ds26/scripts/burden_testing/MONSTERgenome-wide_updated.sh -g exon -x 50 -e promoter,enhancer,TF_bind -l promoter,enhancer,TF_bind -s EigenPCPhred -c 3 -P /lustre/scratch115/projects/t144_helic_15x/analysis/HA/phenotypes/correct_names.andmissing/MANOLIS.HDL.txt -w /lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/burdentesting/arthur_rerun -V /lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/release/postrelease_missingnessfilter/chr%.missingfiltered-0.01_consequences.lof.HWE.vcf.gz -K /lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/relmat/final/burden/matrix.monster.txt -p HDL -d 50th the phenotype file and the kinship matrix.
 # So Monster can process it:
 
+# TODO: remove hardcoded filenames
+# TODO: phenotype file format ? pheno file format ?
 # Get the phenotype:
 echo "[Info] Extracting phenotype."
 cat ${phenotypeFile} | grep -v NA | awk 'NR != 1 {printf "1\t%s\t0\t0\t0\t%s\n", $1, $3}' > pheno.txt
 
+# TODO: order means sorted IDs ?
 # Order the sample IDs in the phenotype file:
 echo "[Info] Re-ordering samples in the phenotype file."
-head -n1 gene_set_output_genotype_file.txt | tr "\t" "\n" | tail -n+2 | perl -lane 'BEGIN {open $pf, "< pheno.txt";
+head -n1 gene_set_output_genotype_file.txt | tr "\t" "\n" | tail -n+2 |sort| perl -lane 'BEGIN {open $pf, "< pheno.txt";
             while ($l = <$pf>){chomp $l;@a = split(/\s/, $l);$h{$a[1]} = $l;}}{print $h{$F[0]} if exists $h{$F[0]}}' > pheno.ordered.txt
 
 # Get the list of samples that are missing from the phenotype file:
 export samples=$(grep -v -w -f <(cut -f2 pheno.ordered.txt) <(head -n1 gene_set_output_genotype_file.txt | cut -f2- | tr "\t" "\n"))
 
-# From the gnotype file, extract only those samples that are present in the phenotype file:
+# From the genotype file, extract only those samples that are present in the phenotype file:
 echo "[info] Extracting un-used samples from the genotype file."
 head -n1 gene_set_output_genotype_file.txt | tr "\t" "\n" | perl -lane 'BEGIN {foreach $s ( split /\s/, $ENV{"samples"}){$h{$s} = 1;}}{
     push @a, $. unless exists $h{$F[0]}} END{$s = sprintf("cut -f%s gene_set_output_genotype_file.txt > genotype.filtered.txt", join(",", @a));`$s`}'
@@ -508,10 +498,13 @@ R --slave -e 'library(data.table); mlong=fread("'$kinshipFile'"); tokeep=fread("
 echo "[Info] Changing IDs and variant names."
 sed -i -f sample.map.sed pheno.ordered.txt
 sed -i -f sample.map.sed genotype.filtered.txt
+
+# TODO: keep nderscores too ?
 cat genotype.filtered.txt | perl -lane '$_ =~ s/[^0-9a-z\-\t\.]//gi; print $_'  > genotype.filtered.mod.txt
 cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9a-z\t\.]//gi; $_ =~ s/Inf/0.0001/g; ;print $_'  > snpfile.mod.txt
 
 # Filter out genes which have only monomorphic variants, as it might cause a crash:
+# TODO: better filtering
 echo "[Info] Looking for monomorphic variants..."
 tail -n+2 genotype.filtered.mod.txt | while read snp genotype ; do if [[ -z $( echo $genotype | awk '$0 ~ 1' ) ]]; then echo $snp; fi; done | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
 
@@ -532,13 +525,13 @@ while true; do
     # If we have all the genes we are good:
     if [[ $(awk 'NF == 5' MONSTER.out | cut -f1 | tail -n+2 | wc -l ) == $(cut -f1 snpfile.mod.txt | sort -u | wc -l) ]]; then break; fi
 
-    # Why did this fucking shit fail?
+    # Why did it fail?
     if [[ ! -e MONSTER.out ]]; then
         echo "[Error] MONSTER failed before creating the output file. Cannot be resolved. Exiting" >&2;
         break;
     elif [[ $( cat MONSTER.out | wc -l) -eq 1 ]]; then
         firstGene=$(cut -f1 snpfile.mod.nomono.txt | head -n1)
-        echo "[Warning] It seems that the first gene (${firstGene}) has been failed. Re-run MONSTER." >&2
+        echo "[Warning] It seems that the first gene (${firstGene}) has failed. Re-run MONSTER." >&2
         grep -vw $(firstGene) snpfile.mod.nomono.txt | sponge snpfile.mod.nomono.txt
     else
         lastGene=$(awk 'NF == 5' MONSTER.out | tail -n1 | cut -f1 )
@@ -548,14 +541,14 @@ while true; do
     fi
 done
 
-# Once MONSTER is finished, we remove the un-used temoporary files:
+# Once MONSTER is finished, we remove the un-used temporary files:
 rm genotype.filtered.txt
 
 # Moving MONSTER.out to the root directory:
 if [[ -e MONSTER.out ]]; then
     cp MONSTER.out ../MONSTER.${phenotype}.${chunkNo}.out
 else
-    echo "[Error] MONSTER.out file was not found. Something failed." >&2
+    echo "[Error] MONSTER.out file was not found. Something went wrong." >&2
 fi
 
 # Compress folder:
