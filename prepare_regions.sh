@@ -522,7 +522,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 intersectBed -wb -a ${targetDir}/${today}/processed/genes.bed.gz -b ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz -sorted \
     | perl -MData::Dumper -MJSON -F"\t" -lane '
         # Parsing gene info:
-        ($g_ID) = $F[3] =~ /ID:(ENSG\d+?)/;
+        ($g_ID) = $F[3] =~ /ID:(ENSG\d+)/;
         ($g_name) = $F[3] =~ /Name:(\S+)/;
 
         # Parsing regulatory feature info:
@@ -589,7 +589,7 @@ zcat ${targetDir}/${today}/processed/overlapping_features.txt.gz \
         }{
 
             ($ID) = $_ =~ /"gene_ID":"(ENSG\d+)"/;
-            exists $h{$ID} ? print join "\t", @{$h{$ID}}, $_ : print STDERR "$ID : gene was notfound in gencode! line: $_"
+            exists $h{$ID} ? print join "\t", @{$h{$ID}}, $_ : print STDERR "$ID : gene was not found in gencode! line: $_"
         }'  2> ${targetDir}/${today}/failed | sort -k1,1 -k2,2n > ${targetDir}/${today}/Linked_features.bed
 
 echo -e "Done.\n"
