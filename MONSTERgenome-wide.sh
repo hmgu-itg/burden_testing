@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#!/bin/bash
 
 # TODO: add output dir option
 # TODO: floor ?
