@@ -570,7 +570,7 @@ export gene_file=${targetDir}/${today}/processed/genes.bed.gz # make sure file r
 #INPUT:
 #
 #{"start":"13400","chr":"chr1","gene_name":"DDX11L1","gene_ID":"ENSG00000223972","regulatory_ID":"ENSR00000344265","class":"CTCF_binding_site","source":"overlap","Tissues":["HUVEC","NHLF","keratinocyte"],"end":"13600"}
-#{"chr":"chr2","GTEx_rsIDs":[null],"gene_ID":"ENSG00000235584","GTEx_tissues":["Thyroid","Lung"],"class":"open_chromatin_region","Tissues":["MM_1S"],"source":"GTEx","start":"96131175","regulatory_ID":"ENSR00000613314","end":"96131863"}
+#{"chr":"chr2","GTEx_rsIDs":[...],"gene_ID":"ENSG00000235584","GTEx_tissues":["Thyroid","Lung"],"class":"open_chromatin_region","Tissues":["MM_1S"],"source":"GTEx","start":"96131175","regulatory_ID":"ENSR00000613314","end":"96131863"}
 #{"appris":"NA","start":"11869","chr":"chr1","strand":"+","source":"GENCODE","gene_ID":"ENSG00000223972","end":"14409","class":"gene"}
 
 
