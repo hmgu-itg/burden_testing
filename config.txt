@@ -14,7 +14,7 @@
 ##
 
 ## This file contains coordinates of the gene related genomic features and annotation:
-Linked_features=/usr/local/bin/burden_testing/test2/2019.11.07/Linked_features.bed.gz
+Linked_features=/usr/local/bin/burden_testing/test2/2019.11.15/Linked_features.bed.gz
 
 gencode_file=/usr/local/bin/burden_testing/gencode.v32.basic.annotation.tsv.gz
 

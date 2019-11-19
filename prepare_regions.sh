@@ -594,6 +594,10 @@ zcat ${targetDir}/${today}/processed/overlapping_features.txt.gz \
 
 echo -e "Done.\n"
 
+# source == GENCODE => chr,start,end in the 4th field are those of transcript,gene,exon
+# source == GTEx => chr,start,end in the 4th field are those of regulatory element
+# source == overlap => chr,start,end in the 4th field are those of regulatory element
+
 # Creating header for the final output:
 cat <(echo -e "# Regions file for burden testing. Created: ${today}
 #
