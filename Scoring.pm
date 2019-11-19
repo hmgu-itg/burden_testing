@@ -195,7 +195,7 @@ sub _get_Eigen_Score {
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
 	$EigenFile=~s/\%/$chr/i;
 
-	print "EIGENFILE=$EigenFile" if $self->{"verbose"};
+	#print "EIGENFILE=$EigenFile" if $self->{"verbose"};
 
         # Two tabix queries will be submitted regardless of the output...
         my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,30-33 | grep %s ", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);

@@ -359,7 +359,6 @@ sub check_scores {
     return $params;
 }
 
-
 sub readConfigFile {
     my $params = $_[0];
 
@@ -397,7 +396,6 @@ sub parseGENCODE {
     return $parameters
 }
 
-
 sub parseRegulation {
     # Accepted features: promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind, allreg
     my %AcceptedFeatures = ( "promoter" => 1, "CTCF" => 1, "enhancer" => 1, "promoterFlank" => 1, "openChrom" => 1, "TF_bind" => 1, "allreg" => 1 );
@@ -421,7 +419,6 @@ sub parseRegulation {
             $hash{'promoter'}          = 1 if "promoter" eq $feature;
             $hash{'allreg'}            = 1 if "allreg" eq $feature;
             $hash{'promoter_flanking_region'} = 1 if "promoterFlank" eq $feature;
-
 
         }
         $parameters->{$class} = \%hash;
@@ -464,7 +461,7 @@ sub BedToolsQuery {
     
     print "[Info] IntersectBed query string: $queryString" if $verbose;
     my $query =Scoring::backticks_bash($queryString);
-    #print("RETURN FROM BEDTOOLSQUERY");
+    #print "QUERY: $query" if $verbose;
     return $query;
 }
 
@@ -481,7 +478,7 @@ sub getVariants {
     # Finding out which chromosome are we on:
     my ($chr) = $merged =~ /^(.+?)\t/;  # WATCHOUT !
 
-    print("GETVARIANTS CHR=$chr") if $verbose;
+    #print("GETVARIANTS CHR=$chr") if $verbose;
     
     # Print info:
     print  "\n[Info] Extracting variants from vcf files:" if $verbose;
@@ -503,6 +500,7 @@ sub getVariants {
 
     return $variants;
 }
+
 sub FilterLines {
     my ($lines, $stable_ID, $parameters) = @_;
 
@@ -515,7 +513,7 @@ sub FilterLines {
     my %overlap = exists $parameters->{"overlap"} ? %{$parameters->{"overlap"}} : ();
 
     foreach my $line (split (/\n/, $lines)){
-
+	#print "LINE: $line";
         # Decoding json line:
         my %annot_hash = %{decode_json($line)};
 
@@ -577,15 +575,18 @@ sub FilterLines {
     print "[Info] Selected lines:\n", join("\n", @output_lines),"" if $verbose;
 
     # Saving temporary bedfile:
-    open (my $tempbed, "> filtered_regions.bed");
+    # TODO: remove hardcoded filename
+    my $tmpName=$parameters->{"tempdir"}."/filtered_regions.bed";
+    open (my $tempbed, "> $tmpName");
     foreach my $line (@output_lines){
         print $tempbed $line;
     }
-    `sort -k1,1 -k2,2n filtered_regions.bed | sponge filtered_regions.bed`;
     close $tempbed;
+    #sortString=sprintf("sort -k1,1 -k2,2n %s | sponge %s",$tmpName);
+    `sort -k1,1 -k2,2n $tmpName | sponge $tmpName`;
 
     # Collapsing overlapping features:
-    my $queryString = "mergeBed -i filtered_regions.bed";
+    my $queryString = "mergeBed -i $tmpName";
     #my $merged = `bash -O extglob -c \'$queryString\'`;
     my $merged = Scoring::backticks_bash($queryString);
     return $merged;
