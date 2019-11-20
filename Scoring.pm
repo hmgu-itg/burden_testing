@@ -7,7 +7,7 @@ package Scoring;
 # Initialize:
 #
 # use Scoring;
-# my $Scoring = Scoring->new(\%ConfFiles, $parameters);
+# my $Scoring = Scoring->new($parameters);
 
 # Adding scores:
 # $hash = $Scoring->AddScore($hash);
@@ -299,35 +299,29 @@ sub _process_score {
     
     printf "[Info] Processing %s scores... \n", $self->{"score"} if $self->{"verbose"};
 
-    # Looping through all variants and modify scores:
+    # Looping through all variants and modifying scores:
     foreach my $var ( keys %hash){
 
-        # Shifting scores if it has been set:
+        # Shifting first
         $hash{$var}{"score"} = $hash{$var}{"score"} + $self->{"shift"} if $self->{"shift"};
-
-	# TODO: clarify precedence of floor vs cutoff
-        # How to deal with variants that are below the cutoff:
-        #if ( $self->{"floor"} ne 0 && $hash{$var}{"score"} <= $self->{"cutoff"} ) {
-	if ($self->{"floor"}){
-	    if ( $hash{$var}{"score"} < $self->{"floor"} ) {
-		printf "[Warning] score of %s is set to %s, because %s score is below the floor threshold: %s < %s!\n",
-                    $var, $self->{"floor"}, $self->{"score"}, $hash{$var}{"score"}, $hash{$var}{"floor"};
+	
+	if(defined($self->{"cutoff"}) && $hash{$var}{"score"} < $self->{"cutoff"}){
+	    if (defined($self->{"floor"})){
+		printf "[Warning] score of %s is set to %s, because %s score is below the cutoff threshold: %s < %s!\n",$var, $self->{"floor"}, $self->{"score"}, $hash{$var}{"score"}, $self->{"cutoff"};
 		$hash{$var}{"score"} = $self->{"floor"};
 	    }
-	}
-        # Removing variants:
-        #elsif ($self->{"floor"} != 0 && $hash{$var}{"score"} < $self->{"cutoff"}){
-	if ($self->{"cutoff"}){
-	    if ($hash{$var}{"score"} < $self->{"cutoff"}){
-		printf "[Warning] %s is deleted, because %s score is below the cutoff threshold: %s < %s!\n", $var, $self->{"score"}, $hash{$var}{"score"}, $hash{$var}{"cutoff"};
-		delete $hash{$var};
+	    else{
+		printf "[Warning] deleting %s, because %s score is below the cutoff threshold and no floor value is defined: %s < %s!\n", $var, $self->{"score"}, $hash{$var}{"score"}, $self->{"cutoff"};
+		delete $hash{$var};		
 	    }
 	}
-        # If the score is above cutoff, we don't do anything.
     }
+
+    
     print "Done.\n" if $self->{"verbose"};
     return \%hash;
 }
+
 sub _get_linsight {
     my $self = $_[0];
     my %hash = %{$_[1]};
