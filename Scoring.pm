@@ -14,12 +14,13 @@ package Scoring;
 
 # ASSUMING ALL SCORES ARE 37 BASED
 
+# TODO: ASSUMING SCORE FILES HAVE CHROMOSOME NAMES LIKE 1,2,3 ...
+
 use strict;
 use warnings;
 use Data::Dumper;
 
 sub new {
-    
     my ( $class, $parameters ) = @_;
     my $self = {};
     bless( $self, $class );
@@ -61,7 +62,7 @@ sub AddScore {
     $hash = _get_Eigen_Score($self, $hash) if $self->{"score"} =~ /Eigen/i;
 
     # Returning CADD scores if that's the case:
-    $hash = _get_CADD_GERP($self, $hash) if $self->{"score"} eq "CADD";
+    $hash = _get_CADD($self, $hash) if $self->{"score"} eq "CADD";
 
     # Returning Insight scores if that's required:
     $hash = _get_linsight($self, $hash) if $self->{"score"} eq "Linsight";
@@ -76,6 +77,7 @@ sub AddScore {
 }
 
 sub _get_mixed {
+    # REQUIRES CONSEQUENCE !
     my $self = $_[0];
     my %hash = %{$_[1]};
     
@@ -89,59 +91,62 @@ sub _get_mixed {
         # Initialize score:
         $hash{$var}{"score"} = "NA";
 
-        # If the consequence is severe, we use cadd:
+	if ($consequence eq "NA"){
+	    printf("[Warning] In Scoring->_get_mixed(): variant %s has not been annotated with a consequence; removing it\n",$var);
+            delete $hash{$var};
+	    next;
+	}
+	
+        # If the consequence is not severe, we use Eigen, otherwise CADD:
         if ( $consequence =~ /intron|intergenic|regulatory|non_coding|upstream|downstream/i ){
             my $EigenFile = $self->{"EigenPath"};
 	    $EigenFile=~s/\%/$chr/i;
-            my $tabix_query = sprintf("tabix %s %s:%s-%s | grep %s", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
-            printf "[Info] %s is a %s so EigenPhred scores are used.\n", $var, $consequence;
+            my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,31 | grep %s", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
+            printf "[Info] %s has benign consequences (%s), so EigenPhred scores are used.\n", $var, $consequence;
             print "$tabix_query\n" if $self->{"verbose"};
 	    my $lines=backticks_bash($tabix_query);
             #my $lines = `bash -O extglob -c \'$tabix_query\'`;
 
             foreach my $line (split("\n", $lines)){
                 chomp $line;
-                # chr     pos     a1      a2      Eigen   EigenPC EigenPhred      EigenPCPhred
-                my @array = split(" ", $line);
+                # chr     pos     a1      a2      EigenPhred
+                my @array = split("\s+", $line);
 
                 # Testing alleles:
                 if (($array[2] eq $hash{$var}{alleles}[0] and $array[3] eq $hash{$var}{alleles}[1]) or
                     ($array[2] eq $hash{$var}{alleles}[1] and $array[3] eq $hash{$var}{alleles}[0])) {
 
-                    $hash{$var}{"score"} = $array[6]; # Phred scaled Eigen score.
+                    $hash{$var}{"score"} = $array[4]; # Phred scaled Eigen score.
                 }
             }
 
             $hash{$var}{"flag"} = "Non-coding variant, EigenPhred score added.";
         }
         else {
-            printf "[Info] %s is a %s so CADD-Phred scores are used.\n", $var, $consequence if $self->{"verbose"};
-            # Tabixing for CADD score:
-            my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f1-5,25-28,115-", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
-            print "[Info] $tabix_query\n";
-            #my $lines = `bash -O extglob -c \'$tabix_query\'`;
+            printf "[Info] %s has severe consequence (%s) so CADD-Phred scores are used.\n", $var, $consequence if $self->{"verbose"};
+	    my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 3,4,107", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
+            print "[Info] $tabix_query\n" if $self->{"verbose"};
 	    my $lines=backticks_bash($tabix_query);
 
             # Looping through all ouput lines:
             foreach my $line (split("\n", $lines)){
+		# Line: C	G    25.0 : REF ALT PHRED
+		chomp $line;
+		my ($ref, $alt, $PHRED) = split("\s+", $line);
 
-                # Line: 12	56482614	C	C	G	5.52	4.63	510	1.76195e-61	4.931423	25.0
-                chomp $line;
-                my ($Chrom, $Pos, $ref, $anc, $alt, $GerpN, $GerpS, $GerpRS, $GerpRSpval, $RawScore, $PHRED) = split("\t", $line);
-
-                # Testing alleles:
-                if (($ref eq $hash{$var}{alleles}[0] and $alt eq $hash{$var}{alleles}[1]) or
-                    ($ref eq $hash{$var}{alleles}[1] and $alt eq $hash{$var}{alleles}[0])) {
-                        $hash{$var}{"score"} = $PHRED;
-                }
+		# Testing alleles:
+		if (($ref eq $hash{$var}{alleles}[0] and $alt eq $hash{$var}{alleles}[1]) or
+		    ($ref eq $hash{$var}{alleles}[1] and $alt eq $hash{$var}{alleles}[0])) {
+                    $hash{$var}{"score"} = $PHRED;
+		}
             }
         }
 
         # Reporting if no score has been found for the variant:
-        if ( $hash{$var}{"score"} eq "NA") {
-            printf ( "[Warning] %s score was not found for variant %s! Removing variant.\n", $self->{"score"}, $var);
-            delete $hash{$var};
-        }
+        #if ( $hash{$var}{"score"} eq "NA") {
+        #    printf ( "[Warning] %s score was not found for variant %s! Removing variant.\n", $self->{"score"}, $var);
+        #    delete $hash{$var};
+        #}
     }
     print "[Info] Mixed EigenPhred/CADDPhred scores have been added to variants.\n" if $self->{"verbose"};
     my $fflag=scalar(keys(%hash))==0;
@@ -150,34 +155,37 @@ sub _get_mixed {
     return \%hash
 }
 
-sub _get_CADD_GERP {
+sub _get_CADD {
     my $self = $_[0];
     my %hash = %{$_[1]};
     
-    # Looping throuh all variants and return the Eigen score for all:
+    # Looping throuh all variants and return the CADD or GERP score for all:
     foreach my $var (keys %hash){
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
-        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f1-5,25-28,115-", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
+	
+        #my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f1-5,25-28,115-", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
+        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 3,4,107", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
         print "[Info] $tabix_query" if $self->{"verbose"};
 	my $lines=backticks_bash($tabix_query);
         $hash{$var}{"score"} = "NA";
 
         foreach my $line (split("\n", $lines)){
-            # Line: 12	56482614	C	C	G	5.52	4.63	510	1.76195e-61	4.931423	25.0
+            # Line: C	G    25.0 : REF ALT PHRED
             chomp $line;
-            my ($Chrom, $Pos, $ref, $anc, $alt, $GerpN, $GerpS, $GerpRS, $GerpRSpval, $RawScore, $PHRED) = split("\t", $line);
+            #my ($Chrom, $Pos, $ref, $anc, $alt, $GerpN, $GerpS, $GerpRS, $GerpRSpval, $RawScore, $PHRED) = split("\t", $line);
+            my ($ref, $alt, $PHRED) = split("\s+", $line);
 
             # Testing alleles:
             if (($ref eq $hash{$var}{alleles}[0] and $alt eq $hash{$var}{alleles}[1]) or
                 ($ref eq $hash{$var}{alleles}[1] and $alt eq $hash{$var}{alleles}[0])) {
-                    $hash{$var}{"score"} = $PHRED if $self->{"score"} eq "CADD";
-                    $hash{$var}{"score"} = $GerpS if $self->{"score"} eq "GERP";
+                    $hash{$var}{"score"} = $PHRED;
+#                    $hash{$var}{"score"} = $GerpS if $self->{"score"} eq "GERP";
             }
         }
     }
     printf "[Info] %s scores have been added to variants.\n", $self->{"score"} if $self->{"verbose"};
     my $fflag=scalar(keys(%hash))==0;
-    print("[Warning] No variants remaining after liftover. \n") if($fflag);
+    print("[Warning] No variants remaining after CADD scoring\n") if($fflag);
     return \%hash
 }
 
@@ -206,16 +214,16 @@ sub _get_Eigen_Score {
 
         foreach my $line (split("\n", $lines)){
             chomp $line;
-            # chr     pos     a1      a2      Eigen   EigenPC EigenPhred      EigenPCPhred
-            my @array = split(" ", $line);
+            # chr     pos     a1      a2      Eigen   EigenPhred    EigenPC    EigenPCPhred
+            my @array = split("\s+", $line);
 
             # Testing alleles:
             if (($array[2] eq $hash{$var}{alleles}[0] and $array[3] eq $hash{$var}{alleles}[1]) or
                 ($array[2] eq $hash{$var}{alleles}[1] and $array[3] eq $hash{$var}{alleles}[0])) {
 
                 $hash{$var}{"score"} = $array[4] || "NA" if $self->{"score"} eq "Eigen"; # Un-scaled raw Eigen score.
-                $hash{$var}{"score"} = $array[5] || "NA" if $self->{"score"} eq "EigenPC"; # Un-scaled Eigen PC score.
-                $hash{$var}{"score"} = $array[6] || "NA" if $self->{"score"} eq "EigenPhred"; # Phred scaled Eigen score.
+                $hash{$var}{"score"} = $array[5] || "NA" if $self->{"score"} eq "EigenPhred"; # Phred scaled Eigen score.
+                $hash{$var}{"score"} = $array[6] || "NA" if $self->{"score"} eq "EigenPC"; # Un-scaled Eigen PC score. 
                 $hash{$var}{"score"} = $array[7] || "NA" if $self->{"score"} eq "EigenPCPhred"; # Phred scaled Eigen PC score.
             }
         }
@@ -229,7 +237,7 @@ sub _get_Eigen_Score {
 
     printf "[Info] Eigen scores have been added to variants (Number of variants: %s).\n\n", scalar keys %hash if $self->{"verbose"};
     my $fflag=scalar(keys(%hash))==0;
-    print("[Warning] No variants remaining after liftover. \n") if($fflag);
+    print("[Warning] No variants remaining after Eigen score annotation\n") if($fflag);
     return \%hash
 }
 
@@ -286,7 +294,6 @@ sub _liftover {
 }
 
 sub _process_score {
-    
     my $self = $_[0];
     my %hash = %{$_[1]}; # hash with data
     
@@ -337,7 +344,7 @@ sub _get_linsight {
     `$bigwigQuery`;
 
     # Reading linsight scores from the output file:
-    open( my $LIN,"<",$linsightOut) or warn "[Warning] Linsight scores were not generated. Check bigWitTools!\n";
+    open( my $LIN,"<",$linsightOut) or warn "[Warning] Linsight scores were not generated\n";
     my %linsightScore = ();
     while ( my $line = <$LIN>) {
         chomp $line;
@@ -352,7 +359,7 @@ sub _get_linsight {
             $hash{$var}{"score"} = $linsightScore{$var};
         }
         else {
-            printf ( "[Warning] linsight score was not found for variant %s! Removing variant.\n", $var);
+            printf ( "[Warning] linsight score was not found for variant %s! Removing it\n", $var);
             delete $hash{$var};
         }
     }

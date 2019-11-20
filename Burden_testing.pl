@@ -236,7 +236,6 @@ while ( my $ID = <$INPUT> ){
         next;
     }
 
-    # TODO max number of variants per gene as input parameter
     # The gene will be skipped if there are too many variants:
     if (scalar keys %{$hash} > $parameters->{"maxVars"}){
         print "[Warning] Gene $ID is skipped as more than ".$parameters->{"maxVars"}." variants are in the set [TOO_MANY_VAR].";
@@ -575,7 +574,6 @@ sub FilterLines {
     print "[Info] Selected lines:\n", join("\n", @output_lines),"" if $verbose;
 
     # Saving temporary bedfile:
-    # TODO: remove hardcoded filename
     my $tmpName=$parameters->{"tempdir"}."/filtered_regions.bed";
     open (my $tempbed, "> $tmpName");
     foreach my $line (@output_lines){
@@ -648,6 +646,8 @@ sub processVar {
         print "WARNING: $variant has no AC" if $ac eq "NA";
         print "WARNING: $variant has no AN" if $an eq "NA";
 
+	#print "AC=$ac; AN=$an";
+	
         # Calculating values for filtering:
         my $missingness = (scalar(@genotypes)*2 - $an)/(scalar(@genotypes)*2);
         my $MAF = $ac/$an;
@@ -688,7 +688,7 @@ sub processVar {
         }
         # If loss of function variants are required, we skip all those variants that are not LoF:
         if ( $parameters->{"lof"} && ! exists $parameters->{"lof_cons"}->{$consequence} ) {
-            printf "[Warning] $SNPID will be omitted because of consequence is not lof (%s)\n", $consequence;
+            printf "[Warning] $SNPID will be omitted because of consequence (%s) is not lof\n", $consequence;
             next;
         }
         # If loftee or lofteeHC are enabled, the script exits if no LoF_conf tag is present in the info field.
@@ -712,7 +712,10 @@ sub processVar {
         $hash{$SNPID}{"missingness"} = $missingness;
 
         # Storing variant data for all variants:
+	# TODO: if genotypeFlip == 1, then ac, an and MAF refer to a1, not a2
         $hash{$SNPID}{"alleles"} = [$a1, $a2];
+
+	# TODO: for indels end should be different
         $hash{$SNPID}{$build} = [$chr, $pos - 1, $pos];
         $hash{$SNPID}{"frequencies"} = [$ac, $an, $MAF];
         $hash{$SNPID}{"consequence"} = $consequence;
