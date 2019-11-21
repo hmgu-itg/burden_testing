@@ -16,12 +16,12 @@
 # Todo for the next generation of the wrapper:
 ## An older verision of MONSTER had an issue why we had to wrap genes individually for
 
-version="v11 Last modified: 2017.08.01" # This version mainly changes in the documentation.
+version="v12 Last modified: 2019.11.20" # This version mainly changes in the documentation.
 
 today=$(date "+%Y.%m.%d") # Get the date
 
 # The variant selector script, that generates snp and genotype input for MONSTER:
-regionSelector=Burden_testing.pl
+regionSelector="Burden_testing.pl"
 
 # Folder with all the scripts:
 export scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -77,7 +77,7 @@ It pools results together within one chunk."
     echo "     -o  - exclude all non loss-of-function variants from the test (less than missense in severity)."
     echo "     -f  - include only HC and LC loftee variants."
     echo "     -j  - include only HC loftee variants."
-    echo "     -z  - config file for Burden_testing.pl."
+    echo "     -C  - config file for Burden_testing.pl."
     echo ""
     echo "Parameters to set up scores for variants:"
     echo "     -s  - turn weights on. Arguments: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred,"
@@ -92,6 +92,7 @@ It pools results together within one chunk."
     echo ""
     echo "General options:"
     echo "     -w  - working directory (default: current working directory)"
+    echo "     -O  - output directory"
     echo "     -b  - Keep temporary files."
     echo "     -i  - p-value threshold (default: 1e-5) below which the temporary files will be saved."
     echo ""
@@ -158,7 +159,7 @@ if [ $# == 0 ]; then display_help; fi
 
 # Looping through all command line options:
 OPTIND=1
-while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:jC:" optname; do
+while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:jC:O:" optname; do
     case "$optname" in
       # Gene list related parameters:
         "L") geneListFile=${OPTARG} ;;
@@ -191,6 +192,7 @@ while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:jC:" optname; do
 
       # Other parameters:
         "w") rootDir=${OPTARG} ;;
+        "C") outputDir=${OPTARG} ;;
         "h") display_help ;;
         "?") display_help "[Error] Unknown option $OPTARG" ;;
         ":") display_help "[Error] No argument value for option $OPTARG" ;;

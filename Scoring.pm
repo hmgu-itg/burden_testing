@@ -311,12 +311,11 @@ sub _process_score {
 		$hash{$var}{"score"} = $self->{"floor"};
 	    }
 	    else{
-		printf "[Warning] deleting %s, because %s score is below the cutoff threshold and no floor value is defined: %s < %s!\n", $var, $self->{"score"}, $hash{$var}{"score"}, $self->{"cutoff"};
+		printf "[Warning] deleting %s, because %s score is below the cutoff threshold and no floor value is provided: %s < %s!\n", $var, $self->{"score"}, $hash{$var}{"score"}, $self->{"cutoff"};
 		delete $hash{$var};		
 	    }
 	}
     }
-
     
     print "Done.\n" if $self->{"verbose"};
     return \%hash;

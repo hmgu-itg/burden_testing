@@ -33,6 +33,9 @@
 ##
 ## Date: 2019.09.16 by Andrei Barysenka. andrei.barysenka@helmholtz-muenchen.de
 ##
+
+# to be called using -B /target/directory:/data option
+
 script_version=3.0
 last_modified=2019.09.16
 
@@ -47,7 +50,7 @@ scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ## printing out information if no parameter is provided:
 function usage {
     echo ""
-    echo "Usage: $0 -G <GTEx file> -t <targetdir>"
+    echo "Usage: $0 -G <GTEx file> -t <working directory>"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
     echo ""
@@ -55,10 +58,10 @@ function usage {
     echo "Version: ${script_version}, Last modified: ${last_modified}"
     echo ""
     echo "Requirements:"
-    echo "  bgzip, tabix in PATH"
+#    echo "  bgzip, tabix in PATH"
 #    echo "  liftOver in path"
 #    echo "  hg19ToHg38.over.chain chain file in script dir"
-    echo "  bedtools in PATH"
+#    echo "  bedtools in PATH"
     echo "  downloaded GTEx datafile with the single eQTLs (eg. GTEx_Analysis_V6_eQTLs.tar.gz)"
     echo ""
     echo ""
@@ -68,11 +71,10 @@ function usage {
     echo "  3: Downloads newest APPRIS release"
     echo "  4: Adds Appris annotation to Gencode transcripts."
     echo "  5: Creates cell-specific regulatory features."
-    echo "  6: Lifts over GTEx coordinates to GRCh38."
-    echo "  7: Links regulatory features to genes based on GTEx data."
-    echo "  8: Links regulatory features to genes based on overlapping."
-    echo "  9: Combined GENCODE, GTEx and Overlap data together into a single bedfile."
-    echo "  11: Tabix output"
+    echo "  6: Links regulatory features to genes based on GTEx data."
+    echo "  7: Links regulatory features to genes based on overlapping."
+    echo "  8: Combined GENCODE, GTEx and Overlap data together into a single bedfile."
+    echo "  9: Tabix output"
     echo ""
     echo ""
     echo "The output is a bed file, where the first 4 columns are the chromosome, start/end
@@ -145,16 +147,18 @@ if [[ $# == 0 ]]; then usage; fi
 
 # Processing command line options:
 OPTIND=1
-while getopts "G:t:e:h" optname; do
+while getopts "G:t:h" optname; do
     case "$optname" in
         "G" ) GTExFile="${OPTARG}" ;;
         "t" ) targetDir="${OPTARG}" ;;
-        "e" ) eigenFiles="${OPTARG}" ;;
+#        "e" ) eigenFiles="${OPTARG}" ;;
         "h" ) usage ;;
         "?" ) usage ;;
         *) usage ;;
     esac;
 done
+
+targetDir="/data/${targetDir}"
 
 # Checking the provided working directory:
 if [[  ! -d "${targetDir}" ]]; then
@@ -165,6 +169,8 @@ elif [[ ! -w "${targetDir}" ]]; then
     echo "[Error] The provided working directory is not writable: ${targetDir}"
     exit 1
 fi
+
+GTExFile="/data/${GTExFile}"
 
 # Checking if GTEx file exists:
 if [[ -z "${GTExFile}" ]]; then
