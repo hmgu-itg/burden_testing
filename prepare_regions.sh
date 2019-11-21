@@ -50,7 +50,7 @@ scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ## printing out information if no parameter is provided:
 function usage {
     echo ""
-    echo "Usage: $0 -G <GTEx file> -t <working directory>"
+    echo "Usage: $0 -G <basename of GTEx file>"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
     echo ""
@@ -158,26 +158,22 @@ while getopts "G:t:h" optname; do
     esac;
 done
 
-targetDir="/data/${targetDir}"
-
-# Checking the provided working directory:
-if [[  ! -d "${targetDir}" ]]; then
-    echo "[Error] The provided directory does not exists: $targetDir"
-    exit 1
-# Checking if the defined working directory is writable:
-elif [[ ! -w "${targetDir}" ]]; then
-    echo "[Error] The provided working directory is not writable: ${targetDir}"
+targetDir="/data/prepare_regions_temp"
+mkdir -p ${targetDir}
+if [ $? -ne 0 ] ; then
+    echo "[Error] Could not create ${targetDir}"
     exit 1
 fi
-
-GTExFile="/data/${GTExFile}"
 
 # Checking if GTEx file exists:
 if [[ -z "${GTExFile}" ]]; then
     echo "[Error] The compressed GTEx file is needed! eg. GTEx_Analysis_V8_eQTLs.tar.gz"
     exit 1
-elif [[ ! -e "${GTExFile}" ]]; then
-    echo "[Error] The provided GTEx file (${GTExFile}) does not exist."
+fi
+
+GTExFile="/data/${GTExFile}"
+if [[ ! -e "${GTExFile}" ]]; then
+    echo "[Error] GTEx file does not exist."
     exit 1
 fi
 
