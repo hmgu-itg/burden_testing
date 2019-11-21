@@ -156,7 +156,7 @@ while getopts "G:h" optname; do
     esac;
 done
 
-targetDir="/data/prepare_regions_temp"
+targetDir="/data/prepare_regions_tempfiles"
 mkdir -p ${targetDir}
 if [ $? -ne 0 ] ; then
     echo "[Error] Could not create ${targetDir}"
@@ -616,11 +616,9 @@ totalLines=$(zcat ${targetDir}/${today}/Linked_features.bed.gz | wc -l | awk '{p
 info "Total number of lines in the final files: ${totalLines}\n"
 
 # FOR LATER USE
-mv ${targetDir}/${today}/Linked_features.bed.gz /data
-mv ${targetDir}/${today}/Linked_features.bed.gz.tbi /data
-zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$id,$gn;' | gzip > /data/gencode.v${GENCODE_release}.basic.annotation.tsv.gz
-
-# Final report and we are done.
+mv -f ${targetDir}/${today}/Linked_features.bed.gz /data
+mv -f ${targetDir}/${today}/Linked_features.bed.gz.tbi /data
+zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > /data/gencode.basic.annotation.tsv.gz
 
 # Report failed associations:
 FailedAssoc=$(wc -l ${targetDir}/${today}/failed | awk '{print $1}')

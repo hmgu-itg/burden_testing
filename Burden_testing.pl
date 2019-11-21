@@ -22,6 +22,9 @@ use lib dirname(__FILE__);
 
 $\="\n";
 
+# TODO: all variants (Eigen scores) might be either in one file or one file per chromosome
+# TODO: update high impact consequences (--lof)
+# TODO: look into allreg (--overlap)
 ##-----------------------------------------------------------------------------------------------------------
 #                                   ASSUMING ALL SCORES ARE 37 BASED
 #
@@ -140,10 +143,10 @@ if ($help || !defined($inputFile) || !defined($outputFile) || !defined($paramete
 $parameters->{"maxVars"}=1000 unless $parameters->{"maxVars"};
 # Exit unless the absolute necessary input files are exists or specified:
 die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
+die "[Error] The specified input gene list does not exist. Exiting." unless -e $inputFile;
 die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
 die "[Error] VCF files have to be specified with the --vcfFile option. Exiting." unless $parameters->{"vcfFile"};
 die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcfFile"});
-die "[Error] The specified input gene list does not exist. Exiting." unless -e $inputFile;
 die "[Error] No config file specified. Exiting." unless $parameters->{"configFileName"};
 die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configFileName"};
 
@@ -152,12 +155,9 @@ die "[Error] The specified config file does not exist. Exiting." unless -e $para
 
 # Open config file:
 $parameters = &readConfigFile($parameters);
-
-die "[Error] No temp dir specified in config file. Exiting." unless $parameters->{"tempdir"};
-die "[Error] The specified temp dir does not exist. Exiting." unless -d $parameters->{"tempdir"};
-die "[Error] No GENCODE file specified in config file. Exiting." unless $parameters->{"gencode_file"};
-die "[Error] The specified GENCODE file does not exist. Exiting." unless -f $parameters->{"gencode_file"};
-
+$parameters->{"tempdir"}="/data/prepare_regions_tempfiles";
+$parameters->{"gencode_file"}="/data/gencode.basic.annotation.tsv.gz";
+$parameters->{"Linked_features"}="/data/Linked_features.bed.gz";
 
 # If the score option is not empty, we have to check if it's a valid score, and the
 # required files are exists. If any problem found, the score parameter will be set to its
