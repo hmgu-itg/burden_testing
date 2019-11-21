@@ -611,10 +611,16 @@ cat <(echo -e "# Regions file for burden testing. Created: ${today}
 bgzip -f ${targetDir}/${today}/Linked_features.bed > ${targetDir}/${today}/Linked_features.bed.gz
 tabix -f -p bed ${targetDir}/${today}/Linked_features.bed.gz
 
-# Final report and we are done.
-info "Output file was saved as: ${targetDir}/${today}/Linked_features.bed.gz\n"
+info "Output file was saved as: Linked_features.bed.gz\n"
 totalLines=$(zcat ${targetDir}/${today}/Linked_features.bed.gz | wc -l | awk '{print $1}')
 info "Total number of lines in the final files: ${totalLines}\n"
+
+# FOR LATER USE
+mv ${targetDir}/${today}/Linked_features.bed.gz /data
+mv ${targetDir}/${today}/Linked_features.bed.gz.tbi /data
+zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$id,$gn;' | gzip > /data/gencode.v${GENCODE_release}.basic.annotation.tsv.gz
+
+# Final report and we are done.
 
 # Report failed associations:
 FailedAssoc=$(wc -l ${targetDir}/${today}/failed | awk '{print $1}')
@@ -622,12 +628,11 @@ FailedGenes=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /(ENSG\d+)/;
 FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":"(.+?)"/; print $1' | sort | uniq | tr "\n" ", " )
 info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sournces: ${FailedSources}\n\n"
 
-# Backing up intermediate files:
-#tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file   ${targetDir}/${today}/APPRIS  \
-#    ${targetDir}/${today}/EnsemblRegulation  ${targetDir}/${today}/failed  ${targetDir}/${today}/GENCODE  \
-#    ${targetDir}/${today}/processed
-#
-#info "Intermediate files are backed in in ${targetDir}/${today}/${today}_annotation.backup.tar.gz\n" 
+info "Backing up intermediate files ...\n"
+tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${targetDir}/${today}/APPRIS  \
+    ${targetDir}/${today}/EnsemblRegulation ${targetDir}/${today}/failed ${targetDir}/${today}/GENCODE  \
+    ${targetDir}/${today}/processed
+info "Intermediate files are backed in in ${today}_annotation.backup.tar.gz\n" 
 
 # Exit.
 info "Program finished.\n"
