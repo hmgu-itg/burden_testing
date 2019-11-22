@@ -13,7 +13,7 @@ use Data::Types;
 use Devel::Size qw(total_size);
 
 # Version information:
-our $version = "v5.1 Last modified: 05.Nov.2019";
+our $version = "v5.1 Last modified: 22.Nov.2019";
 
 # Get script directory:
 our $scriptDir = dirname(__FILE__);
@@ -23,8 +23,6 @@ use lib dirname(__FILE__);
 $\="\n";
 
 # TODO: all variants (Eigen scores) might be either in one file or one file per chromosome
-# TODO: update high impact consequences (--lof)
-# TODO: look into allreg (--overlap)
 ##-----------------------------------------------------------------------------------------------------------
 #                                   ASSUMING ALL SCORES ARE 37 BASED
 #
@@ -67,7 +65,8 @@ $parameters->{"lof_cons"} = {
     "transcript_amplification" => 1,
     "inframe_insertion"        => 1,
     "inframe_deletion"         => 1,
-    "splice_region_variant"    => 1,
+#    "splice_region_variant"    => 1,
+    "missense_variant"         => 1
 };
 
 # Command line options without default values:
