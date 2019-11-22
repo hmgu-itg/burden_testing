@@ -22,7 +22,7 @@ use lib dirname(__FILE__);
 
 $\="\n";
 
-# TODO: all variants (Eigen scores) might be either in one file or one file per chromosome
+# TODO: improve VCF files check
 ##-----------------------------------------------------------------------------------------------------------
 #                                   ASSUMING ALL SCORES ARE 37 BASED
 #
@@ -50,7 +50,7 @@ my $parameters = {
     "cutoff"  => 0, # Score threshold below which the variants will be removed.
     "floor"   => 0, # All the scores below this threshold will be set to this value.
     "shift"   => 0, # A value with which the scores of the variants will be shifted.
-"chr_prefix" => "chr" # Chromosome prefix for VCF files	
+    "chr_prefix" => "chr" # Chromosome prefix in VCF files
 };
 
 # This is the list of those consequences that will be retained upon switching on --lof
@@ -70,14 +70,14 @@ $parameters->{"lof_cons"} = {
 };
 
 # Command line options without default values:
-my ($inputFile, $outputFile, $help);
+my ($outputFile, $help);
 
 # Parsing command line options:
 GetOptions(
     #'build=s' => \$parameters->{"build"},
 
     # Input/Output:
-    'input=s' => \$inputFile,
+#    'input=s' => \$inputFile,
     'output=s' => \$outputFile,
 
     # Selecting region source:
@@ -102,7 +102,7 @@ GetOptions(
     'verbose' => \$parameters->{"verbose"},
 
     # specifying config file:
-    'configFile=s' => \$parameters->{"configFileName"},
+    #'configFile=s' => \$parameters->{"configFileName"},
 
     # Which score do we need:
     'score=s' => \$parameters->{"score"},
@@ -125,7 +125,7 @@ GetOptions(
     'chromosome-prefix=s'  => \$parameters->{"chr_prefix"},  # Chromosome prefix in VCF files
 
     # vcf File:
-    'vcfFile=s' => \$parameters->{"vcfFile"},
+    #'vcfFile=s' => \$parameters->{"vcfFile"},
 
     # TEMP DIR
     #'tempdir=s' => \$parameters->{"tempdir"},
@@ -134,29 +134,26 @@ GetOptions(
     'help|h' => \$help
     );
 
-if ($help || !defined($inputFile) || !defined($outputFile) || !defined($parameters->{"vcfFile"})){
-    &usage();
-    exit(1);
-}
-
 $parameters->{"maxVars"}=1000 unless $parameters->{"maxVars"};
-# Exit unless the absolute necessary input files are exists or specified:
-die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
-die "[Error] The specified input gene list does not exist. Exiting." unless -e $inputFile;
-die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
-die "[Error] VCF files have to be specified with the --vcfFile option. Exiting." unless $parameters->{"vcfFile"};
-die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcfFile"});
-die "[Error] No config file specified. Exiting." unless $parameters->{"configFileName"};
-die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configFileName"};
 
 # Check stuffs:
 #&check_parameters($parameters);
 
 # Open config file:
+$parameters->{"configFileName"}="/data/config.txt";
+die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configFileName"};
 $parameters = &readConfigFile($parameters);
+$parameters->{"inputFile"}="/data/".$parameters->{"inputFile"};
+$parameters->{"vcfFile"}="/data/".$parameters->{"vcfFile"};
 $parameters->{"tempdir"}="/data/prepare_regions_tempfiles";
 $parameters->{"gencode_file"}="/data/gencode.basic.annotation.tsv.gz";
 $parameters->{"Linked_features"}="/data/Linked_features.bed.gz";
+
+die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $parameters->{"inputFile"};
+die "[Error] The specified input gene list does not exist. Exiting." unless -e $parameters->{"inputFile"};
+die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
+die "[Error] VCF files have to be specified with the --vcfFile option. Exiting." unless $parameters->{"vcfFile"};
+die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcfFile"});
 
 # If the score option is not empty, we have to check if it's a valid score, and the
 # required files are exists. If any problem found, the score parameter will be set to its
@@ -173,19 +170,23 @@ our $verbose = $parameters->{"verbose"};
 &print_parameters($parameters);
 
 # Initializing helper objects:
+print "[Info] Initializing GENCODE data" if ($verbose);
 my $GENCODE_data = GENCODE->new($parameters);
+print "[Info] Initializing score data data" if ($verbose);
 my $AddScore = Scoring->new($parameters);
 
 # Open files:
-open (my $INPUT, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened. Exiting.";
-open (my $SNPfile, ">", $outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.";
-open (my $genotypeFile, ">", $outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.";
-open (my $SNPinfo, ">", $outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
+open (my $INPUT, "<", $parameters->{"inputFile"}) or die "[Error] Input file (".$parameters->{"inputFile"}.") could not be opened. Exiting.";
+open (my $SNPfile, ">", "/data/".$outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.";
+open (my $genotypeFile, ">", "/data/".$outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.";
+open (my $SNPinfo, ">", "/data/".$outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
 
 # Processing the input file gene by gene:
 # looping through all the genes in the list:
 my $gene_count = 0;
 while ( my $ID = <$INPUT> ){
+    next if $ID=~/^\s*$/;
+    
     chomp $ID;
 
     # At first we have to extract all the associated genomic coordinates for the gene.
@@ -267,7 +268,7 @@ while ( my $ID = <$INPUT> ){
 
 }
 
-close $inputFile;
+close $INPUT;
 close $SNPfile;
 close $genotypeFile;
 close $SNPinfo;
@@ -481,7 +482,12 @@ sub getVariants {
     # Print info:
     print  "\n[Info] Extracting variants from vcf files:" if $verbose;
     (my $vcfFile = $inputvcfpattern ) =~ s/\%/$chr/g;
-    return "" unless -e $vcfFile;
+    
+    if (! -e $vcfFile){
+	print "[Warning] VCF file for chromosome $chr does not exist";
+	return "";
+    }
+    
     my $bcftools_query = sprintf("tabix %s ", $vcfFile);
 
     # looping through all lines:
@@ -642,8 +648,8 @@ sub processVar {
             next;
         }
 
-        print "WARNING: $variant has no AC" if $ac eq "NA";
-        print "WARNING: $variant has no AN" if $an eq "NA";
+        print "[Warning] $variant has no AC" if $ac eq "NA";
+        print "[Warning] $variant has no AN" if $an eq "NA";
 
 	#print "AC=$ac; AN=$an";
 	
@@ -821,17 +827,16 @@ sub print_SNP_info {
         $line .= "\t$weight" if exists $variant->{"score"};
         print $outfilehandle $line;
     }
-
 }
 ###
 
 sub usage {
     print "Usage::";
     print("      Required:");
-    print("          --input <input file>");
+#    print("          --input <input file>");
     print("          --output <output prefix>");
-    print("          --vcfFile <input VCF>");
-    print("          --configFile <config file>");
+#    print("          --vcfFile <input VCF>");
+#    print("          --configFile <config file>");
     print("      Optional:");    
 #    print("          --build <genome build; default: 38>");
     print("          --GENCODE <comma separated list of GENCODE features (gene, exon, transcript, CDS or UTR)>");

@@ -101,6 +101,11 @@ sub _get_mixed {
         if ( $consequence =~ /intron|intergenic|regulatory|non_coding|upstream|downstream/i ){
             my $EigenFile = $self->{"EigenPath"};
 	    $EigenFile=~s/\%/$chr/i;
+	    if (! -e $EigenFile){
+		print "[Warning] file with Eigen scores for chromosome $chr does not exist.";
+		next;
+	    }
+	    
             my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,31 | grep %s", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
             printf "[Info] %s has benign consequences (%s), so EigenPhred scores are used.\n", $var, $consequence;
             print "$tabix_query\n" if $self->{"verbose"};
@@ -110,7 +115,7 @@ sub _get_mixed {
             foreach my $line (split("\n", $lines)){
                 chomp $line;
                 # chr     pos     a1      a2      EigenPhred
-                my @array = split("\s+", $line);
+                my @array = split("\t", $line);
 
                 # Testing alleles:
                 if (($array[2] eq $hash{$var}{alleles}[0] and $array[3] eq $hash{$var}{alleles}[1]) or
@@ -132,7 +137,7 @@ sub _get_mixed {
             foreach my $line (split("\n", $lines)){
 		# Line: C	G    25.0 : REF ALT PHRED
 		chomp $line;
-		my ($ref, $alt, $PHRED) = split("\s+", $line);
+		my ($ref, $alt, $PHRED) = split("\t", $line);
 
 		# Testing alleles:
 		if (($ref eq $hash{$var}{alleles}[0] and $alt eq $hash{$var}{alleles}[1]) or
@@ -173,7 +178,7 @@ sub _get_CADD {
             # Line: C	G    25.0 : REF ALT PHRED
             chomp $line;
             #my ($Chrom, $Pos, $ref, $anc, $alt, $GerpN, $GerpS, $GerpRS, $GerpRSpval, $RawScore, $PHRED) = split("\t", $line);
-            my ($ref, $alt, $PHRED) = split("\s+", $line);
+            my ($ref, $alt, $PHRED) = split("\t", $line);
 
             # Testing alleles:
             if (($ref eq $hash{$var}{alleles}[0] and $alt eq $hash{$var}{alleles}[1]) or
@@ -202,6 +207,10 @@ sub _get_Eigen_Score {
 
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
 	$EigenFile=~s/\%/$chr/i;
+	if (! -e $EigenFile){
+	    print "[Warning] file with Eigen scores for chromosome $chr does not exist.";
+	    next;
+	}
 
 	#print "EIGENFILE=$EigenFile" if $self->{"verbose"};
 
@@ -215,7 +224,7 @@ sub _get_Eigen_Score {
         foreach my $line (split("\n", $lines)){
             chomp $line;
             # chr     pos     a1      a2      Eigen   EigenPhred    EigenPC    EigenPCPhred
-            my @array = split("\s+", $line);
+            my @array = split("\t", $line);
 
             # Testing alleles:
             if (($array[2] eq $hash{$var}{alleles}[0] and $array[3] eq $hash{$var}{alleles}[1]) or

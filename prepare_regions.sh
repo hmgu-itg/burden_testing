@@ -50,7 +50,7 @@ scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ## printing out information if no parameter is provided:
 function usage {
     echo ""
-    echo "Usage: $0 -G <basename of GTEx file>"
+    echo "Usage: $0 -G <path to GTEx file>"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
     echo ""
@@ -156,7 +156,8 @@ while getopts "G:h" optname; do
     esac;
 done
 
-targetDir="/data/prepare_regions_tempfiles"
+baseDir=$(dirname $GTExFile)
+targetDir=${baseDir}"/prepare_regions_tempfiles"
 mkdir -p ${targetDir}
 if [ $? -ne 0 ] ; then
     echo "[Error] Could not create ${targetDir}"
@@ -169,7 +170,6 @@ if [[ -z "${GTExFile}" ]]; then
     exit 1
 fi
 
-GTExFile="/data/${GTExFile}"
 if [[ ! -e "${GTExFile}" ]]; then
     echo "[Error] GTEx file does not exist."
     exit 1
@@ -616,9 +616,9 @@ totalLines=$(zcat ${targetDir}/${today}/Linked_features.bed.gz | wc -l | awk '{p
 info "Total number of lines in the final files: ${totalLines}\n"
 
 # FOR LATER USE
-mv -f ${targetDir}/${today}/Linked_features.bed.gz /data
-mv -f ${targetDir}/${today}/Linked_features.bed.gz.tbi /data
-zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > /data/gencode.basic.annotation.tsv.gz
+mv -f ${targetDir}/${today}/Linked_features.bed.gz ${baseDir}
+mv -f ${targetDir}/${today}/Linked_features.bed.gz.tbi ${baseDir}
+zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${baseDir}/gencode.basic.annotation.tsv.gz
 
 # Report failed associations:
 FailedAssoc=$(wc -l ${targetDir}/${today}/failed | awk '{print $1}')
