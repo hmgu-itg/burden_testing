@@ -139,15 +139,18 @@ GetOptions(
 
 $parameters->{"maxVars"}=1000 unless $parameters->{"maxVars"};
 
+die "[Error] No working directory specified. Exiting." unless $parameters->{"workingDir"};
+die "[Error] The specified working directory does not exist. Exiting." unless -d $parameters->{"workingDir"};
 # remove trailing slash
 $parameters->{"workingDir"} = $1 if($parameters->{"workingDir"}=~/(.*)\/$/);
 
 # Check stuffs:
 #&check_parameters($parameters);
 
+die "[Error] No config file specified. Exiting." unless $parameters->{"configFileName"};
 die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configFileName"};
-die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $parameters->{"inputFile"};
-die "[Error] The specified input gene list does not exist. Exiting." unless -e $parameters->{"inputFile"};
+die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
+die "[Error] The specified input gene list does not exist. Exiting." unless -e $inputFile;
 die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
 die "[Error] VCF files have to be specified with the --vcfFile option. Exiting." unless $parameters->{"vcfFile"};
 die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcfFile"});
@@ -178,10 +181,10 @@ print "[Info] Initializing score data data" if ($verbose);
 my $AddScore = Scoring->new($parameters);
 
 # Open files:
-open (my $INPUT, "<", $parameters->{"inputFile"}) or die "[Error] Input file (".$parameters->{"inputFile"}.") could not be opened. Exiting.";
-open (my $SNPfile, ">", "/data/".$outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.";
-open (my $genotypeFile, ">", "/data/".$outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.";
-open (my $SNPinfo, ">", "/data/".$outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
+open (my $INPUT, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened. Exiting.";
+open (my $SNPfile, ">", $parameters->{"workingDir"}."/".$outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.";
+open (my $genotypeFile, ">", $parameters->{"workingDir"}."/".$outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.";
+open (my $SNPinfo, ">", $parameters->{"workingDir"}."/".$outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
 
 # Processing the input file gene by gene:
 # looping through all the genes in the list:
@@ -578,7 +581,7 @@ sub FilterLines {
         }
     }
     # Report:
-    print "[Info] Selected lines:\n", join("\n", @output_lines),"" if $verbose;
+    #print "[Info] Selected lines:\n", join("\n", @output_lines),"" if $verbose;
 
     # Saving temporary bedfile:
     my $tmpName=$parameters->{"tempdir"}."/filtered_regions.bed";
