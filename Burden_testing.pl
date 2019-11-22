@@ -70,14 +70,14 @@ $parameters->{"lof_cons"} = {
 };
 
 # Command line options without default values:
-my ($outputFile, $help);
+my ($inputFile,$workingDir,$outputFile, $help);
 
 # Parsing command line options:
 GetOptions(
     #'build=s' => \$parameters->{"build"},
 
     # Input/Output:
-#    'input=s' => \$inputFile,
+    'input=s' => \$inputFile,
     'output=s' => \$outputFile,
 
     # Selecting region source:
@@ -102,7 +102,10 @@ GetOptions(
     'verbose' => \$parameters->{"verbose"},
 
     # specifying config file:
-    #'configFile=s' => \$parameters->{"configFileName"},
+    'configFile=s' => \$parameters->{"configFileName"},
+
+    # specifying working directory:
+    'working-dir=s' => \$parameters->{"workingDir"},
 
     # Which score do we need:
     'score=s' => \$parameters->{"score"},
@@ -125,7 +128,7 @@ GetOptions(
     'chromosome-prefix=s'  => \$parameters->{"chr_prefix"},  # Chromosome prefix in VCF files
 
     # vcf File:
-    #'vcfFile=s' => \$parameters->{"vcfFile"},
+    'vcfFile=s' => \$parameters->{"vcfFile"},
 
     # TEMP DIR
     #'tempdir=s' => \$parameters->{"tempdir"},
@@ -136,24 +139,23 @@ GetOptions(
 
 $parameters->{"maxVars"}=1000 unless $parameters->{"maxVars"};
 
+# remove trailing slash
+$parameters->{"workingDir"} = $1 if($parameters->{"workingDir"}=~/(.*)\/$/);
+
 # Check stuffs:
 #&check_parameters($parameters);
 
-# Open config file:
-$parameters->{"configFileName"}="/data/config.txt";
 die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configFileName"};
-$parameters = &readConfigFile($parameters);
-$parameters->{"inputFile"}="/data/".$parameters->{"inputFile"};
-$parameters->{"vcfFile"}="/data/".$parameters->{"vcfFile"};
-$parameters->{"tempdir"}="/data/prepare_regions_tempfiles";
-$parameters->{"gencode_file"}="/data/gencode.basic.annotation.tsv.gz";
-$parameters->{"Linked_features"}="/data/Linked_features.bed.gz";
-
 die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $parameters->{"inputFile"};
 die "[Error] The specified input gene list does not exist. Exiting." unless -e $parameters->{"inputFile"};
 die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
 die "[Error] VCF files have to be specified with the --vcfFile option. Exiting." unless $parameters->{"vcfFile"};
 die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcfFile"});
+
+$parameters = &readConfigFile($parameters);
+$parameters->{"tempdir"}=$parameters->{"workingDir"}."/prepare_regions_tempfiles";
+$parameters->{"gencode_file"}=$parameters->{"workingDir"}."/gencode.basic.annotation.tsv.gz";
+$parameters->{"Linked_features"}=$parameters->{"workingDir"}."/Linked_features.bed.gz";
 
 # If the score option is not empty, we have to check if it's a valid score, and the
 # required files are exists. If any problem found, the score parameter will be set to its
@@ -833,10 +835,11 @@ sub print_SNP_info {
 sub usage {
     print "Usage::";
     print("      Required:");
-#    print("          --input <input file>");
+    print("          --input <input file>");
+    print("          --working-dir <working directory containing Linked_features.bed.gz and gencode.basic.annotation.tsv.gz>");
     print("          --output <output prefix>");
-#    print("          --vcfFile <input VCF>");
-#    print("          --configFile <config file>");
+    print("          --vcfFile <input VCF>");
+    print("          --configFile <config file>");
     print("      Optional:");    
 #    print("          --build <genome build; default: 38>");
     print("          --GENCODE <comma separated list of GENCODE features (gene, exon, transcript, CDS or UTR)>");
