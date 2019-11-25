@@ -16,6 +16,34 @@
 # Todo for the next generation of the wrapper:
 ## An older verision of MONSTER had an issue why we had to wrap genes individually for
 
+# if pattern corresponds to a filename (doesn't contain %), check if the file exists
+# otherwise check if files for each chromosome (1-22) exist
+function testVCFs {
+    pattern=$1
+    c=0
+    if [[ $pattern =~ % ]];then
+	for i in $(seq 1 22);do
+	    if [[ ! -e $(echo $pattern|sed "s/\%/$i/") ]];then
+		echo "[Warning] No VCF for chromosome $i"
+	    else
+		c=$((c+1))
+	    fi
+	done
+	if [[ $c -gt 0 ]];then
+	    return 0
+	else
+	    return 1
+	fi
+    else
+	if [[ -e $pattern ]];then
+	    return 0
+	else
+	    return 1
+	fi
+    fi
+}
+
+
 version="v12 Last modified: 2019.11.20" # This version mainly changes in the documentation.
 
 today=$(date "+%Y.%m.%d") # Get the date
@@ -37,7 +65,10 @@ export scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # kinshipMatrix=/nfs/team144/ds26/burden_testing/kinship/2016.10.20_fix_diagonal/kinship.fixdiag.txt
 
 MONSTER=$(which MONSTER)
+
+# TODO: is this MONSTER -m option ?
 missing_cutoff=1 # Above the set missingness threshold, variants will be excluded. Below the missing genotype will be imputed.
+
 imputation_method='-A' # The default imputation method is BLUP, slowest, but the most accurate. For other options, see documentation.
 configFile=""
 
@@ -230,14 +261,17 @@ elif [[ ! -e "${kinshipFile}" ]]; then
     exit;
 fi
 
-# TODO
 # vcf file (Is it set? Does it exist?):
 if [[ -z "${vcfFile}" ]]; then
     display_help "[Error] VCF file has to be specified!";
-elif [[ ! -e $( echo "${vcfFile}" | sed -e 's/\%/12/') ]]; then
-    echo "[Error] VCF file could not be opened: $vcfFile";
-    exit;
+    
 else
+    testVCFs ${vcfFile}
+    if [[ $? -eq 1 ]];then
+	echo "[Error] VCF file could not be opened: $vcfFile";
+	exit;
+    fi
+
     commandOptions="${commandOptions} --vcf ${vcfFile} "
 fi
 
