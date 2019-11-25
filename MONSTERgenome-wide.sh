@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# TODO: add output dir option
 # TODO: floor ?
+# TODO: check chunkSize
 
 # A wrapper script to automate genome-wide burden testing using MONSTER.
 # For more information on the applied method see: http://www.stat.uchicago.edu/~mcpeek/software/MONSTER/
@@ -49,9 +49,11 @@ if [[ -z "${MONSTER}" ]]; then echo "[Error] MONSTER is not in the path. Exiting
 ##
 export signifThreshold=1e-5 # By default the hit threshold is 1e-5
 export keep_temp="No" # By default we are not keeping temporary files:
-export chunkCount=1 # By default we process all genes at one chunk.
+export chunkCount=1 # By default we process all genes as one chunk.
 export chunkNo=1 # By default we are processing the first chunk.
 export MAF=0.05 # By default this is the upper minor allele frequency.
+
+# TODO
 if [[ $LSB_JOBINDEX > 0 ]]; then chunkNo=$LSB_JOBINDEX; fi # If jobindex is available, we set that as chunk number, it might be overridden by -c
 
 # --- print out help message and exit:
@@ -92,7 +94,6 @@ It pools results together within one chunk."
     echo ""
     echo "General options:"
     echo "     -w  - working directory (default: current working directory)"
-    echo "     -O  - output directory"
     echo "     -b  - Keep temporary files."
     echo "     -i  - p-value threshold (default: 1e-5) below which the temporary files will be saved."
     echo ""
@@ -100,7 +101,7 @@ It pools results together within one chunk."
     echo "     -p  - phenotype (required, no default)"
     echo "     -P  - phenotype file (required, no default)"
     echo "     -K  - Kinship file (required, no default)"
-    echo "     -V  - VCF file (required, no default, Use % character for chromosome name eg 'chr%.vcf.gz')"
+    echo "     -V  - VCF file (required, no default; use % character for chromosome name eg 'chr%.vcf.gz')"
     echo ""
     echo "Other options:"
     echo "     -h  - print this help message and exit"
@@ -170,7 +171,7 @@ while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:jC:O:" optname; do
         "p" ) phenotype=${OPTARG} ;;
         "P" ) phenotypeFile=${OPTARG} ;;
         "K" ) kinshipFile=${OPTARG} ;;
-        "V" ) vcfFile="${OPTARG}" ;;
+        "V" ) vcfFile=${OPTARG} ;;
 
       # Wrapper option:
         "b") keep_temp="yes";;
@@ -192,7 +193,6 @@ while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:jC:O:" optname; do
 
       # Other parameters:
         "w") rootDir=${OPTARG} ;;
-        "C") outputDir=${OPTARG} ;;
         "h") display_help ;;
         "?") display_help "[Error] Unknown option $OPTARG" ;;
         ":") display_help "[Error] No argument value for option $OPTARG" ;;
@@ -208,11 +208,13 @@ if [[ -z "${configFile}" ]]; then
 fi
 
 if [[ ! -e "${configFile}" ]]; then
-    echo "[Error] Config file does not exist: $geneListFile";
+    echo "[Error] Config file does not exist: $configFile";
     exit;
 fi
 
-# Phenotype file (Is it set? Does it exists?):
+commandOptions=" --config ${configFile} "
+
+# Phenotype file (Is it set? Does it exist?):
 if [[ -z "${phenotypeFile}" ]]; then
     display_help "[Error] Phenotype file has to be specified!";
 elif [[ ! -e "${phenotypeFile}" ]]; then
@@ -220,7 +222,7 @@ elif [[ ! -e "${phenotypeFile}" ]]; then
     exit;
 fi
 
-# Kinship file (Is it set? Does it exists?):
+# Kinship file (Is it set? Does it exist?):
 if [[ -z "${kinshipFile}" ]]; then
     display_help "[Error] Kinship file has to be specified!";
 elif [[ ! -e "${kinshipFile}" ]]; then
@@ -229,32 +231,34 @@ elif [[ ! -e "${kinshipFile}" ]]; then
 fi
 
 # TODO
-# vcf file (Is it set? Does it exists?):
+# vcf file (Is it set? Does it exist?):
 if [[ -z "${vcfFile}" ]]; then
     display_help "[Error] VCF file has to be specified!";
 elif [[ ! -e $( echo "${vcfFile}" | sed -e 's/\%/12/') ]]; then
     echo "[Error] VCF file could not be opened: $vcfFile";
     exit;
 else
-    commandOptions=" --vcfFile ${vcfFile} "
+    commandOptions="${commandOptions} --vcf ${vcfFile} "
 fi
 
 # Select genome build:
 #commandOptions="${commandOptions} --build ${build}"
 
-# Gene list file (Is it set? Does it exists?):
+# Gene list file (Is it set? Does it exist?):
 if [[ ! -e "${geneListFile}" ]]; then
     echo "[Error] Gene list file could not be opened: $geneListFile";
     exit;
 fi
 
-# Working directory (Is it set? Does it exists?):
+# Working directory (Is it set? Does it exist?):
 if [[ -z "${rootDir}" ]]; then
     rootDir=$(pwd)
 elif [[ ! -d "${rootDir}" ]]; then
-    echo "[Error] The directory does not exists: $rootDir";
+    echo "[Error] The directory does not exist: $rootDir";
     exit;
 fi
+
+commandOptions="${commandOptions} --working-dir ${rootDir} "
 
 # GENCODE -expecting a list of feature names separated by a comma.
 if [[ ! -z "${gencode}" ]]; then
@@ -297,8 +301,6 @@ if [[ ! -z "$lof" ]]; then
     folder="${folder}.severe"
     commandOptions="${commandOptions} --lof "
 fi
-
-commandOptions="${commandOptions} --configFile ${configFile} "
 
 # Score - If score is not given we apply no score. Otherwise we test the submitted value:
 # Accepted scores:

@@ -8,6 +8,7 @@ use DateTime;
 use File::Basename;
 use Getopt::Long qw(GetOptions);
 use Data::Types;
+use File::Path qw(make_path);
 
 # For debugging:
 use Devel::Size qw(total_size);
@@ -70,7 +71,7 @@ $parameters->{"lof_cons"} = {
 };
 
 # Command line options without default values:
-my ($inputFile,$workingDir,$outputFile, $help);
+my ($inputFile,$workingDir,$outputDir,$outputFile, $help);
 
 # Parsing command line options:
 GetOptions(
@@ -79,6 +80,7 @@ GetOptions(
     # Input/Output:
     'input=s' => \$inputFile,
     'output=s' => \$outputFile,
+    'output-dir=s' => \$outputDir,
 
     # Selecting region source:
     'GENCODE=s' => \$parameters->{"input"}->{"GENCODE"},
@@ -102,7 +104,7 @@ GetOptions(
     'verbose' => \$parameters->{"verbose"},
 
     # specifying config file:
-    'configFile=s' => \$parameters->{"configFileName"},
+    'config=s' => \$parameters->{"configName"},
 
     # specifying working directory:
     'working-dir=s' => \$parameters->{"workingDir"},
@@ -128,7 +130,7 @@ GetOptions(
     'chromosome-prefix=s'  => \$parameters->{"chr_prefix"},  # Chromosome prefix in VCF files
 
     # vcf File:
-    'vcfFile=s' => \$parameters->{"vcfFile"},
+    'vcf=s' => \$parameters->{"vcf"},
 
     # TEMP DIR
     #'tempdir=s' => \$parameters->{"tempdir"},
@@ -144,16 +146,21 @@ die "[Error] The specified working directory does not exist. Exiting." unless -d
 # remove trailing slash
 $parameters->{"workingDir"} = $1 if($parameters->{"workingDir"}=~/(.*)\/$/);
 
-# Check stuffs:
+die "[Error] No output directory specified. Exiting." unless $outputDir;
+if (! -d $outputDir){
+    die "[Error] Could not create output directory ($outputDir). Exiting." unless make_path($outputDir)==1;
+}
+
+# Check stuff:
 #&check_parameters($parameters);
 
-die "[Error] No config file specified. Exiting." unless $parameters->{"configFileName"};
-die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configFileName"};
+die "[Error] No config file specified. Exiting." unless $parameters->{"configName"};
+die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configName"};
 die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
 die "[Error] The specified input gene list does not exist. Exiting." unless -e $inputFile;
 die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
-die "[Error] VCF files have to be specified with the --vcfFile option. Exiting." unless $parameters->{"vcfFile"};
-die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcfFile"});
+die "[Error] VCF files have to be specified with the --vcf option. Exiting." unless $parameters->{"vcf"};
+die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcf"});
 
 $parameters = &readConfigFile($parameters);
 $parameters->{"tempdir"}=$parameters->{"workingDir"}."/prepare_regions_tempfiles";
@@ -228,7 +235,7 @@ while ( my $ID = <$INPUT> ){
     }
 
     # Once we have the genomic regions, the overlapping variants have to be extracted:
-    my $variants = &getVariants($CollapsedBed, $parameters->{"vcfFile"},$parameters->{"chr_prefix"});
+    my $variants = &getVariants($CollapsedBed, $parameters->{"vcf"},$parameters->{"chr_prefix"});
 
     # Filtering variants based on the provided parameters:
     my ($hash, $genotypes) = &processVar($variants, $parameters);
@@ -366,10 +373,10 @@ sub check_scores {
 sub readConfigFile {
     my $params = $_[0];
 
-#    printf "[Info] Config file: %s", $params->{"configFileName"};
+#    printf "[Info] Config file: %s", $params->{"configName"};
 
     # Reading file:
-    open(my $CONF, "<", $params->{"configFileName"}) or die "[Error] Config file could not be oppended. Exiting.";
+    open(my $CONF, "<", $params->{"configName"}) or die "[Error] Config file could not be oppended. Exiting.";
 
     # Reading file:
     while ( my $line = <$CONF>) {
@@ -486,14 +493,14 @@ sub getVariants {
     
     # Print info:
     print  "\n[Info] Extracting variants from vcf files:" if $verbose;
-    (my $vcfFile = $inputvcfpattern ) =~ s/\%/$chr/g;
+    (my $vcf = $inputvcfpattern ) =~ s/\%/$chr/g;
     
-    if (! -e $vcfFile){
+    if (! -e $vcf){
 	print "[Warning] VCF file for chromosome $chr does not exist";
 	return "";
     }
     
-    my $bcftools_query = sprintf("tabix %s ", $vcfFile);
+    my $bcftools_query = sprintf("tabix %s ", $vcf);
 
     # looping through all lines:
     foreach my $line (split("\n", $merged)){
@@ -783,7 +790,7 @@ sub print_genotypes {
     my $parameters    = $_[2];
     my $gene_counter  = $_[3];
 
-    my $vcfChrFile = &getVCF($parameters->{"vcfFile"});
+    my $vcfChrFile = &getVCF($parameters->{"vcf"});
 
     # Assembling header for the first gene:
     if ( $gene_counter == 0){
@@ -840,9 +847,10 @@ sub usage {
     print("      Required:");
     print("          --input <input file>");
     print("          --working-dir <working directory containing Linked_features.bed.gz and gencode.basic.annotation.tsv.gz>");
-    print("          --output <output prefix>");
-    print("          --vcfFile <input VCF>");
-    print("          --configFile <config file>");
+    print("          --output-dir <output directory>");
+    print("          --output <output filename prefix>");
+    print("          --vcf <input VCF>");
+    print("          --config <config file>");
     print("      Optional:");    
 #    print("          --build <genome build; default: 38>");
     print("          --GENCODE <comma separated list of GENCODE features (gene, exon, transcript, CDS or UTR)>");
