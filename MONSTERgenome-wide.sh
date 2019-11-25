@@ -430,15 +430,16 @@ fi
 # Looping through all genes in the gene set:
 awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${workingDir}/gene_set.${chunkNo}/input_gene.list
 
-# Entering working directory:
-cd ${workingDir}/gene_set.${chunkNo};
-
 # Reporting call:
+outDir=${workingDir}/gene_set.${chunkNo}
 echo "${scriptDir}/${regionSelector}  --build 38 --input input_gene.list --output gene_set_output ${commandOptions} --verbose > output.log"
-${scriptDir}/${regionSelector}  --input input_gene.list --output gene_set_output ${commandOptions} --verbose > output.log
+${scriptDir}/${regionSelector} --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${outDir}/output.log
 
 # We are expecting to get 2 files: gene_set_output_genotype_file.txt & gene_set_output_SNPinfo_file.txt
 echo "[Info] Checking output..."
+# Entering working directory:
+cd ${outDir}
+
 # We have to check if both files are generated AND they have enough lines.
 gene_notenough=$(cat output.log | grep -c NOT_ENOUGH_VAR)
 gene_toomany=$(cat output.log | grep -c TOO_MANY_VAR)
@@ -485,29 +486,32 @@ fi
 # TODO: remove hardcoded filenames
 # TODO: phenotype file format ? pheno file format ?
 # Get the phenotype:
+
+# ASSUMING PHENOTYPE FILE HAS 2 COLUMNS: ID PHENO
+# ASSUMING TAB DELIMITED
+# FIRST LINE IS HEADER LINE
+# TODO: same FID ?
 echo "[Info] Extracting phenotype."
-cat ${phenotypeFile} | grep -v NA | awk 'NR != 1 {printf "1\t%s\t0\t0\t0\t%s\n", $1, $3}' > pheno.txt
+cat ${phenotypeFile} | awk 'BEGIN{FS="\t";OFS="\t";}{if ($2!="NA" && NR != 1) {printf "1\t%s\t0\t0\t0\t%s\n", $1, $2} }' > pheno.txt # subset of samples in pheno.txt (without NA)
 
 # TODO: order means sorted IDs ?
 # Order the sample IDs in the phenotype file:
 echo "[Info] Re-ordering samples in the phenotype file."
-head -n1 gene_set_output_genotype_file.txt | tr "\t" "\n" | tail -n+2 |sort| perl -lane 'BEGIN {open $pf, "< pheno.txt";
-            while ($l = <$pf>){chomp $l;@a = split(/\s/, $l);$h{$a[1]} = $l;}}{print $h{$F[0]} if exists $h{$F[0]}}' > pheno.ordered.txt
+head -n 1 gene_set_output_genotype_file.txt | tr "\t" "\n" | tail -n +2 |sort| perl -lane 'BEGIN {open $pf, "< pheno.txt";while ($l = <$pf>){chomp $l;@a = split(/\s/, $l);$h{$a[1]} = $l;}}{print $h{$F[0]} if exists $h{$F[0]}}' > pheno.ordered.txt
 
-# Get the list of samples that are missing from the phenotype file:
-export samples=$(grep -v -w -f <(cut -f2 pheno.ordered.txt) <(head -n1 gene_set_output_genotype_file.txt | cut -f2- | tr "\t" "\n"))
+# Get the list of samples that are not in the pheno file:
+export samples=$(grep -v -w -f <(cut -f 2 pheno.ordered.txt) <(head -n 1 gene_set_output_genotype_file.txt | cut -f 2- | tr "\t" "\n"))
 
-# From the genotype file, extract only those samples that are present in the phenotype file:
+# From the genotype file, extract only those samples that are present in the pheno file:
 echo "[info] Extracting un-used samples from the genotype file."
-head -n1 gene_set_output_genotype_file.txt | tr "\t" "\n" | perl -lane 'BEGIN {foreach $s ( split /\s/, $ENV{"samples"}){$h{$s} = 1;}}{
-    push @a, $. unless exists $h{$F[0]}} END{$s = sprintf("cut -f%s gene_set_output_genotype_file.txt > genotype.filtered.txt", join(",", @a));`$s`}'
+head -n 1 gene_set_output_genotype_file.txt | tr "\t" "\n" | perl -lane 'BEGIN {foreach $s ( split /\s/, $ENV{"samples"}){$h{$s} = 1;}}{push @a, $. unless exists $h{$F[0]}} END{$s = sprintf("cut -f%s gene_set_output_genotype_file.txt > genotype.filtered.txt", join(",", @a));`$s`}'
 
-# Generate a mapping file that helps to convert HELIC IDs to numbers:
+# Generate a mapping file that helps to convert IDs to numbers:
 echo "[Info] Generate sample mapping file."
-cut -f2 pheno.ordered.txt | awk '{printf "s/%s/%s/g\n", $1, NR+2 }' > sample.map.sed
+cut -f 2 pheno.ordered.txt | awk '{printf "s/%s/%s/g\n", $1, NR+2 }' > sample.map.sed
 
 # Generate an inclusion list with the samples to be kept:
-cut -f2 pheno.ordered.txt > samples.to.keep.txt
+cut -f 2 pheno.ordered.txt > samples.to.keep.txt
 
 # Get the kinship matrix:
 echo "[Info] Processing kinship file."
@@ -533,8 +537,9 @@ echo "[Info] Get genes where only monomorphics remain. Exclude them."
 grep -v -w -f <(cat snpfile.nomono | awk 'NF  == 2 {print $1; a+=1}END{if(a == 0){print "noting to remove"}}') snpfile.mod.txt > snpfile.mod.nomono.txt
 
 # Calling MONSTER
-echo "[info] MONSTER call: MONSTER -k filtered_kinship.txt -p pheno.ordered.txt -m 1 -g genotype.filtered.mod.txt  -s snpfile.mod.txt ${imputation_method}"
+echo "[Info] MONSTER call: MONSTER -k filtered_kinship.txt -p pheno.ordered.txt -m 1 -g genotype.filtered.mod.txt  -s snpfile.mod.txt ${imputation_method}"
 while true; do
+    # TODO: correct -m ?
     MONSTER -k filtered_kinship.txt -p pheno.ordered.txt -m 1 -g genotype.filtered.mod.txt  -s snpfile.mod.nomono.txt ${imputation_method}
 
     # We break the loop if the run was successful.
