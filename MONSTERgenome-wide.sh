@@ -466,7 +466,10 @@ awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${ge
 
 # Reporting call:
 outDir=${workingDir}/gene_set.${chunkNo}
-echo "${scriptDir}/${regionSelector}  --build 38 --input input_gene.list --output gene_set_output ${commandOptions} --verbose > output.log"
+#echo "OUTDIR: $outDir"
+#exit 1
+
+echo "${scriptDir}/${regionSelector}  --build 38  --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${outDir}/output.log"
 ${scriptDir}/${regionSelector} --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${outDir}/output.log
 
 # We are expecting to get 2 files: gene_set_output_genotype_file.txt & gene_set_output_SNPinfo_file.txt

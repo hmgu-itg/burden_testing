@@ -204,11 +204,11 @@ sub _get_Eigen_Score {
     # Looping throuh all variants and return the Eigen score for all:
     foreach my $var (keys %hash){
         my $EigenFile = $self->{"EigenPath"};
-
+	print "EIGENFILE: $EigenFile" if $self->{"verbose"};
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
 	$EigenFile=~s/\%/$chr/i;
 	if (! -e $EigenFile){
-	    print "[Warning] file with Eigen scores for chromosome $chr does not exist.";
+	    print "[Warning] File with Eigen scores for chromosome $chr does not exist.";
 	    next;
 	}
 

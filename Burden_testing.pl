@@ -24,6 +24,7 @@ use lib dirname(__FILE__);
 $\="\n";
 
 # TODO: improve VCF files check
+# TODO: check score files early in script
 ##-----------------------------------------------------------------------------------------------------------
 #                                   ASSUMING ALL SCORES ARE 37 BASED
 #
@@ -141,12 +142,12 @@ GetOptions(
 
 $parameters->{"maxVars"}=1000 unless $parameters->{"maxVars"};
 
-die "[Error] No working directory specified. Exiting." unless $parameters->{"workingDir"};
-die "[Error] The specified working directory does not exist. Exiting." unless -d $parameters->{"workingDir"};
+&usage && die "[Error] No working directory specified. Exiting." unless $parameters->{"workingDir"};
+&usage && die "[Error] The specified working directory does not exist. Exiting." unless -d $parameters->{"workingDir"};
 # remove trailing slash
 $parameters->{"workingDir"} = $1 if($parameters->{"workingDir"}=~/(.*)\/$/);
 
-die "[Error] No output directory specified. Exiting." unless $outputDir;
+&usage && die "[Error] No output directory specified. Exiting." unless $outputDir;
 if (! -d $outputDir){
     die "[Error] Could not create output directory ($outputDir). Exiting." unless make_path($outputDir)==1;
 }
@@ -154,13 +155,13 @@ if (! -d $outputDir){
 # Check stuff:
 #&check_parameters($parameters);
 
-die "[Error] No config file specified. Exiting." unless $parameters->{"configName"};
-die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configName"};
-die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
-die "[Error] The specified input gene list does not exist. Exiting." unless -e $inputFile;
-die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
-die "[Error] VCF files have to be specified with the --vcf option. Exiting." unless $parameters->{"vcf"};
-die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcf"});
+&usage && die "[Error] No config file specified. Exiting." unless $parameters->{"configName"};
+&usage && die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configName"};
+&usage && die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
+&usage && die "[Error] The specified input gene list does not exist. Exiting." unless -e $inputFile;
+&usage && die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
+&usage && die "[Error] VCF files have to be specified with the --vcf option. Exiting." unless $parameters->{"vcf"};
+&usage && die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcf"});
 
 $parameters = &readConfigFile($parameters);
 $parameters->{"tempdir"}=$parameters->{"workingDir"}."/prepare_regions_tempfiles";
@@ -189,9 +190,9 @@ my $AddScore = Scoring->new($parameters);
 
 # Open files:
 open (my $INPUT, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened. Exiting.";
-open (my $SNPfile, ">", $parameters->{"workingDir"}."/".$outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.";
-open (my $genotypeFile, ">", $parameters->{"workingDir"}."/".$outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.";
-open (my $SNPinfo, ">", $parameters->{"workingDir"}."/".$outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
+open (my $SNPfile, ">", $outputDir."/".$outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.";
+open (my $genotypeFile, ">", $outputDir."/".$outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.";
+open (my $SNPinfo, ">", $outputDir."/".$outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
 
 # Processing the input file gene by gene:
 # looping through all the genes in the list:
