@@ -798,7 +798,7 @@ sub print_genotypes {
         # Get list of sample IDs:
         my $samples = `zgrep -m1 "#CHROM"  $vcfChrFile | cut -f10-`;
 	chomp($samples);
-        print $outputhandler "ID\t$samples";
+        print $outputhandler "0\t$samples";
     }
 
     # Saving data:
