@@ -401,7 +401,6 @@ chunkSize=$(wc -l "${geneListFile}" | perl -lane 'print int($F[0]/$ENV{"chunkCou
 # Updating working dir, and create folder:
 folder=$( echo $folder | perl -lane '$_ =~ s/^\.//; print $_;')
 workingDir="${rootDir}/${folder}/Pheno.${phenotype}"
-mkdir -p "${rootDir}"
 
 # --- Reporting parameters ------------------------------------------------------
 echo "##"
@@ -474,7 +473,7 @@ ${scriptDir}/${regionSelector} --input ${outDir}/input_gene.list --output gene_s
 
 # We are expecting to get 2 files: gene_set_output_genotype_file.txt & gene_set_output_SNPinfo_file.txt
 echo "[Info] Checking output..."
-# Entering working directory:
+
 cd ${outDir}
 
 # We have to check if both files are generated AND they have enough lines.
@@ -564,8 +563,8 @@ cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9a-z\t\.]//gi; $_
 
 # Filter out genes which have only monomorphic variants, as it might cause a crash:
 echo "[Info] Looking for monomorphic variants..."
-tail -n+2 genotype.filtered.mod.txt | while read snp genotype ; do if [[ -z $( echo $genotype | awk '$0 ~ 1' ) ]]; then echo $snp; fi; done | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
-#tail -n+2 genotype.filtered.mod.txt | perl -lne '@f=split(/\s+/);$\="\n";$s=shift(@f);foreach (@f){$H{$_}=1;}if (scalar(keys(%H))==1){print $s;}' | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
+#tail -n+2 genotype.filtered.mod.txt | while read snp genotype ; do if [[ -z $( echo $genotype | awk '$0 ~ 1' ) ]]; then echo $snp; fi; done | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
+tail -n+2 genotype.filtered.mod.txt | perl -lne '@f=split(/\s+/);$\="\n";$s=shift(@f);foreach (@f){$H{$_}=1;}if (scalar(keys(%H))==1){print $s;}' | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
 
 echo "[Info] Removing monomorphic variants from the SNPs file."
 sed -f mono_remove.sed snpfile.mod.txt > snpfile.nomono
@@ -574,7 +573,7 @@ echo "[Info] Get genes where only monomorphics remain. Exclude them."
 grep -v -w -f <(cat snpfile.nomono | awk 'NF  == 2 {print $1; a+=1}END{if(a == 0){print "noting to remove"}}') snpfile.mod.txt > snpfile.mod.nomono.txt
 
 # Calling MONSTER
-echo "[Info] MONSTER call: MONSTER -k filtered_kinship.txt -p pheno.ordered.txt -m 1 -g genotype.filtered.mod.txt  -s snpfile.mod.txt ${imputation_method}"
+echo "[Info] MONSTER call: MONSTER -k filtered_kinship.txt -p pheno.ordered.txt -m 1 -g genotype.filtered.mod.txt  -s snpfile.mod.nomono.txt ${imputation_method}"
 while true; do
     # TODO: correct -m ?
     MONSTER -k filtered_kinship.txt -p pheno.ordered.txt -m 1 -g genotype.filtered.mod.txt  -s snpfile.mod.nomono.txt ${imputation_method}
