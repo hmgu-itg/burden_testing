@@ -66,9 +66,9 @@ $parameters->{"lof_cons"} = {
     "start_lost"               => 1,
     "transcript_amplification" => 1,
     "inframe_insertion"        => 1,
-    "inframe_deletion"         => 1,
+    "inframe_deletion"         => 1
 #    "splice_region_variant"    => 1,
-    "missense_variant"         => 1
+#    "missense_variant"         => 1
 };
 
 # Command line options without default values:
@@ -463,8 +463,6 @@ sub print_parameters {
         printf "\tScore floor applied: %s", $parameters->{"floor"};
         printf "\tScore shifted by: %s\n", $parameters->{"shift"};
     }
-
-
 }
 
 sub BedToolsQuery {

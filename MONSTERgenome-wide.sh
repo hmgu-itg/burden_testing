@@ -399,7 +399,7 @@ chunkSize=$(wc -l "${geneListFile}" | perl -lane 'print int($F[0]/$ENV{"chunkCou
 
 
 # Updating working dir, and create folder:
-folder=$( echo $folder | perl -lane '$_ =~ s/^\.//; print $_;')
+folder=$( echo $folder | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
 workingDir="${rootDir}/${folder}/Pheno.${phenotype}"
 
 # --- Reporting parameters ------------------------------------------------------
@@ -609,6 +609,8 @@ if [[ -e MONSTER.out ]]; then
 else
     echo "[Error] MONSTER.out file was not found. Something went wrong." >&2
 fi
+
+cp output.log ..
 
 # Compress folder:
 echo "[Info] Compressing and removing files."

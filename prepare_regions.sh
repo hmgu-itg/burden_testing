@@ -31,10 +31,8 @@
 #### as data format of subsequent releases are quite different.
 
 ##
-## Date: 2019.09.16 by Andrei Barysenka. andrei.barysenka@helmholtz-muenchen.de
+## Date: 2019.09.16 by Andrei Barysenka, andrei.barysenka@helmholtz-muenchen.de
 ##
-
-# to be called using -B /target/directory:/data option
 
 script_version=3.0
 last_modified=2019.09.16
