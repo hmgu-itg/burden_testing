@@ -27,8 +27,15 @@ if [[ -z "$output" ]];then
     exit 1
 fi
 
-cat "$input" | sort -n -k1,1 -n -k2,2 | bgzip > "$output"
-tabix -c C -b 2 -e 2 -s 1 "$output"
+tmpfile=$(mktemp /tmp/compress_table.XXXXXX)
+
+echo "##fileformat=VCFv4.1" > "$tmpfile"
+echo "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" >> "$tmpfile"
+cat "$input" | sort -k1,1n -k2,2n | awk 'BEGIN{FS="\t";OFS="\t";}{print $1,$2,".",$3,$4,".",".",".";}' >> "$tmpfile"
+cat "$tmpfile" | bgzip > "$output"
+tabix -p vcf "$output"
+
+rm "$tmpfile"
 
 
 
