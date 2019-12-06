@@ -219,6 +219,7 @@ if [ -z "${cells}" ]; then
 fi
 
 #Download all cell types:
+#GFF is 1-based
 for cell in ${cells}; do
     echo -n "."
     wget -q ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -O ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
@@ -287,7 +288,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
                         # Saving output in json format:
                         %hash = (
                             "chr" => $F[0],
-                            "start" => $start,
+                            "start" => $start-1,
                             "end" => $end,
                             "source" => "GENCODE",
                             "strand" => $strand,
@@ -302,7 +303,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
                 }' | gzip > ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz
 
 # Test if output is empty or not:
-testFileLines  ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz
+testFileLines  ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz # 0-based
 
 # OUTPUT:
 #
@@ -363,7 +364,7 @@ done | perl -F"\t" -lane '
                 $h{$ID}{line}[1], $h{$ID}{line}[2], $h{$ID}{line}[4], $h{$ID}{line}[3], $cells
         }
     }
-' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz
+' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz # 0-based coordinates here
 
 
 # OUTPUT:
@@ -392,6 +393,7 @@ info "Number of cell specific regulatory features: $cellSpecFeatLines\n\n"
 ##
 ## Step 8. Combine individual files from GTEx tar.gz file into one BED file
 ##
+## TODO: update indel coordinates
 
 tmpGTEx=${targetDir}/${today}/processed/GTEx_tmp.bed
 info "Creating GTEx bed file ... "
@@ -400,10 +402,11 @@ for f in ${listOfGTExFiles};do
     g=$(basename ${f})
     tissue=$(echo ${g}|perl -lne '$x="NA";if (/^([^.]+)\./){$x=$1;} print $x;')
     export tissue
-    tar -zxf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENS.+)\./;$tissue=$ENV{tissue};$,="\t";$chr=~s/^chr//;print $tissue,$chr,$pos,$F[0],$gene;'
+    # TODO: DEALING ONLY WITH SNPS FOR NOW
+    tar -zxf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENS.+)\./;$tissue=$ENV{tissue};$,="\t";$chr=~s/^chr//;print $tissue,$chr,$pos,$F[0],$gene if length($ref)==1 && length($alt)==1;'
 done > ${tmpGTEx}
 
-cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$pos=$F[2];$ID=$F[3];$gene=$F[4];$H{$ID}{chr}=$chr;$H{$ID}{pos}=$pos;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$pos=$H{$id}{pos};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};printf "$chr\t%s\t$pos\tgene=$gene;rsID=$id;tissue=$tissues\n", $pos - 1;}}}' | sort -k1,1 -k2,2 > ${targetDir}/${today}/processed/GTEx.bed
+cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$pos=$F[2];$ID=$F[3];$gene=$F[4];$H{$ID}{chr}=$chr;$H{$ID}{pos}=$pos;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$pos=$H{$id}{pos};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};printf "$chr\t%s\t$pos\tgene=$gene;rsID=$id;tissue=$tissues\n", $pos - 1;}}}' | sort -k1,1 -k2,2 > ${targetDir}/${today}/processed/GTEx.bed # 0-based
 
 echo "Done."
 rm -f ${tmpGTEx}
@@ -486,7 +489,7 @@ intersectBed -wb -a ${targetDir}/${today}/processed/GTEx.bed -b ${targetDir}/${t
 #{"chr":"chr2","GTEx_rsIDs":[...],"gene_ID":"ENSG00000235584","GTEx_tissues":["Thyroid","Lung"],"class":"open_chromatin_region","Tissues":["MM_1S"],"source":"GTEx","start":"96131175","regulatory_ID":"ENSR00000613314","end":"96131863"}
 
 # Testing if output file has lines:
-testFileLines ${targetDir}/${today}/processed/GTEx_Regulation_linked.txt.gz
+testFileLines ${targetDir}/${today}/processed/GTEx_Regulation_linked.txt.gz # start/end are 0-based
 echo "Done."
 
 
@@ -507,12 +510,13 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
         ($g_name) = $_ =~ /gene_name "(.+?)";/;
         ($g_ID) = $_ =~ /gene_id "(.+?)\.*";/;
         $F[0]=~s/^chr//;
+        $start=$F[3]-1;
         printf "$F[0]\t$F[3]\t$F[4]\tID:$g_ID;Name:$g_name\n";
-    ' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/genes.bed.gz
+    ' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/genes.bed.gz # 0-based
 
 # OUTPUT:
 #
-#1    11869   14409   ID:ENSG00000223972;Name:DDX11L1
+#1    11868   14409   ID:ENSG00000223972;Name:DDX11L1
 
 
 # Intersect bed run.
@@ -541,7 +545,7 @@ intersectBed -wb -a ${targetDir}/${today}/processed/genes.bed.gz -b ${targetDir}
             "regulatory_ID" => $r_ID,
             "source"    => "overlap",
         })
-    ' | bgzip -f > ${targetDir}/${today}/processed/overlapping_features.txt.gz
+    ' | bgzip -f > ${targetDir}/${today}/processed/overlapping_features.txt.gz # 0-based coordinates
 echo "Done."
 
 # OUTPUT:
@@ -588,7 +592,7 @@ zcat ${targetDir}/${today}/processed/overlapping_features.txt.gz \
 
             ($ID) = $_ =~ /"gene_ID":"(ENSG\d+)"/;
             exists $h{$ID} ? print join "\t", @{$h{$ID}}, $_ : print STDERR "$ID : gene was not found in gencode! line: $_"
-        }'  2> ${targetDir}/${today}/failed | sort -k1,1 -k2,2n > ${targetDir}/${today}/Linked_features.bed
+        }'  2> ${targetDir}/${today}/failed | sort -k1,1 -k2,2n > ${targetDir}/${today}/Linked_features.bed # 0-based
 
 echo -e "Done.\n"
 

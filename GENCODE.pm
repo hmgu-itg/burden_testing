@@ -41,8 +41,6 @@ sub _initialize {
     while (my $line = <$FILE>) {
         next if $line =~ /^#/;
 	
-	# TODO: skip empty lines
-	
         chomp $line;
         my ($chr, $start, $end, $name, $ID) = split("\t", $line);
         $chr =~ s/^chr//i;
@@ -62,11 +60,9 @@ sub _initialize {
 # A method to extract the coordinates of any gene based on the gene name or stable ID.
 sub GetCoordinates {
     my $self = shift;
-    my $ID = shift;
+    my $ID = shift; # stable ID or gene name
     my ($chr, $start, $end, $stable_ID, $name) = ('NA') x 5;
 
-# TODO: just IDs ?
-    
     # If Stable ID is given:
     if ( exists $self->{"gene_names"}->{$ID} ) {
         $chr        = $self->{"gene_names"}->{$ID}->{chr};

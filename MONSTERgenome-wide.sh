@@ -523,12 +523,12 @@ fi
 # TODO: phenotype file format ? pheno file format ?
 # Get the phenotype:
 
-# ASSUMING PHENOTYPE FILE HAS 2 COLUMNS: ID PHENO
+# ASSUMING PHENOTYPE FILE HAS 2 COLUMNS: ID PHENOTYPE
 # ASSUMING TAB DELIMITED
-# FIRST LINE IS HEADER LINE
+# NO HEADER
 # TODO: same FID ?
 echo "[Info] Extracting phenotype."
-cat ${phenotypeFile} | awk 'BEGIN{FS="\t";OFS="\t";}{if ($2!="NA" && NR != 1) {printf "1\t%s\t0\t0\t0\t%s\n", $1, $2} }' > pheno.txt # subset of samples in pheno.txt (without NA)
+cat ${phenotypeFile} | awk 'BEGIN{FS="\t";OFS="\t";}{if ($2!="NA") {printf "1\t%s\t0\t0\t0\t%s\n", $1, $2} }' > pheno.txt # subset of samples in pheno.txt (without NA)
 
 # TODO: order means sorted IDs ?
 # Order the sample IDs in the phenotype file:

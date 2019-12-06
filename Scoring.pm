@@ -169,21 +169,21 @@ sub _get_CADD {
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
 	
         #my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f1-5,25-28,115-", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
-        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 3,4,107", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
+        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 3,4,106", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
         print "[Info] $tabix_query" if $self->{"verbose"};
 	my $lines=backticks_bash($tabix_query);
         $hash{$var}{"score"} = "NA";
 
         foreach my $line (split("\n", $lines)){
-            # Line: C	G    25.0 : REF ALT PHRED
+            # Line: C	G    25.0 : REF ALT RawScore
             chomp $line;
             #my ($Chrom, $Pos, $ref, $anc, $alt, $GerpN, $GerpS, $GerpRS, $GerpRSpval, $RawScore, $PHRED) = split("\t", $line);
-            my ($ref, $alt, $PHRED) = split("\t", $line);
+            my ($ref, $alt, $rawscore) = split("\t", $line);
 
             # Testing alleles:
             if (($ref eq $hash{$var}{alleles}[0] and $alt eq $hash{$var}{alleles}[1]) or
                 ($ref eq $hash{$var}{alleles}[1] and $alt eq $hash{$var}{alleles}[0])) {
-                    $hash{$var}{"score"} = $PHRED;
+                    $hash{$var}{"score"} = $rawscore;
 #                    $hash{$var}{"score"} = $GerpS if $self->{"score"} eq "GERP";
             }
         }
@@ -198,7 +198,6 @@ sub _get_Eigen_Score {
     my $self = $_[0];
     my %hash = %{$_[1]};
 
-    # just sayin'
     print  "[Info] Adding Eigen scores\n" if $self->{"verbose"};
 
     # Looping throuh all variants and return the Eigen score for all:
@@ -330,6 +329,7 @@ sub _process_score {
     return \%hash;
 }
 
+# TODO: remove linsight
 sub _get_linsight {
     my $self = $_[0];
     my %hash = %{$_[1]};
