@@ -621,6 +621,7 @@ info "Total number of lines in the final files: ${totalLines}\n"
 mv -f ${targetDir}/${today}/Linked_features.bed.gz ${baseDir}
 mv -f ${targetDir}/${today}/Linked_features.bed.gz.tbi ${baseDir}
 zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${baseDir}/gencode.basic.annotation.tsv.gz
+zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];next unless $x=~/gene_type\s+\"protein_coding\"/;$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${baseDir}/gencode.basic.annotation.protein_coding.tsv.gz
 
 # Report failed associations:
 FailedAssoc=$(wc -l ${targetDir}/${today}/failed | awk '{print $1}')
