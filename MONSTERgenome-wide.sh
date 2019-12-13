@@ -148,9 +148,13 @@ if [[ ! -d "${rootDir}" ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Working directory does not exist: $rootDir";
     exit;
 fi
-LOGFILE=${outDir}/"MONSTER-"${today}.log
 
+# SLURM_ARRAY_TASK_ID takes priority
+if [ ! -z ${SLURM_ARRAY_TASK_ID} ];then
+    chunkNo=${SLURM_ARRAY_TASK_ID}
+fi
 
+LOGFILE=${rootDir}/"MONSTER-"${today}."chunk_$chunkNo".log
 
 #--- checking input files - if any of the tests fails, the script exits.---------
 
@@ -358,11 +362,6 @@ echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 # --- Main loop executed for all genes --------------------------------------------
 
-# SLURM_ARRAY_TASK_ID takes priority
-if [ ! -z ${SLURM_ARRAY_TASK_ID+x} ];then
-    chunkNo=${SLURM_ARRAY_TASK_ID}
-fi
-
 # Creating gene set:
 totalGenes=$(cat ${geneListFile} | wc -l)
 rem=$(( totalGenes % chunksTotal ))
@@ -372,8 +371,9 @@ if [[ $rem -ne 0 ]];then
 fi
 awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${outDir}/input_gene.list
 
-echo `date "+%Y.%b.%d_%H:%M"` "Calling ${scriptDir}/${regionSelector}  --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${outDir}/output.log"  >> ${LOGFILE}
-${scriptDir}/${regionSelector} --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${outDir}/output.log
+echo `date "+%Y.%b.%d_%H:%M"` "Calling ${scriptDir}/${regionSelector}  --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${outDir}/output.log 2>1&"  >> ${LOGFILE}
+selectorLog=${outDir}/chunk_${chunkNo}.output.log
+${scriptDir}/${regionSelector} --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${selectorLog} 2>1&
 
 # We are expecting to get 2 files: gene_set_output_genotype_file.txt & gene_set_output_SNPinfo_file.txt
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Checking output..." >> ${LOGFILE}
@@ -381,29 +381,29 @@ echo `date "+%Y.%b.%d_%H:%M"` "[Info] Checking output..." >> ${LOGFILE}
 cd ${outDir}
 
 # We have to check if both files are generated AND they have enough lines.
-gene_notenough=$(cat output.log | grep -c NOT_ENOUGH_VAR)
-gene_toomany=$(cat output.log | grep -c TOO_MANY_VAR)
-gene_noremain=$(cat output.log | grep -c NO_VAR_REMAIN)
-gene_absent=$(cat output.log | grep -c NO_GENE)
-region_absent=$(cat output.log | grep -c NO_REGION)
+gene_notenough=$(cat ${selectorLog} | grep -c NOT_ENOUGH_VAR)
+gene_toomany=$(cat ${selectorLog} | grep -c TOO_MANY_VAR)
+gene_noremain=$(cat ${selectorLog} | grep -c NO_VAR_REMAIN)
+gene_absent=$(cat ${selectorLog} | grep -c NO_GENE)
+region_absent=$(cat ${selectorLog} | grep -c NO_REGION)
 
 echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] ERROR REPORTING FROM REGION SELECTOR" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] ====================================" >> ${LOGFILE}
 
 if [[ "$gene_notenough" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Not enough variants [NOT_ENOUGH_VAR]:\t $(cat output.log | grep NOT_ENOUGH_VAR | sed 's/.*Gene.//;s/ .*//' | tr '\n' ' ')" >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Not enough variants [NOT_ENOUGH_VAR]:\t $(cat ${selectorLog} | grep NOT_ENOUGH_VAR | sed 's/.*Gene.//;s/ .*//' | tr '\n' ' ')" >> ${LOGFILE}
 fi
 if [[ "$gene_toomany" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Too many variants [TOO_MANY_VAR]:\t $(cat output.log | grep TOO_MANY_VAR | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Too many variants [TOO_MANY_VAR]:\t $(cat ${selectorLog} | grep TOO_MANY_VAR | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 if [[ "$gene_noremain" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] All scoring failed [NO_VAR_REMAIN]:\t $(cat output.log | grep NO_VAR_REMAIN | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] All scoring failed [NO_VAR_REMAIN]:\t $(cat ${selectorLog} | grep NO_VAR_REMAIN | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 if [[ "$gene_absent" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Gene name unknown [NO_GENE]:\t $(cat output.log | grep NO_GENE | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Gene name unknown [NO_GENE]:\t $(cat ${selectorLog} | grep NO_GENE | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 if [[ "$region_absent" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] No region in gene [NO_REGION]:\t $(cat output.log | grep NO_REGION | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] No region in gene [NO_REGION]:\t $(cat ${selectorLog} | grep NO_REGION | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 
 if [[ ! -e gene_set_output_genotype_file.txt ]]; then
@@ -503,7 +503,7 @@ else
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out file was not found. Something went wrong."  >> ${LOGFILE}
 fi
 
-cp output.log ..
+cp ${selectorLog} ..
 
 # Compress folder:
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Compressing and removing files." >> ${LOGFILE}

@@ -139,14 +139,7 @@ GetOptions(
     'floor=s'  => \$parameters->{"floor"},  # How do we want to floor Eigen values:
 
     'chromosome-prefix=s'  => \$parameters->{"chr_prefix"},  # Chromosome prefix in VCF files
-
-    # vcf File:
     'vcf=s' => \$parameters->{"vcf"},
-
-    # TEMP DIR
-    #'tempdir=s' => \$parameters->{"tempdir"},
-    
-    # Asking for help:
     'help|h' => \$help
     );
 
@@ -161,9 +154,6 @@ $parameters->{"workingDir"} = $1 if($parameters->{"workingDir"}=~/(.*)\/$/);
 if (! -d $outputDir){
     die "[Error] Could not create output directory ($outputDir). Exiting." unless make_path($outputDir)==1;
 }
-
-# Check stuff:
-#&check_parameters($parameters);
 
 &usage && die "[Error] No config file specified. Exiting." unless $parameters->{"configName"};
 &usage && die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configName"};
@@ -573,7 +563,6 @@ sub FilterLines {
             $hash{overlap}{$class} ++;
 
         }
-        # It is easy to expand this design.
     }
 
     if ($verbose) {
@@ -762,7 +751,7 @@ sub processVar {
 	    $hash{$SNPID}{"alleles"} = [$a1, $a2];
 
 	    # TODO: for indels end should be different
-	    $hash{$SNPID}{$build} = [$chr, $pos - 1, $pos];
+	    $hash{$SNPID}{$build} = [$chr, $pos - 1, $pos]; # 0-based
 	    $hash{$SNPID}{"frequencies"} = [$ac, $an, $MAF];
 	    $hash{$SNPID}{"consequence"} = $consequence;
 	    $hash{$SNPID}{"rsID"} = $id;
@@ -793,7 +782,9 @@ sub print_SNPlist {
     my @snpIDs = keys %hash;
 
     # Check if we have scores as well:
-    my $flag = $hash{$snpIDs[0]}{"score"} ? 1 : 0;
+    my $flag=0;
+    $flag=1 if exists($hash{$snpIDs[0]}{"score"});
+#    my $flag = $hash{$snpIDs[0]}{"score"} ? 1 : 0; # <- WRONG (score might be 0)
 
     # The line with the snps will be written anyways:
     print $outputhandle "$gene_name\t$flag\t", join("\t", @snpIDs),"\n";

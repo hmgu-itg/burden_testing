@@ -38,7 +38,6 @@ sub new {
     # Storing paths:
     $self->{"EigenPath"} = $parameters->{"EigenPath"};
     $self->{"caddPath"} = $parameters->{"caddPath"};
-    $self->{"Linsight"} = $parameters->{"Linsight"};
     
 #    print Dumper $self;
     return $self;
@@ -55,19 +54,11 @@ sub AddScore {
     my $self = shift;
     my $hash = shift;
     
-    # So, based on the selected weighting method, we will select the proper functions:
     $hash = _liftover($self, $hash) unless $self->{"build"} eq "37";
-    
-    # Returning Eigen scores if that's the case:
     $hash = _get_Eigen_Score($self, $hash) if $self->{"score"} =~ /Eigen/i;
-
-    # Returning CADD scores if that's the case:
     $hash = _get_CADD($self, $hash) if $self->{"score"} eq "CADD";
 
-    # Returning Insight scores if that's required:
-    $hash = _get_linsight($self, $hash) if $self->{"score"} eq "Linsight";
-
-    # Returning mixed Eigen/CADD scores if that's the case:
+    # Returning mixed Eigen/CADD scores
     $hash = _get_mixed($self, $hash) if $self->{"score"} eq "Mixed";
 
     # Processing scores based on the flooring method and the cutoff:
@@ -169,7 +160,7 @@ sub _get_CADD {
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
 	
         #my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f1-5,25-28,115-", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
-        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 3,4,106", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
+        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 3,4,106", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]); # CADD file is 1-based
         print "[Info] $tabix_query" if $self->{"verbose"};
 	my $lines=backticks_bash($tabix_query);
         $hash{$var}{"score"} = "NA";
@@ -184,13 +175,12 @@ sub _get_CADD {
             if (($ref eq $hash{$var}{alleles}[0] and $alt eq $hash{$var}{alleles}[1]) or
                 ($ref eq $hash{$var}{alleles}[1] and $alt eq $hash{$var}{alleles}[0])) {
                     $hash{$var}{"score"} = $rawscore;
-#                    $hash{$var}{"score"} = $GerpS if $self->{"score"} eq "GERP";
             }
         }
     }
     printf "[Info] %s scores have been added to variants.\n", $self->{"score"} if $self->{"verbose"};
-    my $fflag=scalar(keys(%hash))==0;
-    print("[Warning] No variants remaining after CADD scoring\n") if($fflag);
+    #my $fflag=scalar(keys(%hash))==0;
+    #print("[Warning] No variants remaining after CADD scoring\n") if($fflag);
     return \%hash
 }
 
@@ -214,7 +204,7 @@ sub _get_Eigen_Score {
 	#print "EIGENFILE=$EigenFile" if $self->{"verbose"};
 
         # Two tabix queries will be submitted regardless of the output...
-        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,30-33 | grep %s ", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
+        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,30-33 | grep %s ", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]); # Eigen file is 1-based
         print "$tabix_query" if $self->{"verbose"};
 	my $lines=backticks_bash($tabix_query);
 
@@ -284,7 +274,7 @@ sub _liftover {
     while (my $line = <$lifted>) {
         chomp $line;
         my ($chr, $start, $end, $SNPID) = split("\t", $line);
-        $hash{$SNPID}{"GRCh37"} = [$chr, $start, $end];
+        $hash{$SNPID}{"GRCh37"} = [$chr, $start, $end]; # still 0-based
         $liftedVarNo ++;
     }
     
@@ -329,46 +319,4 @@ sub _process_score {
     return \%hash;
 }
 
-# TODO: remove linsight
-sub _get_linsight {
-    my $self = $_[0];
-    my %hash = %{$_[1]};
-
-    print  "[Info] Adding Linsight scores for variants.\n" if $self->{"verbose"};
-
-    # Calling BigWig tools to get the scores:
-    #./bigWigAverageOverBed /lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/LINSIGHT/LINSIGHT.bw APOC3_GRCh37.bed  out.tab
-    my $linsightOut = $self->{"tempdir"}."/temp_GRCh37_linsight.tab";
-    my $tempFileName37 = $self->{"tempdir"}."/temp_GRCH37.bed";
-
-    my $bigwigQuery = sprintf("bigWigAverageOverBed %s %s %s", $self->{"Linsight"},$tempFileName37,$linsightOut);
-    print $bigwigQuery,"\n" if $self->{"verbose"};
-    `$bigwigQuery`;
-
-    # Reading linsight scores from the output file:
-    open( my $LIN,"<",$linsightOut) or warn "[Warning] Linsight scores were not generated\n";
-    my %linsightScore = ();
-    while ( my $line = <$LIN>) {
-        chomp $line;
-        my @a = split("\t", $line);
-        $linsightScore{$a[0]} = $a[3];
-    }
-
-    # Adding linsight scores to the hash:
-    foreach my $var (keys %hash){
-
-        if (exists $linsightScore{$var}) {
-            $hash{$var}{"score"} = $linsightScore{$var};
-        }
-        else {
-            printf ( "[Warning] linsight score was not found for variant %s! Removing it\n", $var);
-            delete $hash{$var};
-        }
-    }
-
-    printf "[Info] linsight scores have been added to variants (Number of variants: %s).\n\n", scalar keys %hash if $self->{"verbose"};
-    my $fflag=scalar(keys(%hash))==0;
-    print("[Warning] No variants remaining after liftover. \n") if($fflag);
-    return \%hash
-}
 1;
