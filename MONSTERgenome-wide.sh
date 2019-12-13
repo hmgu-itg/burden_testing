@@ -1,20 +1,6 @@
 #!/bin/bash
 
-# TODO: floor ?
-# TODO: check chunkSize
-
-# A wrapper script to automate genome-wide burden testing using MONSTER.
-# For more information on the applied method see: http://www.stat.uchicago.edu/~mcpeek/software/MONSTER/
-
-# In this version when the script finds a significant gene, it tests if the association is
-## driven by a single variant or more by repeating the test with removing a variant
-## each time.
-
-# For more information on how to use the wrapper, please see the README.md file or check the repository:
-# https://github.com/wtsi-team144/burden_testing
-
-# Todo for the next generation of the wrapper:
-## An older verision of MONSTER had an issue why we had to wrap genes individually for
+# TODO: shift Eigen by 1 by default ?
 
 # if pattern corresponds to a filename (doesn't contain %), check if the file exists
 # otherwise check if files for each chromosome (1-22) exist
@@ -24,7 +10,7 @@ function testVCFs {
     if [[ $pattern =~ % ]];then
 	for i in $(seq 1 22);do
 	    if [[ ! -e $(echo $pattern|sed "s/\%/$i/") ]];then
-		echo "[Warning] No VCF for chromosome $i"
+		echo `date "+%Y.%b.%d_%H:%M"` "[Warning] No VCF for chromosome $i"
 	    else
 		c=$((c+1))
 	    fi
@@ -43,49 +29,22 @@ function testVCFs {
     fi
 }
 
-
-version="v12 Last modified: 2019.11.20" # This version mainly changes in the documentation.
-
-today=$(date "+%Y.%m.%d") # Get the date
+version="v12 Last modified: 2019.Dec.13"
+today=$(date "+%Y.%b.%d-%H_%M")
 
 # The variant selector script, that generates snp and genotype input for MONSTER:
 regionSelector="Burden_testing.pl"
 
-# Folder with all the scripts:
-export scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-# Folder with all the phenotypes: # No longer hardwired. Accept as a command line parameter.
-# phenotypeDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/phenotypes
-# phenotypeDir=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/phenotypes/correct_names.andmissing
-
-# Default file with all the gene names:
-#geneListFile="${scriptDir}/gene_list.txt"
-
-# Kinship matrix file: # No longer hardwired, accepted as command line parameter.
-# kinshipMatrix=/nfs/team144/ds26/burden_testing/kinship/2016.10.20_fix_diagonal/kinship.fixdiag.txt
-
+# Folder with the variant selector script:
+scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 MONSTER=$(which MONSTER)
-
-# TODO: is this MONSTER -m option ?
-missing_cutoff=1 # Above the set missingness threshold, variants will be excluded. Below the missing genotype will be imputed.
-
+missing_cutoff=1 # Missingness threshold, individuals having missingness higher than this threshold will be excluded.
 imputation_method='-A' # The default imputation method is BLUP, slowest, but the most accurate. For other options, see documentation.
 configFile=""
 
-# Testing if MONSTER is in the path, exiting if not:
-if [[ -z "${MONSTER}" ]]; then echo "[Error] MONSTER is not in the path. Exiting."; exit; fi
-
-##
-## Defining default values:
-##
-export signifThreshold=1e-5 # By default the hit threshold is 1e-5
-export keep_temp="No" # By default we are not keeping temporary files:
-export chunkCount=1 # By default we process all genes as one chunk.
-export chunkNo=1 # By default we are processing the first chunk.
-export MAF=0.05 # By default this is the upper minor allele frequency.
-
-# TODO
-if [[ $LSB_JOBINDEX > 0 ]]; then chunkNo=$LSB_JOBINDEX; fi # If jobindex is available, we set that as chunk number, it might be overridden by -c
+chunksTotal=1
+chunkNo=1
+MAF=0.05 # By default this is the upper minor allele frequency.
 
 # --- print out help message and exit:
 function display_help() {
@@ -95,9 +54,8 @@ function display_help() {
     echo "version: ${version}"
     echo ""
     echo "This script was written to run MONSTER genome wide. This script takes a series of arguments
-based on which it calls downstream helper scripts, and generates specific directory for the output files.
-This is supposed to be called by bsub, where the chunk number is read from LSB_JOBINDEX.
-It pools results together within one chunk."
+          based on which it calls downstream helper scripts, and generates specific directory for the output files.
+          It pools results together within one chunk."
     echo ""
     echo "Usage: $0 <parameters>"
     echo ""
@@ -107,106 +65,56 @@ It pools results together within one chunk."
     echo "     -l  - list of linked overlapping features."
     echo "     -m  - upper maf thresholds"
     echo "     -x  - extend genomic regions (bp)."
-    echo "     -o  - exclude all non loss-of-function variants from the test (less than missense in severity)."
+    echo "     -o  - include variants with severe consequences only (more severe than missense)."
     echo "     -f  - include only HC and LC loftee variants."
     echo "     -j  - include only HC loftee variants."
     echo "     -C  - config file for Burden_testing.pl."
     echo ""
     echo "Parameters to set up scores for variants:"
-    echo "     -s  - turn weights on. Arguments: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred,"
-    echo "           Linsight, Mixed"
+    echo "     -s  - turn weights on. Arguments: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred, Mixed"
     echo "     -t  - the value with which the scores will be shifted"
     echo "     -k  - below the specified cutoff value, the variants will be excluded"
     echo ""
     echo "Gene list and chunking:"
-    echo "     -L  - list file with the gene IDs (required, no default)."
-    echo "     -d  - chunk count: how many chunks the gene list should be split into (default: 1)."
-    echo "     -c  - chunk number or jobindex (default: 1)."
+    echo "     -L  - file with gene IDs (required, no default)."
+    echo "     -d  - total number of chunks (default: 1)."
+    echo "     -c  - chunk number (default: 1)."
     echo ""
     echo "General options:"
-    echo "     -w  - working directory (default: current working directory)"
-    echo "     -b  - Keep temporary files."
-    echo "     -i  - p-value threshold (default: 1e-5) below which the temporary files will be saved."
+    echo "     -w  - working directory where the output files of \"prepare-regions\" are (required, no default)"
     echo ""
     echo "Monster parameters:"
-    echo "     -p  - phenotype (required, no default)"
+    echo "     -p  - phenotype name (required, no default)"
     echo "     -P  - phenotype file (required, no default)"
-    echo "     -K  - Kinship file (required, no default)"
-    echo "     -V  - VCF file (required, no default; use % character for chromosome name eg 'chr%.vcf.gz')"
+    echo "     -K  - kinship matrix (required, no default)"
+    echo "     -V  - VCF file(s) (required, no default; use % character for chromosome name eg 'chr%.vcf.gz')"
     echo ""
     echo "Other options:"
-    echo "     -h  - print this help message and exit"
+    echo "     -h  - print this message and exit"
     echo ""
     echo ""
 
     exit 1
 }
 
-# --- If a gene fails at some point, generate a report, and save files in a failed folder.
-function failed (){
-
-# TODO: $gene ?
-    
-    message="${1}"
-
-    echo "[Error] Gene has failed: ${gene}"
-    echo "[Error] Gene has failed: ${gene}" >&2 # Reporting to the error log as well.
-    echo "[Error] ${message}"
-    echo "[Error] folder moved to ${folder}/failed"
-    echo ""
-
-    # Adding NA-s to the output file:
-    echo -e "${gene}\tNA\tNA" >> ${workingDir}/gene_set.${chunkNo}/results
-
-    # Generating failed directory and compress gene dir:
-    mkdir -p ${workingDir}/failed
-    tar -czvf ${workingDir}/failed/${gene}.tar.gz -C ${workingDir}/gene_set.${chunkNo}/ ${gene}
-
-    # Once the folder is compressed, we add to the pooled tar archive:
-    if [[ ! -e ${workingDir}/failed/failed_genes.tar ]]; then
-        tar -c --remove-files -f ${workingDir}/failed/failed_genes.tar -C ${workingDir}/failed  ${gene}.tar.gz # Create archive
-    else
-        tar -r --remove-files -f ${workingDir}/failed/failed_genes.tar -C ${workingDir}/failed  ${gene}.tar.gz  # Add to archive
-        rm ${workingDir}/failed/${gene}.tar.gz
-    fi
-
-    # Removing directory:
-    cd ${workingDir}
-    rm -rf ${workingDir}/gene_set.${chunkNo}/${gene}
-    return 0
-}
-
-# --- If a p-value is really low, the whole run is backed up:
-function savehit (){
-    mkdir -p ${workingDir}/hits
-    tar -czvf ${workingDir}/hits/${gene}.tar.gz -C ${workingDir}/gene_set.${chunkNo}/ ${gene}
-    cd ${workingDir}
-    return 0
-}
-
 # --- Capture command line options --------------------------------------------
 
-# Help message is printed if no command line arguments has been passed:
 if [ $# == 0 ]; then display_help; fi
 
-# Looping through all command line options:
 OPTIND=1
-while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:jC:O:" optname; do
+#while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:jC:O:" optname; do
+while getopts ":hL:c:d:p:P:K:V:bg:m:s:l:e:x:k:t:ofw:jC:O:" optname; do
     case "$optname" in
       # Gene list related parameters:
         "L") geneListFile=${OPTARG} ;;
-        "c") export chunkNo=${OPTARG} ;;
-        "d") chunkCount=${OPTARG} ;;
+        "c") chunkNo=${OPTARG} ;;
+        "d") chunksTotal=${OPTARG} ;;
 
       # MONSTER input files:
         "p" ) phenotype=${OPTARG} ;;
         "P" ) phenotypeFile=${OPTARG} ;;
         "K" ) kinshipFile=${OPTARG} ;;
         "V" ) vcfFile=${OPTARG} ;;
-
-      # Wrapper option:
-        "b") keep_temp="yes";;
-        "i") signifThreshold=${OPTARG};;
 
       # variant filter parameters:
         "g") gencode=${OPTARG} ;;
@@ -231,65 +139,65 @@ while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:jC:O:" optname; do
     esac
 done
 
+if [[ -z "${rootDir}" ]]; then
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Working directory not specified";
+    exit;
+fi
+
+if [[ ! -d "${rootDir}" ]]; then
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Working directory does not exist: $rootDir";
+    exit;
+fi
+LOGFILE=${outDir}/"MONSTER-"${today}.log
+
+
+
 #--- checking input files - if any of the tests fails, the script exits.---------
 
 if [[ -z "${configFile}" ]]; then
-    echo "[Error] Config file was not specified";
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Config file was not specified";
     exit;
 fi
 
 if [[ ! -e "${configFile}" ]]; then
-    echo "[Error] Config file does not exist: $configFile";
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Config file does not exist: $configFile";
     exit;
 fi
 
 commandOptions=" --config ${configFile} "
 
-# Phenotype file (Is it set? Does it exist?):
 if [[ -z "${phenotypeFile}" ]]; then
-    display_help "[Error] Phenotype file has to be specified!";
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Phenotype file has to be specified!"
+    exit 1
 elif [[ ! -e "${phenotypeFile}" ]]; then
-    echo "[Error] Phenotype file could not be opened: $phenotypeFile";
-    exit;
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Phenotype file could not be opened: $phenotypeFile"
+    exit 1
 fi
 
-# Kinship file (Is it set? Does it exist?):
 if [[ -z "${kinshipFile}" ]]; then
-    display_help "[Error] Kinship file has to be specified!";
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Kinship file has to be specified!"
+    exit 1
 elif [[ ! -e "${kinshipFile}" ]]; then
-    echo "[Error] Kiship file could not be opened: $kinshipFile";
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Kiship file could not be opened: $kinshipFile"
     exit;
 fi
 
-# vcf file (Is it set? Does it exist?):
 if [[ -z "${vcfFile}" ]]; then
-    display_help "[Error] VCF file has to be specified!";
-    
+    "[Error] VCF file(s) not specified!"
+    exit 1
 else
     testVCFs ${vcfFile}
     if [[ $? -eq 1 ]];then
-	echo "[Error] VCF file could not be opened: $vcfFile";
-	exit;
+	echo `date "+%Y.%b.%d_%H:%M"` "[Error] VCF file could not be opened: $vcfFile"
+	exit 1
     fi
 
     commandOptions="${commandOptions} --vcf ${vcfFile} "
 fi
 
-# Select genome build:
-#commandOptions="${commandOptions} --build ${build}"
-
-# Gene list file (Is it set? Does it exist?):
 if [[ ! -e "${geneListFile}" ]]; then
-    echo "[Error] Gene list file could not be opened: $geneListFile";
-    exit;
-fi
-
-# Working directory (Is it set? Does it exist?):
-if [[ -z "${rootDir}" ]]; then
-    rootDir=$(pwd)
-elif [[ ! -d "${rootDir}" ]]; then
-    echo "[Error] The directory does not exist: $rootDir";
-    exit;
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene list file could not be opened: $geneListFile"
+    exit 1
 fi
 
 commandOptions="${commandOptions} --working-dir ${rootDir} "
@@ -346,13 +254,12 @@ if [[ ! -z "${score}" ]]; then
         EIGENPHRED )   score="EigenPhred";;
         EIGENPCPHRED ) score="EigenPCPhred";;
         CADD )         score="CADD";;
-        LINSIGHT )     score="Linsight";;
         MIXED )        score="Mixed";;
         * )            score="noweight";;
     esac
 else
-    echo "[Warning] Submitted score name is not recognized! Accepted scores: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred, Linsight or Mixed."
-    echo "[Warning] No scoreing will be applied."
+    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Submitted score name is not recognized! Accepted scores: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred or Mixed." >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] No scoreing will be applied." >> ${LOGFILE}
     score="noweight"
 fi
 
@@ -388,91 +295,88 @@ fi
 
 # Checking if phenotype is provided and if that phenotype file:
 if [[ -z "${phenotype}" ]]; then
-    echo "[Error] Phenotype was not set! Exiting."
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Phenotype was not set! Exiting."
     exit 1
 fi
 
-# Based on the size of the list and the chunk count we determine the size of each chunk:
-chunkSize=$(wc -l "${geneListFile}" | perl -lane 'print int($F[0]/$ENV{"chunkCount"}+0.5)')
-
-# Once everything is checked, print out the parameters:
-
-
-# Updating working dir, and create folder:
+# Updating working dir, and creating folder:
 folder=$( echo $folder | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
 workingDir="${rootDir}/${folder}/Pheno.${phenotype}"
+outDir=${workingDir}/gene_set.${chunkNo}
+mkdir -p ${outDir}
+if [[ ! -d ${outDir} ]]; then
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Chunk directory (${outDir}) could not be created. Exiting."
+fi
 
 # --- Reporting parameters ------------------------------------------------------
-echo "##"
-echo "## Genome-wide Monster wrapper version ${version}"
-echo "## Date: ${today}"
-echo "##"
-echo ""
+echo `date "+%Y.%b.%d_%H:%M"` "##"  >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "## Genome-wide Monster wrapper version ${version}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "## Date: ${today}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "##" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
-echo "[Info] General options:"
-echo -e "\tVariant selector: ${regionSelector}"
-echo -e "\tScript dir: ${scriptDir}"
-echo -e "\tSignificance threshold: ${signifThreshold}"
-echo -e "\tWorking directory: ${workingDir}/gene_set.${chunkNo}"
-echo -e "\tKeeping temporary files: ${keep_temp}"
-echo ""
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] General options:" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tVariant selector: ${regionSelector}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tScript dir: ${scriptDir}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tWorking directory: ${workingDir}/gene_set.${chunkNo}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
-echo "[Info] Gene list options:"
-echo -e "\tGene list file: ${geneListFile}"
-echo -e "\tNumber of chunks the gene list is split into: ${chunkCount}"
-echo -e "\tCurrent chunk: ${chunkNo}"
-echo -e "\tNumber of genes in one chunk: ${chunkSize}"
-echo ""
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Gene list options:" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tGene list file: ${geneListFile}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tNumber of chunks the gene list is split into: ${chunkCount}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tCurrent chunk: ${chunkNo}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tNumber of genes in one chunk: ${chunkSize}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
-echo "[Info] Variant filtering options:"
-echo -e "\tvcf file: ${vcfFile}"
-echo -e "\tGENCODE feaures: ${gencode:--}"
-echo -e "\tGTEx feaures: ${gtex:--}"
-echo -e "\tOverlapping reg.features: ${overlap:-NA}"
-echo -e "\tFeatures are extended by ${xtend:-0}bp"
-echo -e "\tUpper minor allele frequency: ${MAF:-1}"
-echo ""
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Variant filtering options:" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tvcf file: ${vcfFile}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tGENCODE feaures: ${gencode:--}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tGTEx feaures: ${gtex:--}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tOverlapping reg.features: ${overlap:-NA}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tFeatures are extended by ${xtend:-0}bp" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tUpper minor allele frequency: ${MAF:-1}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
-echo "[Info] Weighting options:"
-echo -e "\tWeighting: ${score}"
-echo -e "\tScore cutoff: ${cutoff:-0}"
-echo -e "\tScores shifted by: ${scoreshift:-0}"
-echo -e "\tOutput folder: ${workingDir}"
-echo ""
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Weighting options:" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tWeighting: ${score}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tScore cutoff: ${cutoff:-0}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tScores shifted by: ${scoreshift:-0}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tOutput folder: ${workingDir}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
-echo "[Info] command line options for burden get region: ${commandOptions}"
-echo ""
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] command line options for burden get region: ${commandOptions}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
-echo "[Info] MONSTER options:"
-echo -e "\tMONSTER executable: ${MONSTER}"
-echo -e "\tMissingness: ${missing_cutoff}"
-echo -e "\tImputation method: ${imputation_method:-BLUP}"
-echo -e "\tKinship matrix: ${kinshipFile}"
-echo -e "\tPhenotype file: ${phenotypeFile}"
-echo -e "\tPhenotype: ${phenotype}"
-echo ""
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] MONSTER options:" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tMONSTER executable: ${MONSTER}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tMissingness: ${missing_cutoff}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tImputation method: ${imputation_method:-BLUP}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tKinship matrix: ${kinshipFile}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tPhenotype file: ${phenotypeFile}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "\tPhenotype: ${phenotype}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 # --- Main loop executed for all genes --------------------------------------------
 
-# Creating results file with header:
-mkdir -p ${workingDir}/gene_set.${chunkNo}
-if [[ ! -d ${workingDir}/gene_set.${chunkNo} ]]; then
-    echo "[Error] Chunk directory (${workingDir}/gene_set.${chunkNo}) could not be created. Exiting."
+# SLURM_ARRAY_TASK_ID takes priority
+if [ ! -z ${SLURM_ARRAY_TASK_ID+x} ];then
+    chunkNo=${SLURM_ARRAY_TASK_ID}
 fi
 
-# Looping through all genes in the gene set:
-awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${workingDir}/gene_set.${chunkNo}/input_gene.list
+# Creating gene set:
+totalGenes=$(cat ${geneListFile} | wc -l)
+rem=$(( totalGenes % chunksTotal ))
+chunkSize=$(( totalGenes / chunksTotal ))
+if [[ $rem -ne 0 ]];then
+    chunkSize=$(( chunkSize + 1 ))
+fi
+awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${outDir}/input_gene.list
 
-# Reporting call:
-outDir=${workingDir}/gene_set.${chunkNo}
-#echo "OUTDIR: $outDir"
-#exit 1
-
-echo "${scriptDir}/${regionSelector}  --build 38  --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${outDir}/output.log"
+echo `date "+%Y.%b.%d_%H:%M"` "Calling ${scriptDir}/${regionSelector}  --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${outDir}/output.log"  >> ${LOGFILE}
 ${scriptDir}/${regionSelector} --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${outDir}/output.log
 
 # We are expecting to get 2 files: gene_set_output_genotype_file.txt & gene_set_output_SNPinfo_file.txt
-echo "[Info] Checking output..."
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Checking output..." >> ${LOGFILE}
 
 cd ${outDir}
 
@@ -483,119 +387,108 @@ gene_noremain=$(cat output.log | grep -c NO_VAR_REMAIN)
 gene_absent=$(cat output.log | grep -c NO_GENE)
 region_absent=$(cat output.log | grep -c NO_REGION)
 
-echo -e "[Warning] ERROR REPORTING FROM REGION SELECTOR"
-echo -e "[Warning] ===================================="
+echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] ERROR REPORTING FROM REGION SELECTOR" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] ====================================" >> ${LOGFILE}
 
-if [[ "$gene_notenough" != 0 ]]; then
-        echo -e "[Warning] Not enough variants [NOT_ENOUGH_VAR]:\t $(cat output.log | grep NOT_ENOUGH_VAR | sed 's/.*Gene.//;s/ .*//' | tr '\n' ' ')"
+if [[ "$gene_notenough" -ne 0 ]]; then
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Not enough variants [NOT_ENOUGH_VAR]:\t $(cat output.log | grep NOT_ENOUGH_VAR | sed 's/.*Gene.//;s/ .*//' | tr '\n' ' ')" >> ${LOGFILE}
 fi
-if [[ "$gene_toomany" != 0 ]]; then
-        echo -e "[Warning] Too many variants [TOO_MANY_VAR]:\t $(cat output.log | grep TOO_MANY_VAR | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')"
+if [[ "$gene_toomany" -ne 0 ]]; then
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Too many variants [TOO_MANY_VAR]:\t $(cat output.log | grep TOO_MANY_VAR | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
-if [[ "$gene_noremain" != 0 ]]; then
-        echo -e "[Warning] All scoring failed [NO_VAR_REMAIN]:\t $(cat output.log | grep NO_VAR_REMAIN | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')"
+if [[ "$gene_noremain" -ne 0 ]]; then
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] All scoring failed [NO_VAR_REMAIN]:\t $(cat output.log | grep NO_VAR_REMAIN | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
-if [[ "$gene_absent" != 0 ]]; then
-        echo -e "[Warning] Gene name unknown [NO_GENE]:\t $(cat output.log | grep NO_GENE | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')"
+if [[ "$gene_absent" -ne 0 ]]; then
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Gene name unknown [NO_GENE]:\t $(cat output.log | grep NO_GENE | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
-if [[ "$region_absent" != 0 ]]; then
-        echo -e "[Warning] No region in gene [NO_REGION]:\t $(cat output.log | grep NO_REGION | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')"
+if [[ "$region_absent" -ne 0 ]]; then
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] No region in gene [NO_REGION]:\t $(cat output.log | grep NO_REGION | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 
 if [[ ! -e gene_set_output_genotype_file.txt ]]; then
-    echo "[Error] Gene set ${chunkNo} has failed. No genotype file has been generated. Exiting."
-    exit
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed. No genotype file has been generated. Exiting." >> ${LOGFILE}
+    exit 1
 elif [[ $(cat gene_set_output_genotype_file.txt | wc -l ) -lt 2 ]]; then
-    echo "[Error] Gene set ${chunkNo} has failed, genotype file is empty. Exiting."
-    exit
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, genotype file is empty. Exiting." >> ${LOGFILE}
+    exit 1
 elif [[ ! -e gene_set_output_variant_file.txt ]]; then
-    echo "[Error] Gene set ${chunkNo} has failed, SNP file was not generated. Exiting."
-    exit
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, SNP file was not generated. Exiting." >> ${LOGFILE}
+    exit 1
 elif [[ $( cat gene_set_output_variant_file.txt | wc -l ) -lt 1 ]]; then
-    echo "[Error] Gene set ${chunkNo} has failed, SNP file is empty. Exiting."
-    exit
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, SNP file is empty. Exiting." >> ${LOGFILE}
+    exit 1
 fi
 
 # At this point the we have to process the above created files to syncronize wi/nfs/team144/ds26/scripts/burden_testing/MONSTERgenome-wide_updated.sh -g exon -x 50 -e promoter,enhancer,TF_bind -l promoter,enhancer,TF_bind -s EigenPCPhred -c 3 -P /lustre/scratch115/projects/t144_helic_15x/analysis/HA/phenotypes/correct_names.andmissing/MANOLIS.HDL.txt -w /lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/burdentesting/arthur_rerun -V /lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/release/postrelease_missingnessfilter/chr%.missingfiltered-0.01_consequences.lof.HWE.vcf.gz -K /lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/relmat/final/burden/matrix.monster.txt -p HDL -d 50th the phenotype file and the kinship matrix.
-# So Monster can process it:
 
-# TODO: remove hardcoded filenames
-# TODO: phenotype file format ? pheno file format ?
-# Get the phenotype:
-
-# ASSUMING PHENOTYPE FILE HAS 2 COLUMNS: ID PHENOTYPE
-# ASSUMING TAB DELIMITED
-# NO HEADER
-# TODO: same FID ?
-echo "[Info] Extracting phenotype."
+# ASSUMING PHENOTYPE FILE HAS 2 COLUMNS: ID PHENOTYPE, TAB DELIMITED, NO HEADER
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Extracting phenotype." >> ${LOGFILE}
 cat ${phenotypeFile} | awk 'BEGIN{FS="\t";OFS="\t";}{if ($2!="NA") {printf "1\t%s\t0\t0\t0\t%s\n", $1, $2} }' > pheno.txt # subset of samples in pheno.txt (without NA)
 
-# TODO: order means sorted IDs ?
 # Order the sample IDs in the phenotype file:
-echo "[Info] Re-ordering samples in the phenotype file."
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Re-ordering samples in the phenotype file." >> ${LOGFILE}
 head -n 1 gene_set_output_genotype_file.txt | tr "\t" "\n" | tail -n +2 |sort| perl -lane 'BEGIN {open $pf, "< pheno.txt";while ($l = <$pf>){chomp $l;@a = split(/\s/, $l);$h{$a[1]} = $l;}}{print $h{$F[0]} if exists $h{$F[0]}}' > pheno.ordered.txt
 
 # Get the list of samples that are not in the pheno file:
 export samples=$(grep -v -w -f <(cut -f 2 pheno.ordered.txt) <(head -n 1 gene_set_output_genotype_file.txt | cut -f 2- | tr "\t" "\n"))
 
 # From the genotype file, extract only those samples that are present in the pheno file:
-echo "[info] Extracting un-used samples from the genotype file."
+echo `date "+%Y.%b.%d_%H:%M"` "[info] Extracting un-used samples from the genotype file." >> ${LOGFILE}
 head -n 1 gene_set_output_genotype_file.txt | tr "\t" "\n" | perl -lane 'BEGIN {foreach $s ( split /\s/, $ENV{"samples"}){$h{$s} = 1;}}{push @a, $. unless exists $h{$F[0]}} END{$s = sprintf("cut -f%s gene_set_output_genotype_file.txt > genotype.filtered.txt", join(",", @a));`$s`}'
 
 # Generate a mapping file that helps to convert IDs to numbers:
-echo "[Info] Generate sample mapping file."
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Generate sample mapping file." >> ${LOGFILE}
 cut -f 2 pheno.ordered.txt | awk '{printf "s/%s/%s/g\n", $1, NR+2 }' > sample.map.sed
 
 # Generate an inclusion list with the samples to be kept:
 cut -f 2 pheno.ordered.txt > samples.to.keep.txt
 
 # Get the kinship matrix:
-echo "[Info] Processing kinship file."
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Processing kinship file." >> ${LOGFILE}
 R --slave -e 'library(data.table); mlong=fread("'$kinshipFile'"); tokeep=fread("samples.to.keep.txt", header=F)$V1; direct=mlong[(mlong$V2 %in% tokeep) & (mlong$V3 %in% tokeep),];  mapping = fread("sample.map.sed", sep="/", header=FALSE);direct$V3 = mapping[match(direct$V3, mapping$V2),]$V3; direct$V2 = mapping[match(direct$V2, mapping$V2),]$V3;write.table(direct, file="filtered_kinship.txt", quote=FALSE, sep=" ", col.names = FALSE, row.names=FALSE)'
 
 # Remap IDs and remove special characters from the snp, phenotype and genotype files:
-echo "[Info] Changing IDs and variant names."
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Changing IDs and variant names." >> ${LOGFILE}
 sed -i -f sample.map.sed pheno.ordered.txt
 sed -i -f sample.map.sed genotype.filtered.txt
-# TODO: keep underscores and capital letters too ?
-cat genotype.filtered.txt | perl -lane '$_ =~ s/[^0-9a-z\-\t\.]//gi; print $_'  > genotype.filtered.mod.txt
+cat genotype.filtered.txt | perl -lane '$_ =~ s/[^0-9A-Za-z\-\t\._]//gi; print $_'  > genotype.filtered.mod.txt
 cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9a-z\t\.]//gi; $_ =~ s/Inf/0.0001/g; ;print $_'  > snpfile.mod.txt
 
 # Filter out genes which have only monomorphic variants, as it might cause a crash:
-echo "[Info] Looking for monomorphic variants..."
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Looking for monomorphic variants..." >> ${LOGFILE}
 #tail -n+2 genotype.filtered.mod.txt | while read snp genotype ; do if [[ -z $( echo $genotype | awk '$0 ~ 1' ) ]]; then echo $snp; fi; done | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
 tail -n+2 genotype.filtered.mod.txt | perl -lne '@f=split(/\s+/);$\="\n";$s=shift(@f);foreach (@f){$H{$_}=1;}if (scalar(keys(%H))==1){print $s;}' | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
 
-echo "[Info] Removing monomorphic variants from the SNPs file."
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Removing monomorphic variants from the SNPs file." >> ${LOGFILE}
 sed -f mono_remove.sed snpfile.mod.txt > snpfile.nomono
 
-echo "[Info] Get genes where only monomorphics remain. Exclude them."
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Get genes where only monomorphics remain. Exclude them." >> ${LOGFILE}
 grep -v -w -f <(cat snpfile.nomono | awk 'NF  == 2 {print $1; a+=1}END{if(a == 0){print "noting to remove"}}') snpfile.mod.txt > snpfile.mod.nomono.txt
 
 # Calling MONSTER
-echo "[Info] MONSTER call: MONSTER -k filtered_kinship.txt -p pheno.ordered.txt -m 1 -g genotype.filtered.mod.txt  -s snpfile.mod.nomono.txt ${imputation_method}"
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] MONSTER call: MONSTER -k filtered_kinship.txt -p pheno.ordered.txt -m 1 -g genotype.filtered.mod.txt  -s snpfile.mod.nomono.txt ${imputation_method}" >> ${LOGFILE}
 while true; do
-    # TODO: correct -m ?
     MONSTER -k filtered_kinship.txt -p pheno.ordered.txt -m 1 -g genotype.filtered.mod.txt  -s snpfile.mod.nomono.txt ${imputation_method}
 
     # We break the loop if the run was successful.
-    if [[ $? == 0 ]]; then break; fi
+    if [[ $? -eq 0 ]]; then break; fi
     
     # If we have all the genes we are good:
-    if [[ $(awk 'NF == 5' MONSTER.out | cut -f1 | tail -n+2 | wc -l ) == $(cut -f1 snpfile.mod.txt | sort -u | wc -l) ]]; then break; fi
+    if [[ $(awk 'NF == 5' MONSTER.out | cut -f1 | tail -n+2 | wc -l ) == $(cut -f1 snpfile.mod.txt | sort| uniq -u | wc -l) ]]; then break; fi
 
     # Why did it fail?
     if [[ ! -e MONSTER.out ]]; then
-        echo "[Error] MONSTER failed before creating the output file. Cannot be resolved. Exiting" >&2;
+        echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER failed before creating the output file. Cannot be resolved. Exiting" >> ${LOGFILE}
         break;
     elif [[ $( cat MONSTER.out | wc -l) -eq 1 ]]; then
         firstGene=$(cut -f1 snpfile.mod.nomono.txt | head -n1)
-        echo "[Warning] It seems that the first gene (${firstGene}) has failed. Re-run MONSTER." >&2
+        echo `date "+%Y.%b.%d_%H:%M"` "[Warning] It seems that the first gene (${firstGene}) has failed. Re-run MONSTER." >> ${LOGFILE}
         grep -vw $(firstGene) snpfile.mod.nomono.txt | sponge snpfile.mod.nomono.txt
     else
         lastGene=$(awk 'NF == 5' MONSTER.out | tail -n1 | cut -f1 )
         failedGene=$(grep -A1 -w ${lastGene} snpfile.mod.nomono.txt | cut -f1 | tail -n1 )
-        echo "[Warning] Monster has failed after ${lastGene}, next gene (${failedGene}) is removed and re-run."
+        echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Monster has failed after ${lastGene}, next gene (${failedGene}) is removed and re-run." >> ${LOGFILE}
         grep -vw ${failedGene} snpfile.mod.nomono.txt | sponge snpfile.mod.nomono.txt
     fi
 done
@@ -607,13 +500,14 @@ rm genotype.filtered.txt
 if [[ -e MONSTER.out ]]; then
     cp MONSTER.out ../MONSTER.${phenotype}.${chunkNo}.out
 else
-    echo "[Error] MONSTER.out file was not found. Something went wrong." >&2
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out file was not found. Something went wrong."  >> ${LOGFILE}
 fi
 
 cp output.log ..
 
 # Compress folder:
-echo "[Info] Compressing and removing files."
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Compressing and removing files." >> ${LOGFILE}
 tar -zcvf gene_set.${chunkNo}.tar.gz *
 mv gene_set.${chunkNo}.tar.gz ..
 cd .. && rm -rf gene_set.${chunkNo}
+echo `date "+%Y.%b.%d_%H:%M"` "DONE"  >> ${LOGFILE}
