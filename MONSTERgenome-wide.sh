@@ -154,8 +154,6 @@ if [ ! -z ${SLURM_ARRAY_TASK_ID} ];then
     chunkNo=${SLURM_ARRAY_TASK_ID}
 fi
 
-LOGFILE=${rootDir}/"MONSTER-"${today}."chunk_$chunkNo".log
-
 #--- checking input files - if any of the tests fails, the script exits.---------
 
 if [[ -z "${configFile}" ]]; then
@@ -262,8 +260,8 @@ if [[ ! -z "${score}" ]]; then
         * )            score="noweight";;
     esac
 else
-    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Submitted score name is not recognized! Accepted scores: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred or Mixed." >> ${LOGFILE}
-    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] No scoreing will be applied." >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Submitted score name is not recognized! Accepted scores: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred or Mixed."
+    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] No scoring will be applied."
     score="noweight"
 fi
 
@@ -311,6 +309,8 @@ mkdir -p ${outDir}
 if [[ ! -d ${outDir} ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Chunk directory (${outDir}) could not be created. Exiting."
 fi
+
+LOGFILE=${outDir}/"MONSTER-"${today}."chunk_$chunkNo".log
 
 # --- Reporting parameters ------------------------------------------------------
 echo `date "+%Y.%b.%d_%H:%M"` "##"  >> ${LOGFILE}
