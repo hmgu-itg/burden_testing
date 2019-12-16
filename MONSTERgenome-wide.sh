@@ -246,6 +246,8 @@ if [[ ! -z "$lof" ]]; then
     commandOptions="${commandOptions} --lof "
 fi
 
+warning1=""
+warning2=""
 # Score - If score is not given we apply no score. Otherwise we test the submitted value:
 # Accepted scores:
 if [[ ! -z "${score}" ]]; then
@@ -260,8 +262,8 @@ if [[ ! -z "${score}" ]]; then
         * )            score="noweight";;
     esac
 else
-    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Submitted score name is not recognized! Accepted scores: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred or Mixed."
-    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] No scoring will be applied."
+    warning1="[Warning] Submitted score name is not recognized! Accepted scores: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred or Mixed."
+    warning2="[Warning] No scoring will be applied."
     score="noweight"
 fi
 
@@ -312,55 +314,13 @@ fi
 
 LOGFILE=${outDir}/"MONSTER-"${today}."chunk_$chunkNo".log
 
-# --- Reporting parameters ------------------------------------------------------
-echo `date "+%Y.%b.%d_%H:%M"` "##"  >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "## Genome-wide Monster wrapper version ${version}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "## Date: ${today}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "##" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+if [[ ! -z ${warning1} ]];then
+    echo ${warning1} >> ${LOGFILE}
+fi
 
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] General options:" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tVariant selector: ${regionSelector}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tScript dir: ${scriptDir}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tWorking directory: ${workingDir}/gene_set.${chunkNo}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
-
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Gene list options:" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tGene list file: ${geneListFile}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tNumber of chunks the gene list is split into: ${chunkCount}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tCurrent chunk: ${chunkNo}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tNumber of genes in one chunk: ${chunkSize}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
-
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Variant filtering options:" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tvcf file: ${vcfFile}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tGENCODE feaures: ${gencode:--}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tGTEx feaures: ${gtex:--}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tOverlapping reg.features: ${overlap:-NA}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tFeatures are extended by ${xtend:-0}bp" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tUpper minor allele frequency: ${MAF:-1}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
-
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Weighting options:" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tWeighting: ${score}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tScore cutoff: ${cutoff:-0}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tScores shifted by: ${scoreshift:-0}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tOutput folder: ${workingDir}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
-
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] command line options for burden get region: ${commandOptions}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
-
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] MONSTER options:" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tMONSTER executable: ${MONSTER}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tMissingness: ${missing_cutoff}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tImputation method: ${imputation_method:-BLUP}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tKinship matrix: ${kinshipFile}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tPhenotype file: ${phenotypeFile}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "\tPhenotype: ${phenotype}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
-
-# --- Main loop executed for all genes --------------------------------------------
+if [[ ! -z ${warning2} ]];then
+    echo ${warning2} >> ${LOGFILE}
+fi
 
 # Creating gene set:
 totalGenes=$(cat ${geneListFile} | wc -l)
@@ -369,11 +329,67 @@ chunkSize=$(( totalGenes / chunksTotal ))
 if [[ $rem -ne 0 ]];then
     chunkSize=$(( chunkSize + 1 ))
 fi
-awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${outDir}/input_gene.list
 
-echo `date "+%Y.%b.%d_%H:%M"` "Calling ${scriptDir}/${regionSelector}  --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${outDir}/output.log 2>1&"  >> ${LOGFILE}
+# --- Reporting parameters ------------------------------------------------------
+echo `date "+%Y.%b.%d_%H:%M"` "##"  >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "## Genome-wide Monster wrapper version ${version}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "## Date: ${today}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "##" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] General options:" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Variant selector: ${regionSelector}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Script dir: ${scriptDir}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Working directory: ${workingDir}/gene_set.${chunkNo}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Gene list options:" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Gene list file: ${geneListFile}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Number of chunks the gene list is split into: ${chunksTotal}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Current chunk: ${chunkNo}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Number of genes in one chunk: ${chunkSize}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Variant filtering options:" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "vcf file: ${vcfFile}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "GENCODE feaures: ${gencode:--}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "GTEx feaures: ${gtex:--}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Overlapping reg.features: ${overlap:-NA}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Features are extended by ${xtend:-0}bp" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Upper minor allele frequency: ${MAF:-1}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Weighting options:" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Weighting: ${score}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Score cutoff: ${cutoff:-0}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Scores shifted by: ${scoreshift:-0}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Output folder: ${workingDir}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] command line options for burden get region: ${commandOptions}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] MONSTER options:" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "MONSTER executable: ${MONSTER}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Missingness: ${missing_cutoff}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Imputation method: ${imputation_method:-BLUP}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Kinship matrix: ${kinshipFile}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Phenotype file: ${phenotypeFile}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "Phenotype: ${phenotype}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+
+# --- Main loop executed for all genes --------------------------------------------
+
+awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${outDir}/input_gene.list
+n=$( cat ${outDir}/input_gene.list | wc -l)
+if [[ $n -eq 0 ]];then
+    echo "Chunk ${chunkNo} is empty; EXIT" >> ${LOGFILE}
+    exit 0
+fi
+
 selectorLog=${outDir}/chunk_${chunkNo}.output.log
-${scriptDir}/${regionSelector} --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${selectorLog} 2>1&
+echo `date "+%Y.%b.%d_%H:%M"` "Calling ${scriptDir}/${regionSelector}  --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}"  >> ${LOGFILE}
+${scriptDir}/${regionSelector} --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}
 
 # We are expecting to get 2 files: gene_set_output_genotype_file.txt & gene_set_output_SNPinfo_file.txt
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Checking output..." >> ${LOGFILE}
@@ -453,7 +469,8 @@ echo `date "+%Y.%b.%d_%H:%M"` "[Info] Changing IDs and variant names." >> ${LOGF
 sed -i -f sample.map.sed pheno.ordered.txt
 sed -i -f sample.map.sed genotype.filtered.txt
 cat genotype.filtered.txt | perl -lane '$_ =~ s/[^0-9A-Za-z\-\t\._]//gi; print $_'  > genotype.filtered.mod.txt
-cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9a-z\t\.]//gi; $_ =~ s/Inf/0.0001/g; ;print $_'  > snpfile.mod.txt
+cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9A-Za-z\-\t\._]//gi; $_ =~ s/Inf/0.0001/g; ;print $_'  > snpfile.mod.txt
+#cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9a-z\t\.]//gi; $_ =~ s/Inf/0.0001/g; ;print $_'  > snpfile.mod.txt
 
 # Filter out genes which have only monomorphic variants, as it might cause a crash:
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Looking for monomorphic variants..." >> ${LOGFILE}

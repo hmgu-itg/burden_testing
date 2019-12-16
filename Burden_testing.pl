@@ -155,6 +155,11 @@ if (! -d $outputDir){
     die "[Error] Could not create output directory ($outputDir). Exiting." unless make_path($outputDir)==1;
 }
 
+$parameters->{"tempdir"}=$outputDir."/prepare_regions_tempfiles";
+if (! -d $parameters->{"tempdir"}){
+    die "[Error] Could not create temp directory (".$parameters->{"tempdir"}."). Exiting." unless make_path($parameters->{"tempdir"})==1;
+}
+
 &usage && die "[Error] No config file specified. Exiting." unless $parameters->{"configName"};
 &usage && die "[Error] The specified config file does not exist. Exiting." unless -e $parameters->{"configName"};
 &usage && die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
@@ -164,7 +169,6 @@ if (! -d $outputDir){
 &usage && die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcf"});
 
 $parameters = &readConfigFile($parameters);
-$parameters->{"tempdir"}=$parameters->{"workingDir"}."/prepare_regions_tempfiles";
 $parameters->{"gencode_file"}=$parameters->{"workingDir"}."/gencode.basic.annotation.tsv.gz";
 $parameters->{"Linked_features"}=$parameters->{"workingDir"}."/Linked_features.bed.gz";
 
@@ -599,7 +603,7 @@ sub FilterLines {
     }
     close $tempbed;
     #sortString=sprintf("sort -k1,1 -k2,2n %s | sponge %s",$tmpName);
-    `sort -k1,1 -k2,2n $tmpName | sponge $tmpName`;
+    `sort -k1,1n -k2,2n $tmpName | sponge $tmpName`;
 
     # Collapsing overlapping features:
     my $queryString = "mergeBed -i $tmpName";
