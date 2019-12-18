@@ -222,11 +222,12 @@ while ( my $ID = <$INPUT> ){
         print "[Info] Queried gene: $name (Ensembl ID: $stable_ID), Genomic location: $chr:$start-$end (Input: $ID)";
 
         my $bedlines = &BedToolsQuery($chr, $start, $end, $stable_ID, $parameters->{"Linked_features"});
+	#print "BEDLINES:\n".$bedlines."\n" if $verbose;
         $CollapsedBed = &FilterLines($bedlines, $stable_ID, $parameters);
 
         # This should never be a problem, but still be tested:
         unless ( $CollapsedBed ){
-            print "[Error] Gene $name did not yield any regions. Skipped. [NO_REGION].";
+            print "[WARNING] Gene $name did not yield any regions. Skipped. [NO_REGION].";
             next;
         }
     }
