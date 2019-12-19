@@ -338,44 +338,44 @@ echo `date "+%Y.%b.%d_%H:%M"` "##" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] General options:" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Variant selector: ${regionSelector}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Script dir: ${scriptDir}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Working directory: ${workingDir}/gene_set.${chunkNo}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Variant selector: ${regionSelector}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Script dir: ${scriptDir}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Working directory: ${workingDir}/gene_set.${chunkNo}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Gene list options:" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Gene list file: ${geneListFile}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Number of chunks the gene list is split into: ${chunksTotal}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Current chunk: ${chunkNo}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Number of genes in one chunk: ${chunkSize}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Gene list file: ${geneListFile}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Number of chunks the gene list is split into: ${chunksTotal}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Current chunk: ${chunkNo}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Number of genes in one chunk: ${chunkSize}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Variant filtering options:" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "vcf file: ${vcfFile}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "GENCODE feaures: ${gencode:--}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "GTEx feaures: ${gtex:--}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Overlapping reg.features: ${overlap:-NA}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Features are extended by ${xtend:-0}bp" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Upper minor allele frequency: ${MAF:-1}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "vcf file: ${vcfFile}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "GENCODE feaures: ${gencode:--}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "GTEx feaures: ${gtex:--}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Overlapping reg.features: ${overlap:-NA}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Features are extended by ${xtend:-0}bp" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Upper minor allele frequency: ${MAF:-1}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Weighting options:" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Weighting: ${score}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Score cutoff: ${cutoff:-0}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Scores shifted by: ${scoreshift:-0}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Output folder: ${workingDir}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Weighting: ${score}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Score cutoff: ${cutoff:-0}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Scores shifted by: ${scoreshift:-0}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Output folder: ${workingDir}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] command line options for burden get region: ${commandOptions}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] MONSTER options:" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "MONSTER executable: ${MONSTER}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Missingness: ${missing_cutoff}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Imputation method: ${imputation_method:-BLUP}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Kinship matrix: ${kinshipFile}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Phenotype file: ${phenotypeFile}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "Phenotype: ${phenotype}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "MONSTER executable: ${MONSTER}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Missingness: ${missing_cutoff}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Imputation method: ${imputation_method:-BLUP}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Kinship matrix: ${kinshipFile}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Phenotype file: ${phenotypeFile}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Phenotype: ${phenotype}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 # --- Main loop executed for all genes --------------------------------------------
@@ -470,7 +470,6 @@ sed -i -f sample.map.sed pheno.ordered.txt
 sed -i -f sample.map.sed genotype.filtered.txt
 cat genotype.filtered.txt | perl -lane '$_ =~ s/[^0-9A-Za-z\-\t\._]//gi; print $_'  > genotype.filtered.mod.txt
 cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9A-Za-z\-\t\._]//gi; $_ =~ s/Inf/0.0001/g; ;print $_'  > snpfile.mod.txt
-#cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9a-z\t\.]//gi; $_ =~ s/Inf/0.0001/g; ;print $_'  > snpfile.mod.txt
 
 # Filter out genes which have only monomorphic variants, as it might cause a crash:
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Looking for monomorphic variants..." >> ${LOGFILE}
@@ -491,16 +490,15 @@ while true; do
     # We break the loop if the run was successful.
     if [[ $? -eq 0 ]]; then break; fi
     
-    # If we have all the genes we are good:
+    # Test if we've analyzed all genes
     if [[ $(awk 'NF == 5' MONSTER.out | cut -f1 | tail -n+2 | wc -l ) == $(cut -f1 snpfile.mod.txt | sort| uniq -u | wc -l) ]]; then break; fi
 
-    # Why did it fail?
     if [[ ! -e MONSTER.out ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER failed before creating the output file. Cannot be resolved. Exiting" >> ${LOGFILE}
         break;
     elif [[ $( cat MONSTER.out | wc -l) -eq 1 ]]; then
         firstGene=$(cut -f1 snpfile.mod.nomono.txt | head -n1)
-        echo `date "+%Y.%b.%d_%H:%M"` "[Warning] It seems that the first gene (${firstGene}) has failed. Re-run MONSTER." >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` "[Warning] It seems that the first gene (${firstGene}) has failed. Re-running MONSTER." >> ${LOGFILE}
         grep -vw $(firstGene) snpfile.mod.nomono.txt | sponge snpfile.mod.nomono.txt
     else
         lastGene=$(awk 'NF == 5' MONSTER.out | tail -n1 | cut -f1 )
@@ -511,20 +509,24 @@ while true; do
 done
 
 # Once MONSTER is finished, we remove the un-used temporary files:
-rm genotype.filtered.txt
+#rm genotype.filtered.txt
 
 # Moving MONSTER.out to the root directory:
-if [[ -e MONSTER.out ]]; then
-    cp MONSTER.out ../MONSTER.${phenotype}.${chunkNo}.out
-else
+#if [[ -e MONSTER.out ]]; then
+#    cp MONSTER.out ../MONSTER.${phenotype}.${chunkNo}.out
+#else
+#    echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out file was not found. Something went wrong."  >> ${LOGFILE}
+#fi
+
+if [[ ! -e MONSTER.out ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out file was not found. Something went wrong."  >> ${LOGFILE}
 fi
 
-cp ${selectorLog} ..
+#cp ${selectorLog} ..
 
 # Compress folder:
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Compressing and removing files." >> ${LOGFILE}
-tar -zcvf gene_set.${chunkNo}.tar.gz *
-mv gene_set.${chunkNo}.tar.gz ..
-cd .. && rm -rf gene_set.${chunkNo}
+#echo `date "+%Y.%b.%d_%H:%M"` "[Info] Compressing and removing files." >> ${LOGFILE}
+#tar -zcvf gene_set.${chunkNo}.tar.gz *
+#mv gene_set.${chunkNo}.tar.gz ..
+#cd .. && rm -rf gene_set.${chunkNo}
 echo `date "+%Y.%b.%d_%H:%M"` "DONE"  >> ${LOGFILE}
