@@ -35,7 +35,7 @@
 ##
 
 script_version=3.0
-last_modified=2019.09.16
+last_modified=2019.12.20
 
 ## Built in versions:
 GENCODE_release=32
@@ -75,19 +75,21 @@ function usage {
     echo "  9: Tabix output"
     echo ""
     echo ""
-    echo "The output is a bed file, where the first 4 columns are the chromosome, start/end
+    echo "This script produces two output files, both in the same directory as the input GTEx file."
+    echo "1) the first file  is \"Linked_features.bed.gz\"; its first 4 columns are the chromosome, start/end
 coordinates and the stable ID of the gene respectively. The 5th column is a json
 formatted string describing one genomic region associated to the given gene. This
 line contains all information of the association."
+    echo ""
+    echo "2) the second file is \"gencode.basic.annotation.tsv.gz\"; it's a trimmed version of the downloaded GENCODE file."
     echo ""
     echo "JSON tags:"
     echo "  -source: from which source the given region is coming from (GENCODE, GTEx, Overlap)."
     echo "  -class: class of the given feature (eg. exon, CDS, gene, enhancer, promoter etc.)"
     echo "  -chr, start, end: GRCh38 coordintes of the feature."
-    echo "  -other sources contain information about the evidence. (linked rsID, tissue in
-    which the feature in active etc.)"
+    echo "  -other sources contain information about the evidence. (linked rsID, tissue in which the feature in active etc.)"
     echo ""
-    echo "WARNINGS: ALL COORDINATES ARE BASED ON GRCH38 BUILD!"
+    echo "IMPORTANT: ALL COORDINATES ARE BASED ON GRCh38 BUILD"
     echo ""
     exit 0
 }

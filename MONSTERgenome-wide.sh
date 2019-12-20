@@ -72,8 +72,8 @@ function display_help() {
     echo ""
     echo "Parameters to set up scores for variants:"
     echo "     -s  - turn weights on. Arguments: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred, Mixed"
-    echo "     -t  - the value with which the scores will be shifted"
-    echo "     -k  - below the specified cutoff value, the variants will be excluded"
+    echo "     -t  - the value with which the scores will be shifted (default value: if Eigen score weighting specified: 1, otherwise: 0)"
+    echo "     -k  - below the specified cutoff value, the variants will be excluded (default: 0)"
     echo ""
     echo "Gene list and chunking:"
     echo "     -L  - file with gene IDs (required, no default)."
@@ -149,10 +149,13 @@ if [[ ! -d "${rootDir}" ]]; then
     exit;
 fi
 
-# SLURM_ARRAY_TASK_ID takes priority
-if [ ! -z ${SLURM_ARRAY_TASK_ID} ];then
+chunk_warning=""
+if [[ ! -z ${SLURM_ARRAY_TASK_ID} && ! -z ${chunkNo} ]];then
+    chunk_warning="WARNING: both SLURM_ARRAY_TASK_ID and chunkNo are defined; using chunkNo"
+elif [[ ! -z ${SLURM_ARRAY_TASK_ID} && -z ${chunkNo} ]];then
     chunkNo=${SLURM_ARRAY_TASK_ID}
 fi
+
 
 #--- checking input files - if any of the tests fails, the script exits.---------
 
@@ -320,6 +323,10 @@ fi
 
 if [[ ! -z ${warning2} ]];then
     echo ${warning2} >> ${LOGFILE}
+fi
+
+if [[ ! -z ${chunk_warning} ]];then
+    echo ${chunk_warning} >> ${LOGFILE}
 fi
 
 # Creating gene set:
