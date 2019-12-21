@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# TODO: shift Eigen by 1 by default ?
-
 # if pattern corresponds to a filename (doesn't contain %), check if the file exists
 # otherwise check if files for each chromosome (1-22) exist
 function testVCFs {
@@ -29,7 +27,7 @@ function testVCFs {
     fi
 }
 
-version="v12 Last modified: 2019.Dec.13"
+version="v12 Last modified: 2019.Dec.21"
 today=$(date "+%Y.%b.%d-%H_%M")
 
 # The variant selector script, that generates snp and genotype input for MONSTER:
@@ -39,11 +37,11 @@ regionSelector="Burden_testing.pl"
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 MONSTER=$(which MONSTER)
 missing_cutoff=1 # Missingness threshold, individuals having missingness higher than this threshold will be excluded.
-imputation_method='-A' # The default imputation method is BLUP, slowest, but the most accurate. For other options, see documentation.
+imputation_method='-A' # The default imputation method is BLUP, slowest, but the most accurate. For other options, see MONSTER documentation.
 configFile=""
 
 chunksTotal=1
-chunkNo=1
+chunkNo=""
 MAF=0.05 # By default this is the upper minor allele frequency.
 
 # --- print out help message and exit:
@@ -102,7 +100,6 @@ function display_help() {
 if [ $# == 0 ]; then display_help; fi
 
 OPTIND=1
-#while getopts ":hL:c:d:p:P:K:V:bi:g:m:s:l:e:x:k:t:ofw:jC:O:" optname; do
 while getopts ":hL:c:d:p:P:K:V:bg:m:s:l:e:x:k:t:ofw:jC:O:" optname; do
     case "$optname" in
       # Gene list related parameters:
@@ -150,12 +147,17 @@ if [[ ! -d "${rootDir}" ]]; then
 fi
 
 chunk_warning=""
-if [[ ! -z ${SLURM_ARRAY_TASK_ID} && ! -z ${chunkNo} ]];then
-    chunk_warning="WARNING: both SLURM_ARRAY_TASK_ID and chunkNo are defined; using chunkNo"
-elif [[ ! -z ${SLURM_ARRAY_TASK_ID} && -z ${chunkNo} ]];then
-    chunkNo=${SLURM_ARRAY_TASK_ID}
+if [[ ! -z ${SLURM_ARRAY_TASK_ID} ]];then
+    if [[ ! -z ${chunkNo} ]];then
+	chunk_warning="WARNING: both SLURM_ARRAY_TASK_ID and chunkNo ( -c ) are defined; using chunkNo"
+    else
+	chunkNo=${SLURM_ARRAY_TASK_ID}
+    fi
+else
+    if [[ -z ${chunkNo} ]];then
+	chunkNo=1 # default
+    fi
 fi
-
 
 #--- checking input files - if any of the tests fails, the script exits.---------
 
