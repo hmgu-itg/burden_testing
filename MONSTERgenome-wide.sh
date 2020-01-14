@@ -79,7 +79,7 @@ function display_help() {
     echo "     -c  - chunk number (default: 1)."
     echo ""
     echo "General options:"
-    echo "     -w  - working directory where the output files of \"prepare-regions\" are (required, no default)"
+    echo "     -w  - output directory where the chunk subdirectories will be created (required, no default)"
     echo ""
     echo "Monster parameters:"
     echo "     -p  - phenotype name (required, no default)"
@@ -130,7 +130,7 @@ while getopts ":hL:c:d:p:P:K:V:bg:m:s:l:e:x:k:t:ofw:jC:z" optname; do
         "C") configFile=${OPTARG} ;;
 
       # Other parameters:
-        "w") rootDir=${OPTARG} ;;
+        "w") outputDir=${OPTARG} ;;
         "h") display_help ;;
         "?") display_help "[Error] Unknown option $OPTARG" ;;
         ":") display_help "[Error] No argument value for option $OPTARG" ;;
@@ -138,13 +138,8 @@ while getopts ":hL:c:d:p:P:K:V:bg:m:s:l:e:x:k:t:ofw:jC:z" optname; do
     esac
 done
 
-if [[ -z "${rootDir}" ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Working directory not specified";
-    exit;
-fi
-
-if [[ ! -d "${rootDir}" ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Working directory does not exist: $rootDir";
+if [[ -z "${outputDir}" ]]; then
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Output directory not specified";
     exit;
 fi
 
@@ -209,7 +204,7 @@ if [[ ! -e "${geneListFile}" ]]; then
     exit 1
 fi
 
-commandOptions="${commandOptions} --working-dir ${rootDir} "
+#commandOptions="${commandOptions} --working-dir ${rootDir} "
 
 # GENCODE -expecting a list of feature names separated by a comma.
 if [[ ! -z "${gencode}" ]]; then
@@ -297,7 +292,6 @@ if [[ ! -z "${cutoff}" ]]; then
     commandOptions="${commandOptions} --cutoff ${cutoff}"
 fi
 
-# TODO: scoreshift, general vs Eigen ?
 # Setting score shift, a number that will be added to every scores (MONSTER does not accept scores <= 0!!):
 if [[ ! -z "${scoreshift}" ]]; then
     folder="${folder}.shift.${scoreshift}"
@@ -312,14 +306,15 @@ fi
 
 # Updating working dir, and creating folder:
 folder=$( echo $folder | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-workingDir="${rootDir}/${folder}/Pheno.${phenotype}"
-outDir=${workingDir}/gene_set.${chunkNo}
-mkdir -p ${outDir}
-if [[ ! -d ${outDir} ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Chunk directory (${outDir}) could not be created. Exiting."
+outputDir="${outputDir}/${folder}/Pheno.${phenotype}"
+outputDir=${outputDir}/gene_set.${chunkNo}
+mkdir -p ${outputDir}
+if [[ ! -d ${outputDir} ]]; then
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Chunk directory (${outputDir}) could not be created. Exiting."
+    exit 1
 fi
 
-LOGFILE=${outDir}/"MONSTER-"${today}."chunk_$chunkNo".log
+LOGFILE=${outputDir}/"MONSTER-"${today}."chunk_$chunkNo".log
 
 if [[ ! -z ${warning1} ]];then
     echo ${warning1} >> ${LOGFILE}
@@ -374,7 +369,7 @@ echo `date "+%Y.%b.%d_%H:%M"` "[Info] Weighting options:" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "Weighting: ${score}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "Score cutoff: ${cutoff:-0}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "Scores shifted by: ${scoreshift:-0}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "Output folder: ${workingDir}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "Output folder: ${outputDir}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] command line options for burden get region: ${commandOptions}" >> ${LOGFILE}
@@ -391,21 +386,21 @@ echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 # --- Main loop executed for all genes --------------------------------------------
 
-awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${outDir}/input_gene.list
-n=$( cat ${outDir}/input_gene.list | wc -l)
+awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${outputDir}/input_gene.list
+n=$( cat ${outputDir}/input_gene.list | wc -l)
 if [[ $n -eq 0 ]];then
     echo "Chunk ${chunkNo} is empty; EXIT" >> ${LOGFILE}
     exit 0
 fi
 
-selectorLog=${outDir}/chunk_${chunkNo}.output.log
-echo `date "+%Y.%b.%d_%H:%M"` "Calling ${scriptDir}/${regionSelector}  --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}"  >> ${LOGFILE}
-${scriptDir}/${regionSelector} --input ${outDir}/input_gene.list --output gene_set_output --output-dir ${outDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}
+selectorLog=${outputDir}/chunk_${chunkNo}.output.log
+echo `date "+%Y.%b.%d_%H:%M"` "Calling ${scriptDir}/${regionSelector}  --input ${outputDir}/input_gene.list --output gene_set_output --output-dir ${outputDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}"  >> ${LOGFILE}
+${scriptDir}/${regionSelector} --input ${outputDir}/input_gene.list --output gene_set_output --output-dir ${outputDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}
 
 # We are expecting to get 2 files: gene_set_output_genotype_file.txt & gene_set_output_SNPinfo_file.txt
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Checking output..." >> ${LOGFILE}
 
-cd ${outDir}
+cd ${outputDir}
 
 # We have to check if both files are generated AND they have enough lines.
 gene_notenough=$(cat ${selectorLog} | grep -c NOT_ENOUGH_VAR)
