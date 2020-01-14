@@ -72,7 +72,7 @@ $parameters->{"lof_cons"} = {
 };
 
 # Command line options without default values:
-my ($inputFile,$workingDir,$outputDir,$outputFile, $help);
+my ($inputFile,$outputDir,$outputFile, $help);
 
 # should we filter SNPs for MAF, missingness, MAC etc.
 # we don't do filtering when annotating SNP lists (for SMMAT)
@@ -117,7 +117,7 @@ GetOptions(
     'config=s' => \$parameters->{"configName"},
 
     # specifying working directory:
-    'working-dir=s' => \$parameters->{"workingDir"},
+#    'working-dir=s' => \$parameters->{"workingDir"},
 
     # Which score do we need:
     'score=s' => \$parameters->{"score"},
@@ -144,10 +144,10 @@ GetOptions(
 
 $parameters->{"maxVars"}=1000 unless $parameters->{"maxVars"};
 
-&usage && die "[Error] No working directory specified. Exiting." unless $parameters->{"workingDir"};
-&usage && die "[Error] The specified working directory does not exist. Exiting." unless -d $parameters->{"workingDir"};
+#&usage && die "[Error] No working directory specified. Exiting." unless $parameters->{"workingDir"};
+#&usage && die "[Error] The specified working directory does not exist. Exiting." unless -d $parameters->{"workingDir"};
 # remove trailing slash
-$parameters->{"workingDir"} = $1 if($parameters->{"workingDir"}=~/(.*)\/$/);
+#$parameters->{"workingDir"} = $1 if($parameters->{"workingDir"}=~/(.*)\/$/);
 
 &usage && die "[Error] No output directory specified. Exiting." unless $outputDir;
 if (! -d $outputDir){
@@ -168,8 +168,8 @@ if (! -d $parameters->{"tempdir"}){
 &usage && die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcf"});
 
 $parameters = &readConfigFile($parameters);
-$parameters->{"gencode_file"}=$parameters->{"workingDir"}."/gencode.basic.annotation.tsv.gz";
-$parameters->{"Linked_features"}=$parameters->{"workingDir"}."/Linked_features.bed.gz";
+#$parameters->{"gencode_file"}=$parameters->{"workingDir"}."/gencode.basic.annotation.tsv.gz";
+#$parameters->{"Linked_features"}=$parameters->{"workingDir"}."/Linked_features.bed.gz";
 
 # If the score option is not empty, we have to check if it's a valid score, and the
 # required files are exists. If any problem found, the score parameter will be set to its
@@ -872,7 +872,7 @@ sub usage {
     print "Usage::";
     print("      Required:");
     print("          --input <input file>");
-    print("          --working-dir <working directory containing Linked_features.bed.gz and gencode.basic.annotation.tsv.gz>");
+#    print("          --working-dir <working directory containing Linked_features.bed.gz and gencode.basic.annotation.tsv.gz>");
     print("          --output-dir <output directory>");
     print("          --output <output filename prefix>");
     print("          --vcf <input VCF>");
