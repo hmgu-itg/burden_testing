@@ -429,8 +429,7 @@ rm -f ${tmpGTEx}
 ## Step 9. Using intersectbed. Find overlap between GTEx variations and regulatory regions
 ##
 info "Linking genes to regulatory features using GTEx data... "
-intersectBed -wb -a ${targetDir}/${today}/processed/GTEx.bed -b ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz \
-    | perl -MData::Dumper -MJSON -F"\t" -lane '
+intersectBed -wb -a ${targetDir}/${today}/processed/GTEx.bed -b ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz 2>/dev/null | perl -MData::Dumper -MJSON -F"\t" -lane '
         # Name of the source is GTEx
         $source= "GTEx";
 
@@ -523,8 +522,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 
 # Intersect bed run.
 # 1	16048	29570	ID:ENSG00000227232;Name:WASH7P	1	16048	30847	ENSR00000528774	chr=1;start=16048;end=30847;class=CTCF_binding_site;regulatory_ID=ENSR00000528774;Tissues=DND-41|HMEC|HSMMtube|IMR90|K562|MultiCell|NHDF-AD
-intersectBed -wb -a ${targetDir}/${today}/processed/genes.bed.gz -b ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz -sorted \
-    | perl -MData::Dumper -MJSON -F"\t" -lane '
+intersectBed -wb -a ${targetDir}/${today}/processed/genes.bed.gz -b ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz -sorted 2>/dev/null | perl -MData::Dumper -MJSON -F"\t" -lane '
         # Parsing gene info:
         ($g_ID) = $F[3] =~ /ID:(ENSG\d+)/;
         ($g_name) = $F[3] =~ /Name:(\S+)/;
