@@ -99,8 +99,9 @@ function display_help() {
 
 if [ $# == 0 ]; then display_help; fi
 
+zipout="yes" # by default gzip output results
 OPTIND=1
-while getopts ":hL:c:d:p:P:K:V:bg:m:s:l:e:x:k:t:ofw:jC:O:" optname; do
+while getopts ":hL:c:d:p:P:K:V:bg:m:s:l:e:x:k:t:ofw:jC:z" optname; do
     case "$optname" in
       # Gene list related parameters:
         "L") geneListFile=${OPTARG} ;;
@@ -123,6 +124,7 @@ while getopts ":hL:c:d:p:P:K:V:bg:m:s:l:e:x:k:t:ofw:jC:O:" optname; do
         "k") cutoff=${OPTARG} ;;
         "t") scoreshift=${OPTARG} ;;
         "o") lof=1 ;;
+        "z") zipout="no" ;;
         "f") loftee=1 ;;
         "j") lofteeHC=1 ;;
         "C") configFile=${OPTARG} ;;
@@ -518,24 +520,22 @@ while true; do
 done
 
 # Once MONSTER is finished, we remove the un-used temporary files:
-#rm genotype.filtered.txt
+rm genotype.filtered.txt
 
 # Moving MONSTER.out to the root directory:
-#if [[ -e MONSTER.out ]]; then
-#    cp MONSTER.out ../MONSTER.${phenotype}.${chunkNo}.out
-#else
-#    echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out file was not found. Something went wrong."  >> ${LOGFILE}
-#fi
-
-if [[ ! -e MONSTER.out ]]; then
+if [[ -e MONSTER.out ]]; then
+    cp MONSTER.out ../MONSTER.${phenotype}.${chunkNo}.out
+else
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out file was not found. Something went wrong."  >> ${LOGFILE}
 fi
 
-#cp ${selectorLog} ..
+cp ${selectorLog} ..
 
-# Compress folder:
-#echo `date "+%Y.%b.%d_%H:%M"` "[Info] Compressing and removing files." >> ${LOGFILE}
-#tar -zcvf gene_set.${chunkNo}.tar.gz *
-#mv gene_set.${chunkNo}.tar.gz ..
-#cd .. && rm -rf gene_set.${chunkNo}
+if [[ ${zipout} = "yes" ]];then
+    # Compress folder:
+    echo `date "+%Y.%b.%d_%H:%M"` "[Info] Compressing and removing files." >> ${LOGFILE}
+    tar -zcvf gene_set.${chunkNo}.tar.gz *
+    mv gene_set.${chunkNo}.tar.gz ..
+    cd .. && rm -rf gene_set.${chunkNo}
+fi
 echo `date "+%Y.%b.%d_%H:%M"` "DONE"  >> ${LOGFILE}
