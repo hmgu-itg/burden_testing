@@ -412,8 +412,8 @@ gene_noremain=$(cat ${selectorLog} | grep -c NO_VAR_REMAIN)
 gene_absent=$(cat ${selectorLog} | grep -c NO_GENE)
 region_absent=$(cat ${selectorLog} | grep -c NO_REGION)
 
-echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] ERROR REPORTING FROM REGION SELECTOR" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] ====================================" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] ERROR REPORTING FROM VARIANT SELECTOR" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] =====================================" >> ${LOGFILE}
 
 if [[ "$gene_notenough" -ne 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Not enough variants [NOT_ENOUGH_VAR]:\t $(cat ${selectorLog} | grep NOT_ENOUGH_VAR | sed 's/.*Gene.//;s/ .*//' | tr '\n' ' ')" >> ${LOGFILE}

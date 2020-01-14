@@ -25,9 +25,8 @@ $\="\n";
 
 # TODO: improve VCF files check
 # TODO: check score files early in the script
-# TODO: include indels (and fix the start/end coordinates) if no scores are applied
 ##-----------------------------------------------------------------------------------------------------------
-#                                   ASSUMING ALL SCORES ARE 37 BASED
+#                                   ASSUMING EIGEN SCORES ARE b37 BASED, CADD SCORES are b38 based (v. 1.5,  https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)
 #
 ##-----------------------------------------------------------------------------------------------------------
 

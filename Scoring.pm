@@ -53,8 +53,12 @@ sub backticks_bash {
 sub AddScore {
     my $self = shift;
     my $hash = shift;
-    
-    $hash = _liftover($self, $hash) unless $self->{"build"} eq "37";
+
+# no need to liftover if we're using CADD scores (they are b38 based)    
+    if ($self->{"score"} =~ /Eigen/i || $self->{"score"} eq "Mixed"){
+	$hash = _liftover($self, $hash) unless $self->{"build"} eq "37";
+    }
+
     $hash = _get_Eigen_Score($self, $hash) if $self->{"score"} =~ /Eigen/i;
     $hash = _get_CADD($self, $hash) if $self->{"score"} eq "CADD";
 
@@ -67,6 +71,7 @@ sub AddScore {
     return $hash;
 }
 
+# TODO: update CADD part
 sub _get_mixed {
     # REQUIRES CONSEQUENCE !
     my $self = $_[0];
@@ -77,7 +82,8 @@ sub _get_mixed {
 
         # Extracting consequence:
         my $consequence = $hash{$var}{'consequence'};
-        (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
+        (my $chr37 = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
+        (my $chr38 = $hash{$var}{GRCh38}[0] ) =~ s/chr//i;
 
         # Initialize score:
         $hash{$var}{"score"} = "NA";
@@ -89,15 +95,19 @@ sub _get_mixed {
 	}
 	
         # If the consequence is not severe, we use Eigen, otherwise CADD:
+	# Eigen-raw       30
+	# Eigen-phred     31
+	# Eigen-PC-raw    32
+	# Eigen-PC-phred  33
         if ( $consequence =~ /intron|intergenic|regulatory|non_coding|upstream|downstream/i ){
             my $EigenFile = $self->{"EigenPath"};
-	    $EigenFile=~s/\%/$chr/i;
+	    $EigenFile=~s/\%/$chr37/i;
 	    if (! -e $EigenFile){
-		print "[Warning] file with Eigen scores for chromosome $chr does not exist.";
+		print "[Warning] file with Eigen scores for chromosome $chr37 does not exist.";
 		next;
 	    }
 	    
-            my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,31 | grep %s", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
+            my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,31 | grep %s", $EigenFile, $chr37, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
             printf "[Info] %s has benign consequences (%s), so EigenPhred scores are used.\n", $var, $consequence;
             print "$tabix_query\n" if $self->{"verbose"};
 	    my $lines=backticks_bash($tabix_query);
@@ -120,7 +130,7 @@ sub _get_mixed {
         }
         else {
             printf "[Info] %s has severe consequence (%s) so CADD-Phred scores are used.\n", $var, $consequence if $self->{"verbose"};
-	    my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 3,4,107", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
+	    my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 3,4,6", $self->{"caddPath"}, $chr38, $hash{$var}{GRCh38}[2], $hash{$var}{GRCh38}[2]);
             print "[Info] $tabix_query\n" if $self->{"verbose"};
 	    my $lines=backticks_bash($tabix_query);
 
@@ -146,35 +156,34 @@ sub _get_mixed {
     }
     print "[Info] Mixed EigenPhred/CADDPhred scores have been added to variants.\n" if $self->{"verbose"};
     my $fflag=scalar(keys(%hash))==0;
-    print("[Warning] No variants remaining after liftover. \n") if($fflag);
+    print("[Warning] No variants remain after adding mixed weights. \n") if($fflag);
     
     return \%hash
 }
 
+# CADD are b38 based
+# using PHRED CADD score
 sub _get_CADD {
     my $self = $_[0];
     my %hash = %{$_[1]};
     
-    # Looping throuh all variants and return the CADD or GERP score for all:
+    # Looping throuh all variants and returning the CADD PHRED score:
     foreach my $var (keys %hash){
-        (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
-	
-        #my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f1-5,25-28,115-", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]);
-        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 3,4,106", $self->{"caddPath"}, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2]); # CADD file is 1-based
+        (my $chr = $hash{$var}{GRCh38}[0] ) =~ s/chr//i;
+        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 3,4,6", $self->{"caddPath"}, $chr, $hash{$var}{GRCh38}[2], $hash{$var}{GRCh38}[2]); # CADD file is 1-based
         print "[Info] $tabix_query" if $self->{"verbose"};
 	my $lines=backticks_bash($tabix_query);
         $hash{$var}{"score"} = "NA";
 
         foreach my $line (split("\n", $lines)){
-            # Line: C	G    25.0 : REF ALT RawScore
+            # Line: C	G    25.0 : REF ALT phred
             chomp $line;
-            #my ($Chrom, $Pos, $ref, $anc, $alt, $GerpN, $GerpS, $GerpRS, $GerpRSpval, $RawScore, $PHRED) = split("\t", $line);
-            my ($ref, $alt, $rawscore) = split("\t", $line);
+            my ($ref, $alt, $phred) = split("\t", $line);
 
             # Testing alleles:
             if (($ref eq $hash{$var}{alleles}[0] and $alt eq $hash{$var}{alleles}[1]) or
                 ($ref eq $hash{$var}{alleles}[1] and $alt eq $hash{$var}{alleles}[0])) {
-                    $hash{$var}{"score"} = $rawscore;
+                    $hash{$var}{"score"} = $phred;
             }
         }
     }
@@ -184,6 +193,7 @@ sub _get_CADD {
     return \%hash
 }
 
+# Eigen are b37 based
 sub _get_Eigen_Score {
     my $self = $_[0];
     my %hash = %{$_[1]};
