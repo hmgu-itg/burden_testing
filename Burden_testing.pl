@@ -605,6 +605,9 @@ sub processVar {
 	# Parsing info field for relevant information:
 	(my $ac )= $info =~ /AC=(.+?)[;\b]/;
 	(my $an )= $info =~ /AN=(.+?)[;\b]/;
+
+	# TODO: here should be an alternative method of retreiving variant's consequences _for a specific gene_, as consequences in the VCFs don't give information as to which gene they correspond
+	# External Python script maybe, using <https://rest.ensembl.org/documentation/info/vep_hgvs_get> or similar
 	(my $consequence ) = $info =~ /consequence=(.+?)[;\b]/;
 	# If AN and AC values are not found we skip the variant:
 	if (! $an){
