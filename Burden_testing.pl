@@ -55,18 +55,16 @@ my $parameters = {
 
 # This is the list of those consequences that will be retained upon switching on --lof
 $parameters->{"lof_cons"} = {
-    "transcript_ablation"      => 1,
-    "splice_acceptor_variant"  => 1,
-    "splice_donor_variant"     => 1,
-    "stop_gained"              => 1,
-    "frameshift_variant"       => 1,
-    "stop_lost"                => 1,
-    "start_lost"               => 1,
-    "transcript_amplification" => 1,
-    "inframe_insertion"        => 1,
+    "transcript_ablation"      => 10,
+    "splice_acceptor_variant"  => 9,
+    "splice_donor_variant"     => 8,
+    "stop_gained"              => 7,
+    "frameshift_variant"       => 6,
+    "stop_lost"                => 5,
+    "start_lost"               => 4,
+    "transcript_amplification" => 3,
+    "inframe_insertion"        => 2,
     "inframe_deletion"         => 1
-#    "splice_region_variant"    => 1,
-#    "missense_variant"         => 1
 };
 
 # Command line options without default values:
@@ -232,7 +230,7 @@ while ( my $ID = <$INPUT> ){
     my $variants = &getVariants($CollapsedBed, $parameters->{"vcf"},$parameters->{"chr_prefix"});
 
     # Filtering variants based on the provided parameters:
-    my ($hash, $genotypes) = &processVar($variants, $parameters);
+    my ($hash, $genotypes) = &processVar($variants, $parameters,$stable_ID);
     # Gene will be skipped if there are no suitable variations left:
     if (scalar keys %{$hash} < 2){
         print "[Warning] Gene $ID is skipped as not enough variants left to test [NOT_ENOUGH_VAR].";
@@ -573,9 +571,100 @@ sub FilterLines {
     return $merged;
 }
 
+sub getVariantType{
+    my ($ref,$alt)=@_;
+
+    return "SNP" if length($ref)==1 && length($alt)==1;
+    return "DEL" if length($ref)>1 && length($alt)==1;
+    return "INS" if length($ref)==1 && length($alt)>1;
+
+    return "NA";    
+}
+
+sub getConsequences{
+    my $variants   = $_[0];
+    my $parameters   = $_[1];
+    my $stable_ID=$_[2];
+
+    my $vepin;
+    my $vepout;
+    
+    my %cons=();
+
+    local $\="\n";
+    local $,="\t";
+    
+    my $fname1=$parameters->{"tempdir"}."/vep_input.txt";
+    my $fname2=$parameters->{"tempdir"}."/vep_output.txt";
+
+    open ($vepin, ">", $fname1) or die "[Error] Input file for VEP could not be opened.";
+    
+    my @total_vars = split("\n", $variants);
+    while (@total_vars){
+	my $variant = shift @total_vars;
+
+	# line: CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	EGAN00001033155
+	my ($chr, $pos, $id, $a1, $a2, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
+	
+        (my $c = $chr ) =~ s/chr//i;
+	
+	my $varID=$c."_".$pos."_".$ref."_".$alt;
+	if ($alt=~/,/){
+	    $cons{$varID}="NA";
+	    next;
+	}
+
+	my $vtype=getVariantType($ref,$alt);
+	if ($vtype eq "SNP"){
+	    print $vepin $c,$pos,$pos,$ref."/".$alt,"+",$varID;
+	}
+	elsif($vtype eq "DEL"){
+	    my $r=substr($ref,1,length($ref)-1);
+	    print $vepin $c,$pos+1,$pos+length($ref)-1,$r."/-","+",$varID;
+	}
+	elsif($vtype eq "INS"){
+	    my $a=substr($alt,1,length($ralt)-1);
+	    print $vepin $c,$pos+1,$pos,"-/".$a,"+",$varID;
+	}
+	else{
+	    print STDERR "[Error] could not determine variant type of $variant";
+	    $cons{$varID}="NA";
+	    next;
+	}
+    }
+
+    close($vepin);
+
+    my $queryString="vep -i ".$fname1." -o STDOUT --cache --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
+    my $query =Scoring::backticks_bash($queryString);
+    my %max_severity;
+    foreach my $line (split (/\n/, $query)){
+	my @a=split(/\t/,$line);
+	my $ID=$a[0];
+	my $effs=$a[1];
+	$max_severity{$ID}=0 unless exists($max_severity{$ID});
+	
+	foreach my $e (split(/,/,$effs)){
+	    if (! exists($parameters->{"lof_cons"}->{$e})){ # low severity
+		    $cons{$ID}=$e if ($max_severity{$ID}==0);
+	    }
+	    else{
+		if ($parameters->{"lof_cons"}->{$e} > $max_severity{$ID}){
+		    $max_severity{$ID}=$parameters->{"lof_cons"}->{$e};
+		    $cons{$ID}=$e;
+		}
+	    }
+	}
+
+    }
+
+    return \%cons;
+}
+
 sub processVar {
     my $variants   = $_[0]; # List of all overlapping variants
     my $parameters = $_[1]; # All the submitted parameters to filter variants.
+    my $stable_ID=$_[2];
     
     my %hash = (); # SNP info container.
     my %genotypeContainer = (); # genotype information container.
@@ -585,6 +674,8 @@ sub processVar {
 
     print "[Info] Filtering variants:" if $verbose;
 
+    my $cons=getConsequences($variants,$parameters,$stable_ID);
+    
     my @total_vars = split("\n", $variants);
     printf "[Info] Total number of overlapping variants: %s\n", scalar(@total_vars) if $verbose;
 
@@ -596,6 +687,13 @@ sub processVar {
 	# line: CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	EGAN00001033155
 	my ($chr, $pos, $id, $a1, $a2, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
 
+        (my $chr2 = $chr ) =~ s/chr//i;
+	my $varID=$chr2."_".$pos."_".$ref."_".$alt;
+	my $consequence="NA";
+	if (exists $cons{$varID}){
+	    $consequence=$cons{$varID};
+	}
+	
 	# Generating variant name (Sometimes the long allele names cause problems):
 	my $short_a1 = length $a1 > 5 ? substr($a1,0,4) : $a1;
 	my $short_a2 = length $a2 > 5 ? substr($a2,0,4) : $a2;
@@ -606,9 +704,9 @@ sub processVar {
 	(my $ac )= $info =~ /AC=(.+?)[;\b]/;
 	(my $an )= $info =~ /AN=(.+?)[;\b]/;
 
-	# TODO: here should be an alternative method of retreiving variant's consequences _for a specific gene_, as consequences in the VCFs don't give information as to which gene they correspond
-	# External Python script maybe, using <https://rest.ensembl.org/documentation/info/vep_hgvs_get> or similar
-	(my $consequence ) = $info =~ /consequence=(.+?)[;\b]/;
+	#(my $consequence ) = $info =~ /consequence=(.+?)[;\b]/;
+
+	
 	# If AN and AC values are not found we skip the variant:
 	if (! $an){
 	    print "[Warning] $SNPID has no AN; skipping";
@@ -621,7 +719,7 @@ sub processVar {
 	}
 	
 	# We add NA if consequence was not found:
-	$consequence = "NA" unless $consequence;
+	#$consequence = "NA" unless $consequence;
 
 	# We don't consider multialleleic sites this time.
 	if ( $a2 =~ /,/){
@@ -632,8 +730,6 @@ sub processVar {
 	print "[Warning] $variant has no AC" if $ac eq "NA";
 	print "[Warning] $variant has no AN" if $an eq "NA";
 
-	#print "AC=$ac; AN=$an";
-	
 	# Calculating values for filtering:
 	my $missingness = (scalar(@genotypes)*2 - $an)/(scalar(@genotypes)*2);
 	my $MAF = $ac/$an;
