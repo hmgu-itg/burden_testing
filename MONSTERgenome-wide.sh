@@ -27,8 +27,8 @@ function testVCFs {
     fi
 }
 
-version="v12 Last modified: 2019.Dec.21"
-today=$(date "+%Y.%b.%d-%H_%M")
+version="v12 Last modified: 2020.Jan.22"
+today=$(date "+%Y.%b.%d")
 
 # The variant selector script, that generates snp and genotype input for MONSTER:
 regionSelector="Burden_testing.pl"
@@ -314,7 +314,7 @@ if [[ ! -d ${outputDir} ]]; then
     exit 1
 fi
 
-LOGFILE=${outputDir}/"MONSTER-"${today}."chunk_$chunkNo".log
+LOGFILE=${outputDir}/"MONSTER-"${today}.log
 
 if [[ ! -z ${warning1} ]];then
     echo ${warning1} >> ${LOGFILE}
@@ -332,9 +332,7 @@ fi
 totalGenes=$(cat ${geneListFile} | wc -l)
 rem=$(( totalGenes % chunksTotal ))
 chunkSize=$(( totalGenes / chunksTotal ))
-if [[ $rem -ne 0 ]];then
-    chunkSize=$(( chunkSize + 1 ))
-fi
+lastChunkSize=$(( chunkSize + rem ))
 
 # --- Reporting parameters ------------------------------------------------------
 echo `date "+%Y.%b.%d_%H:%M"` "##"  >> ${LOGFILE}
@@ -385,8 +383,12 @@ echo `date "+%Y.%b.%d_%H:%M"`  "Phenotype: ${phenotype}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 # --- Main loop executed for all genes --------------------------------------------
+if [[ ${chunkNo} -eq ${chunksTotal} ]];then
+    tail -n ${lastChunkSize} ${geneListFile} > ${outputDir}/input_gene.list
+else
+    awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${outputDir}/input_gene.list
+fi
 
-awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${outputDir}/input_gene.list
 n=$( cat ${outputDir}/input_gene.list | wc -l)
 if [[ $n -eq 0 ]];then
     echo "Chunk ${chunkNo} is empty; EXIT" >> ${LOGFILE}
@@ -413,19 +415,19 @@ echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] ERROR REPORTING FROM VARIANT SELECTO
 echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] =====================================" >> ${LOGFILE}
 
 if [[ "$gene_notenough" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Not enough variants [NOT_ENOUGH_VAR]:\t $(cat ${selectorLog} | grep NOT_ENOUGH_VAR | sed 's/.*Gene.//;s/ .*//' | tr '\n' ' ')" >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Not enough variants [NOT_ENOUGH_VAR]: $(cat ${selectorLog} | grep NOT_ENOUGH_VAR | sed 's/.*Gene.//;s/ .*//' | tr '\n' ' ')" >> ${LOGFILE}
 fi
 if [[ "$gene_toomany" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Too many variants [TOO_MANY_VAR]:\t $(cat ${selectorLog} | grep TOO_MANY_VAR | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Too many variants [TOO_MANY_VAR]: $(cat ${selectorLog} | grep TOO_MANY_VAR | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 if [[ "$gene_noremain" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] All scoring failed [NO_VAR_REMAIN]:\t $(cat ${selectorLog} | grep NO_VAR_REMAIN | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] All scoring failed [NO_VAR_REMAIN]: $(cat ${selectorLog} | grep NO_VAR_REMAIN | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 if [[ "$gene_absent" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Gene name unknown [NO_GENE]:\t $(cat ${selectorLog} | grep NO_GENE | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Gene name unknown [NO_GENE]: $(cat ${selectorLog} | grep NO_GENE | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 if [[ "$region_absent" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] No region in gene [NO_REGION]:\t $(cat ${selectorLog} | grep NO_REGION | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] No region in gene [NO_REGION]: $(cat ${selectorLog} | grep NO_REGION | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 
 if [[ ! -e gene_set_output_genotype_file.txt ]]; then
@@ -445,79 +447,136 @@ fi
 # At this point the we have to process the above created files to syncronize wi/nfs/team144/ds26/scripts/burden_testing/MONSTERgenome-wide_updated.sh -g exon -x 50 -e promoter,enhancer,TF_bind -l promoter,enhancer,TF_bind -s EigenPCPhred -c 3 -P /lustre/scratch115/projects/t144_helic_15x/analysis/HA/phenotypes/correct_names.andmissing/MANOLIS.HDL.txt -w /lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/burdentesting/arthur_rerun -V /lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/release/postrelease_missingnessfilter/chr%.missingfiltered-0.01_consequences.lof.HWE.vcf.gz -K /lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/relmat/final/burden/matrix.monster.txt -p HDL -d 50th the phenotype file and the kinship matrix.
 
 # ASSUMING PHENOTYPE FILE HAS 2 COLUMNS: ID PHENOTYPE, TAB DELIMITED, NO HEADER
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Extracting phenotype." >> ${LOGFILE}
-cat ${phenotypeFile} | awk 'BEGIN{FS="\t";OFS="\t";}{if ($2!="NA") {printf "1\t%s\t0\t0\t0\t%s\n", $1, $2} }' > pheno.txt # subset of samples in pheno.txt (without NA)
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Extracting samples with present phenotype values from the phenotype file and saving them in 01.pheno.txt." >> ${LOGFILE}
+cat ${phenotypeFile} | awk 'BEGIN{FS="\t";OFS="\t";}{if ($2!="NA") {printf "1\t%s\t0\t0\t0\t%s\n", $1, $2} }' > 01.pheno.txt # subset of samples without NA phenotype values
+n1=$(cat ${phenotypeFile} | wc -l)
+n2=$(cat 01.pheno.txt | wc -l)
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Original number of samples in the phenofile: ${n1}; samples in 01.pheno.txt: ${n2}" >> ${LOGFILE}
+echo  >> ${LOGFILE}
 
-# Order the sample IDs in the phenotype file:
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Re-ordering samples in the phenotype file." >> ${LOGFILE}
-head -n 1 gene_set_output_genotype_file.txt | tr "\t" "\n" | tail -n +2 |sort| perl -lane 'BEGIN {open $pf, "< pheno.txt";while ($l = <$pf>){chomp $l;@a = split(/\s/, $l);$h{$a[1]} = $l;}}{print $h{$F[0]} if exists $h{$F[0]}}' > pheno.ordered.txt
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Selecting sample names from gene_set_output_genotype_file.txt that are already in 01.pheno.txt; saving the result in 02.pheno.ordered.txt" >> ${LOGFILE}
+head -n 1 gene_set_output_genotype_file.txt | tr "\t" "\n" | tail -n +2 |sort| perl -lne 'BEGIN {open $pf, "< 01.pheno.txt";while ($l = <$pf>){chomp $l;@a = split(/\s/, $l);$h{$a[1]} = $l;}close($pf);}{print $h{$_} if exists $h{$_}}' > 02.pheno.ordered.txt
+n3=$(cat 02.pheno.ordered.txt | wc -l)
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Samples in 02.pheno.ordered.txt: ${n3}" >> ${LOGFILE}
+echo  >> ${LOGFILE}
 
-# Get the list of samples that are not in the pheno file:
-export samples=$(grep -v -w -f <(cut -f 2 pheno.ordered.txt) <(head -n 1 gene_set_output_genotype_file.txt | cut -f 2- | tr "\t" "\n"))
+# Get samples from gene_set_output_genotype_file.txt that are not in the 02.pheno.ordered.txt file:
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Getting samples from gene_set_output_genotype_file.txt that are not in the 02.pheno.ordered.txt file; saving results in 03.samples.to.exclude.txt" >> ${LOGFILE}
+cut -f 2 02.pheno.ordered.txt > temp.txt
+head -n 1 gene_set_output_genotype_file.txt | cut -f 2- | tr "\t" "\n" >> temp.txt
+sort temp.txt | uniq -u > 03.samples.to.exclude.txt
+rm temp.txt
+n4=$(cat  03.samples.to.exclude.txt | wc -l)
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Samples in 03.samples.to.exclude.txt: ${n4}" >> ${LOGFILE}
+echo  >> ${LOGFILE}
 
 # From the genotype file, extract only those samples that are present in the pheno file:
-echo `date "+%Y.%b.%d_%H:%M"` "[info] Extracting un-used samples from the genotype file." >> ${LOGFILE}
-head -n 1 gene_set_output_genotype_file.txt | tr "\t" "\n" | perl -lane 'BEGIN {foreach $s ( split /\s/, $ENV{"samples"}){$h{$s} = 1;}}{push @a, $. unless exists $h{$F[0]}} END{$s = sprintf("cut -f%s gene_set_output_genotype_file.txt > genotype.filtered.txt", join(",", @a));`$s`}'
+echo `date "+%Y.%b.%d_%H:%M"` "[info] Removing samples in 03.samples.to.exclude.txt from gene_set_output_genotype_file.txt; saving results in 04.genotype.filtered.txt" >> ${LOGFILE}
+echo  >> ${LOGFILE}
+head -n 1 gene_set_output_genotype_file.txt | tr "\t" "\n" | perl -lne 'BEGIN {open $pf, "< 03.samples.to.exclude.txt";while ($l = <$pf>){chomp $l;$h{$l} = 1;}close($pf);}{push @a, $. unless exists $h{$_}} END{$s = sprintf("cut -f%s gene_set_output_genotype_file.txt > 04.genotype.filtered.txt", join(",", @a));`$s`}'
 
 # Generate a mapping file that helps to convert IDs to numbers:
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Generate sample mapping file." >> ${LOGFILE}
-cut -f 2 pheno.ordered.txt | awk '{printf "s/%s/%s/g\n", $1, NR+2 }' > sample.map.sed
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Generate SED sample ID to integer mapping file; saving result in 05.sample.map.sed" >> ${LOGFILE}
+echo  >> ${LOGFILE}
+cut -f 2 02.pheno.ordered.txt | awk '{printf "s/%s/%s/g\n", $1, NR+2 }' > 05.sample.map.sed
 
 # Generate an inclusion list with the samples to be kept:
-cut -f 2 pheno.ordered.txt > samples.to.keep.txt
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Generate an inclusion list from 02.pheno.ordered.txt with the samples to be kept; saving result in 06.samples.to.keep.txt" >> ${LOGFILE}
+echo  >> ${LOGFILE}
+cut -f 2 02.pheno.ordered.txt > 06.samples.to.keep.txt
 
 # Get the kinship matrix:
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Processing kinship file." >> ${LOGFILE}
-R --slave -e 'library(data.table); mlong=fread("'$kinshipFile'"); tokeep=fread("samples.to.keep.txt", header=F)$V1; direct=mlong[(mlong$V2 %in% tokeep) & (mlong$V3 %in% tokeep),];  mapping = fread("sample.map.sed", sep="/", header=FALSE);direct$V3 = mapping[match(direct$V3, mapping$V2),]$V3; direct$V2 = mapping[match(direct$V2, mapping$V2),]$V3;write.table(direct, file="filtered_kinship.txt", quote=FALSE, sep=" ", col.names = FALSE, row.names=FALSE)'
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Selecting samples in 06.samples.to.keep.txt from the kinship file;saving result in 07.kinship.filtered.txt" >> ${LOGFILE}
+echo  >> ${LOGFILE}
+R --slave -e 'library(data.table); mlong=fread("'$kinshipFile'"); tokeep=fread("06.samples.to.keep.txt", header=F)$V1; direct=mlong[(mlong$V2 %in% tokeep) & (mlong$V3 %in% tokeep),]; mapping = fread("05.sample.map.sed", sep="/", header=FALSE);direct$V3 = mapping[match(direct$V3, mapping$V2),]$V3; direct$V2 = mapping[match(direct$V2, mapping$V2),]$V3;write.table(direct, file="07.kinship.filtered.txt", quote=FALSE, sep=" ", col.names = FALSE, row.names=FALSE)'
 
 # Remap IDs and remove special characters from the snp, phenotype and genotype files:
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Changing IDs and variant names." >> ${LOGFILE}
-sed -i -f sample.map.sed pheno.ordered.txt
-sed -i -f sample.map.sed genotype.filtered.txt
-cat genotype.filtered.txt | perl -lane '$_ =~ s/[^0-9A-Za-z\-\t\._]//gi; print $_'  > genotype.filtered.mod.txt
-cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9A-Za-z\-\t\._]//gi; $_ =~ s/Inf/0.0001/g; ;print $_'  > snpfile.mod.txt
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Changing ID names in 02.pheno.ordered.txt and 04.genotype.filtered.txt (using 05.sample.map.sed); saving results in 08.pheno.ordered.txt and 09.genotype.filtered.txt" >> ${LOGFILE}
+echo  >> ${LOGFILE}
+sed -f 05.sample.map.sed 02.pheno.ordered.txt > 08.pheno.ordered.txt
+sed -f 05.sample.map.sed 04.genotype.filtered.txt > 09.genotype.filtered.txt
+
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Renaming variants in 09.genotype.filtered.txt and gene_set_output_variant_file.txt; saving results in 10.genotype.filtered.mod.txt and 11.snpfile.mod.txt" >> ${LOGFILE}
+echo  >> ${LOGFILE}
+cat 09.genotype.filtered.txt | perl -lane '$_ =~ s/[^0-9A-Za-z\-\t\._]//gi;$_ =~ s/_/x/g; print $_'  > 10.genotype.filtered.mod.txt
+cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9A-Za-z\-\t\._]//gi;$_ =~ s/_/x/g; $_ =~ s/Inf/0.0001/g;print $_'  > 11.snpfile.mod.txt
 
 # Filter out genes which have only monomorphic variants, as it might cause a crash:
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Looking for monomorphic variants..." >> ${LOGFILE}
-#tail -n+2 genotype.filtered.mod.txt | while read snp genotype ; do if [[ -z $( echo $genotype | awk '$0 ~ 1' ) ]]; then echo $snp; fi; done | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
-tail -n+2 genotype.filtered.mod.txt | perl -lne '@f=split(/\s+/);$\="\n";$s=shift(@f);foreach (@f){$H{$_}=1;}if (scalar(keys(%H))==1){print $s;}' | awk '{printf "s/%s//g\n", $1}' > mono_remove.sed
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Looking for monomorphic variants in 10.genotype.filtered.mod.txt; saving them in 12.mono.variants.txt" >> ${LOGFILE}
+echo  >> ${LOGFILE}
+tail -n +2 10.genotype.filtered.mod.txt | perl -lne '@f=split(/\s+/);$\="\n";$s=shift(@f);%H=();foreach $x (@f){$H{$x}=1;}if (scalar(keys(%H))==1){print $s;}' > 12.mono.variants.txt
 
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Removing monomorphic variants from the SNPs file." >> ${LOGFILE}
-sed -f mono_remove.sed snpfile.mod.txt > snpfile.nomono
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Removing monomorphic variants from 11.snpfile.mod.txt; saving result in 13.snpfile.nomono.txt" >> ${LOGFILE}
+echo  >> ${LOGFILE}
+cat 11.snpfile.mod.txt | perl -lne 'BEGIN{open $pf, "< 12.mono.variants.txt";while ($l = <$pf>){chomp $l;$H{$l}=1;}close($pf);}{@b=();@a=split(/\t/);push(@b,$a[0]);push(@b,$a[1]);for ($i=2;$i<scalar(@a);$i++){if (! exists($H{$a[$i]})){push(@b,$a[$i]);}} print(join("\t",@b));}' > 13.snpfile.nomono.txt
 
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Get genes where only monomorphics remain. Exclude them." >> ${LOGFILE}
-grep -v -w -f <(cat snpfile.nomono | awk 'NF  == 2 {print $1; a+=1}END{if(a == 0){print "noting to remove"}}') snpfile.mod.txt > snpfile.mod.nomono.txt
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Getting genes having only monomorphic variants (saving them in mono.genes.txt). Exclude them from 13.snpfile.nomono.txt and save the result in 14.snpfile.final.txt" >> ${LOGFILE}
+echo  >> ${LOGFILE}
+awk 'BEGIN{FS="\t";}NF  == 2 {print $1;}' 13.snpfile.nomono.txt > mono.genes.txt
+cat 13.snpfile.nomono.txt | perl -lne 'BEGIN{open $pf, "< mono.genes.txt";while ($l = <$pf>){chomp $l;$H{$l}=1;}close($pf);}{@a=split(/\t/); if (! exists($H{$a[0]})){print(join("\t",@a));}' > 14.snpfile.final.txt
+
+cp 14.snpfile.final.txt 14.snpfile.final.original.txt
 
 # Calling MONSTER
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] MONSTER call: MONSTER -k filtered_kinship.txt -p pheno.ordered.txt -m 1 -g genotype.filtered.mod.txt  -s snpfile.mod.nomono.txt ${imputation_method}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] MONSTER call: MONSTER -k 07.kinship.filtered.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.txt  -s 14.snpfile.final.txt ${imputation_method}" >> ${LOGFILE}
+
+flag=0
 while true; do
-    MONSTER -k filtered_kinship.txt -p pheno.ordered.txt -m 1 -g genotype.filtered.mod.txt  -s snpfile.mod.nomono.txt ${imputation_method}
+    MONSTER  -k 07.kinship.filtered.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.txt  -s 14.snpfile.final.txt ${imputation_method} 2>>${LOGFILE}
 
     # We break the loop if the run was successful.
     if [[ $? -eq 0 ]]; then break; fi
-    
-    # Test if we've analyzed all genes
-    if [[ $(awk 'NF == 5' MONSTER.out | cut -f1 | tail -n+2 | wc -l ) == $(cut -f1 snpfile.mod.txt | sort| uniq -u | wc -l) ]]; then break; fi
 
     if [[ ! -e MONSTER.out ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER failed before creating the output file. Cannot be resolved. Exiting" >> ${LOGFILE}
+	echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER failed before creating the output file. Exiting" >> ${LOGFILE}
+    fi
+    
+    if [[ $( cat MONSTER.out | wc -l) -eq 0 ]]; then
+        echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out is empty. Trying to run MONSTER gene by gene" >> ${LOGFILE}
+	flag=1
         break;
-    elif [[ $( cat MONSTER.out | wc -l) -eq 1 ]]; then
-        firstGene=$(cut -f1 snpfile.mod.nomono.txt | head -n1)
-        echo `date "+%Y.%b.%d_%H:%M"` "[Warning] It seems that the first gene (${firstGene}) has failed. Re-running MONSTER." >> ${LOGFILE}
-        grep -vw $(firstGene) snpfile.mod.nomono.txt | sponge snpfile.mod.nomono.txt
+    fi
+    
+    # Test if we've analyzed all genes
+    if [[ $(awk 'BEGIN{FS="\t";}NF==5{print $0;}' MONSTER.out | tail -n +2 | wc -l ) == $(cat 14.snpfile.final.txt | wc -l) ]]; then break; fi
+
+    # If only header is in the output
+    if [[ $( cat MONSTER.out | wc -l) -eq 1 ]]; then
+        firstGene=$(cut -f 1 14.snpfile.final.txt | head -n 1)
+        echo `date "+%Y.%b.%d_%H:%M"` "[Warning] It seems that the first gene (${firstGene}) has failed. Re-running MONSTER after excluding it." >> ${LOGFILE}
+        awk 'BEGIN{FS="\t";}NR>1{print $0;}' 14.snpfile.final.txt | sponge 14.snpfile.final.txt
     else
-        lastGene=$(awk 'NF == 5' MONSTER.out | tail -n1 | cut -f1 )
-        failedGene=$(grep -A1 -w ${lastGene} snpfile.mod.nomono.txt | cut -f1 | tail -n1 )
+        lastGene=$(awk 'BEGIN{FS="\t";}NF==5{print $1;}' MONSTER.out | tail -n 1 )
+	failedGene=$(awk -v g=${lastGene} 'BEGIN{FS="\t";f=0;}{if (f==1){print $1;exit;} if ($1==g){f=1;}}' 14.snpfile.final.txt)
         echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Monster has failed after ${lastGene}, next gene (${failedGene}) is removed and re-run." >> ${LOGFILE}
-        grep -vw ${failedGene} snpfile.mod.nomono.txt | sponge snpfile.mod.nomono.txt
+	
+        awk -v g=${failedGene} 'BEGIN{FS="\t";}$1!=g{print $0;}' 14.snpfile.final.txt | sponge 14.snpfile.final.txt
     fi
 done
 
-# Once MONSTER is finished, we remove the un-used temporary files:
-rm genotype.filtered.txt
+# gene by gene
+if [[ $flag -eq 1 ]];then
+    k=$(cat 14.snpfile.final.txt | wc -l)
+    for i in $(seq 1 $k);do
+	head -n $i 14.snpfile.final.txt | tail -n 1 > temp.snpfile.txt
+	gene=$(head -n $i 14.snpfile.final.txt | tail -n 1 | cut -f 1)
+	echo `date "+%Y.%b.%d_%H:%M"` "[Info] Trying only one gene ${gene}" >> ${LOGFILE}
+	MONSTER  -k 07.kinship.filtered.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.txt  -s temp.snpfile.txt ${imputation_method} 2>>${LOGFILE}
+	if [[ ! -e MONSTER.out ]]; then
+	    echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER failed before creating the output file for gene ${gene}" >> ${LOGFILE}
+	elif [[ $( cat MONSTER.out | wc -l) -eq 0 ]]; then
+            echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out for gene ${gene} is empty" >> ${LOGFILE}
+	else
+	    mv MONSTER.out MONSTER.out."$i"	    
+	fi
+    done
+    
+    echo -e 'SNP_set_ID\tn_individual\tn_SNP\trho_MONSTER\tp_MONSTER' > MONSTER.out
+    cat MONSTER.out.* | grep -v "SNP_set_ID" >> MONSTER.out
+    rm MONSTER.out.* temp.snpfile.txt
+fi
 
-# Moving MONSTER.out to the root directory:
+# Copying MONSTER.out to the root directory:
 if [[ -e MONSTER.out ]]; then
     cp MONSTER.out ../MONSTER.${phenotype}.${chunkNo}.out
 else

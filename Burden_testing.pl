@@ -604,7 +604,7 @@ sub getConsequences{
 	my $variant = shift @total_vars;
 
 	# line: CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	EGAN00001033155
-	my ($chr, $pos, $id, $a1, $a2, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
+	my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
 	
         (my $c = $chr ) =~ s/chr//i;
 	
@@ -623,7 +623,7 @@ sub getConsequences{
 	    print $vepin $c,$pos+1,$pos+length($ref)-1,$r."/-","+",$varID;
 	}
 	elsif($vtype eq "INS"){
-	    my $a=substr($alt,1,length($ralt)-1);
+	    my $a=substr($alt,1,length($alt)-1);
 	    print $vepin $c,$pos+1,$pos,"-/".$a,"+",$varID;
 	}
 	else{
@@ -674,7 +674,7 @@ sub processVar {
 
     print "[Info] Filtering variants:" if $verbose;
 
-    my $cons=getConsequences($variants,$parameters,$stable_ID);
+#    my $cons=getConsequences($variants,$parameters,$stable_ID);
     
     my @total_vars = split("\n", $variants);
     printf "[Info] Total number of overlapping variants: %s\n", scalar(@total_vars) if $verbose;
@@ -687,12 +687,12 @@ sub processVar {
 	# line: CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	EGAN00001033155
 	my ($chr, $pos, $id, $a1, $a2, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
 
-        (my $chr2 = $chr ) =~ s/chr//i;
-	my $varID=$chr2."_".$pos."_".$ref."_".$alt;
-	my $consequence="NA";
-	if (exists $cons{$varID}){
-	    $consequence=$cons{$varID};
-	}
+#        (my $chr2 = $chr ) =~ s/chr//i;
+#	my $varID=$chr2."_".$pos."_".$a1."_".$a2;
+#	my $consequence="NA";
+#	if (exists $cons{$varID}){
+#	    $consequence=$cons{$varID};
+#	}
 	
 	# Generating variant name (Sometimes the long allele names cause problems):
 	my $short_a1 = length $a1 > 5 ? substr($a1,0,4) : $a1;
@@ -703,9 +703,6 @@ sub processVar {
 	# Parsing info field for relevant information:
 	(my $ac )= $info =~ /AC=(.+?)[;\b]/;
 	(my $an )= $info =~ /AN=(.+?)[;\b]/;
-
-	#(my $consequence ) = $info =~ /consequence=(.+?)[;\b]/;
-
 	
 	# If AN and AC values are not found we skip the variant:
 	if (! $an){
@@ -719,7 +716,8 @@ sub processVar {
 	}
 	
 	# We add NA if consequence was not found:
-	#$consequence = "NA" unless $consequence;
+	(my $consequence ) = $info =~ /consequence=(.+?)[;\b]/;
+	$consequence = "NA" unless $consequence;
 
 	# We don't consider multialleleic sites this time.
 	if ( $a2 =~ /,/){
