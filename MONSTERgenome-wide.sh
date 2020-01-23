@@ -491,7 +491,7 @@ echo  >> ${LOGFILE}
 R --slave -e 'library(data.table); mlong=fread("'$kinshipFile'"); tokeep=fread("06.samples.to.keep.txt", header=F)$V1; direct=mlong[(mlong$V2 %in% tokeep) & (mlong$V3 %in% tokeep),]; mapping = fread("05.sample.map.sed", sep="/", header=FALSE);direct$V3 = mapping[match(direct$V3, mapping$V2),]$V3; direct$V2 = mapping[match(direct$V2, mapping$V2),]$V3;write.table(direct, file="07.kinship.filtered.txt", quote=FALSE, sep=" ", col.names = FALSE, row.names=FALSE)'
 
 # Remap IDs and remove special characters from the snp, phenotype and genotype files:
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Changing ID names in 02.pheno.ordered.txt and 04.genotype.filtered.txt (using 05.sample.map.sed); saving results in 08.pheno.ordered.txt and 09.genotype.filtered.txt" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Changing sample names in 02.pheno.ordered.txt and 04.genotype.filtered.txt (using 05.sample.map.sed); saving results in 08.pheno.ordered.txt and 09.genotype.filtered.txt" >> ${LOGFILE}
 echo  >> ${LOGFILE}
 sed -f 05.sample.map.sed 02.pheno.ordered.txt > 08.pheno.ordered.txt
 sed -f 05.sample.map.sed 04.genotype.filtered.txt > 09.genotype.filtered.txt
@@ -513,7 +513,7 @@ cat 11.snpfile.mod.txt | perl -lne 'BEGIN{open $pf, "< 12.mono.variants.txt";whi
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Getting genes having only monomorphic variants (saving them in mono.genes.txt). Exclude them from 13.snpfile.nomono.txt and save the result in 14.snpfile.final.txt" >> ${LOGFILE}
 echo  >> ${LOGFILE}
 awk 'BEGIN{FS="\t";}NF  == 2 {print $1;}' 13.snpfile.nomono.txt > mono.genes.txt
-cat 13.snpfile.nomono.txt | perl -lne 'BEGIN{open $pf, "< mono.genes.txt";while ($l = <$pf>){chomp $l;$H{$l}=1;}close($pf);}{@a=split(/\t/); if (! exists($H{$a[0]})){print(join("\t",@a));}' > 14.snpfile.final.txt
+cat 13.snpfile.nomono.txt | perl -lne 'BEGIN{open $pf, "< mono.genes.txt";while ($l = <$pf>){chomp $l;$H{$l}=1;}close($pf);}{@a=split(/\t/); if (! exists($H{$a[0]})){print(join("\t",@a));}}' > 14.snpfile.final.txt
 
 cp 14.snpfile.final.txt 14.snpfile.final.original.txt
 
@@ -524,13 +524,15 @@ flag=0
 while true; do
     MONSTER  -k 07.kinship.filtered.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.txt  -s 14.snpfile.final.txt ${imputation_method} 2>>${LOGFILE}
 
-    # We break the loop if the run was successful.
+    # Break the loop if the run was successful
     if [[ $? -eq 0 ]]; then break; fi
 
+    # No MONSTER.out
     if [[ ! -e MONSTER.out ]]; then
 	echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER failed before creating the output file. Exiting" >> ${LOGFILE}
     fi
-    
+
+    # Empty MONSTER.out
     if [[ $( cat MONSTER.out | wc -l) -eq 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out is empty. Trying to run MONSTER gene by gene" >> ${LOGFILE}
 	flag=1
@@ -540,14 +542,14 @@ while true; do
     # Test if we've analyzed all genes
     if [[ $(awk 'BEGIN{FS="\t";}NF==5{print $0;}' MONSTER.out | tail -n +2 | wc -l ) == $(cat 14.snpfile.final.txt | wc -l) ]]; then break; fi
 
-    # If only header is in the output
+    # Only header is in MONSTER.out
     if [[ $( cat MONSTER.out | wc -l) -eq 1 ]]; then
         firstGene=$(cut -f 1 14.snpfile.final.txt | head -n 1)
         echo `date "+%Y.%b.%d_%H:%M"` "[Warning] It seems that the first gene (${firstGene}) has failed. Re-running MONSTER after excluding it." >> ${LOGFILE}
         awk 'BEGIN{FS="\t";}NR>1{print $0;}' 14.snpfile.final.txt | sponge 14.snpfile.final.txt
     else
         lastGene=$(awk 'BEGIN{FS="\t";}NF==5{print $1;}' MONSTER.out | tail -n 1 )
-	failedGene=$(awk -v g=${lastGene} 'BEGIN{FS="\t";f=0;}{if (f==1){print $1;exit;} if ($1==g){f=1;}}' 14.snpfile.final.txt)
+	failedGene=$(awk -v g=${lastGene} 'BEGIN{FS="\t";f=0;}{if (f==1 && $1!=g){print $1;exit;} if ($1==g){f=1;}}' 14.snpfile.final.txt)
         echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Monster has failed after ${lastGene}, next gene (${failedGene}) is removed and re-run." >> ${LOGFILE}
 	
         awk -v g=${failedGene} 'BEGIN{FS="\t";}$1!=g{print $0;}' 14.snpfile.final.txt | sponge 14.snpfile.final.txt
