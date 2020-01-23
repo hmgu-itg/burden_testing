@@ -314,7 +314,7 @@ if [[ ! -d ${outputDir} ]]; then
     exit 1
 fi
 
-LOGFILE=${outputDir}/"MONSTER-"${today}.log
+LOGFILE=${outputDir}/"MONSTER.log"
 
 if [[ ! -z ${warning1} ]];then
     echo ${warning1} >> ${LOGFILE}
