@@ -71,7 +71,6 @@ sub AddScore {
     return $hash;
 }
 
-# TODO: update CADD part
 sub _get_mixed {
     # REQUIRES CONSEQUENCE !
     my $self = $_[0];
@@ -111,7 +110,6 @@ sub _get_mixed {
             printf "[Info] %s has benign consequences (%s), so EigenPhred scores are used.\n", $var, $consequence;
             print "$tabix_query\n" if $self->{"verbose"};
 	    my $lines=backticks_bash($tabix_query);
-            #my $lines = `bash -O extglob -c \'$tabix_query\'`;
 
             foreach my $line (split("\n", $lines)){
                 chomp $line;

@@ -581,6 +581,7 @@ sub getVariantType{
     return "NA";    
 }
 
+# Using VEP
 sub getConsequences{
     my $variants   = $_[0];
     my $parameters   = $_[1];
@@ -745,7 +746,7 @@ sub processVar {
 
 	# We don't consider indels if weights are used:
 	if (( length($a2) > 1 or length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
-	    print  "[Warning] $SNPID will be omitted because it's an indel! ($a1/$a2).";
+	    print  "[Warning] $SNPID will be omitted because it's an indel and we use scores for weighting! ($a1/$a2).";
 	    next;
 	}
 	# Filter out variants because of high missingness:

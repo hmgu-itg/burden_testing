@@ -317,15 +317,15 @@ fi
 LOGFILE=${outputDir}/"MONSTER.log"
 
 if [[ ! -z ${warning1} ]];then
-    echo ${warning1} >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` ${warning1} >> ${LOGFILE}
 fi
 
 if [[ ! -z ${warning2} ]];then
-    echo ${warning2} >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` ${warning2} >> ${LOGFILE}
 fi
 
 if [[ ! -z ${chunk_warning} ]];then
-    echo ${chunk_warning} >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` ${chunk_warning} >> ${LOGFILE}
 fi
 
 # Creating gene set:
