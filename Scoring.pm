@@ -34,6 +34,10 @@ sub new {
     $self->{"verbose"} = $parameters->{"verbose"};
     $self->{"scriptDir"} = $parameters->{"scriptDir"};
     $self->{"tempdir"} = $parameters->{"tempdir"};
+
+    foreach my $k (keys(%{$parameters->{"lof_cons"}})){
+	$self->{"lof_cons"}->{$k}=$parameters->{"lof_cons"}->{$k};
+    }
     
     # Storing paths:
     $self->{"EigenPath"} = $parameters->{"EigenPath"};
@@ -98,7 +102,8 @@ sub _get_mixed {
 	# Eigen-phred     31
 	# Eigen-PC-raw    32
 	# Eigen-PC-phred  33
-        if ( $consequence =~ /intron|intergenic|regulatory|non_coding|upstream|downstream/i ){
+	if (! exists($self->{"lof_cons"}->{$consequence})){
+        #if ( $consequence =~ /intron|intergenic|regulatory|non_coding|upstream|downstream/i ){
             my $EigenFile = $self->{"EigenPath"};
 	    $EigenFile=~s/\%/$chr37/i;
 	    if (! -e $EigenFile){

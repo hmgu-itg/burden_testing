@@ -766,7 +766,7 @@ sub processVar {
 	}
 	# If loss of function variants are required, we skip all those variants that are not LoF:
 	if ( $parameters->{"lof"} && ! exists $parameters->{"lof_cons"}->{$consequence} ) {
-	    printf "[Warning] $SNPID will be omitted because of consequence (%s) is not lof\n", $consequence;
+	    printf "[Warning] $SNPID will be omitted because its consequence (%s) is not lof\n", $consequence;
 	    next;
 	}
 	# If loftee or lofteeHC are enabled, the script exits if no LoF_conf tag is present in the info field.
