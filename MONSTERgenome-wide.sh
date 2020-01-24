@@ -506,23 +506,26 @@ echo `date "+%Y.%b.%d_%H:%M"` "[Info] Looking for monomorphic variants in 10.gen
 echo  >> ${LOGFILE}
 tail -n +2 10.genotype.filtered.mod.txt | perl -lne '@f=split(/\s+/);$\="\n";$s=shift(@f);%H=();foreach $x (@f){$H{$x}=1;}if (scalar(keys(%H))==1){print $s;}' > 12.mono.variants.txt
 
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Removing monomorphic variants from 11.snpfile.mod.txt; saving result in 13.snpfile.nomono.txt" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Removing monomorphic variants and genes with less than two variants from 11.snpfile.mod.txt; saving result in 13.snpfile.nomono.txt" >> ${LOGFILE}
 echo  >> ${LOGFILE}
-cat 11.snpfile.mod.txt | perl -lne 'BEGIN{open $pf, "< 12.mono.variants.txt";while ($l = <$pf>){chomp $l;$H{$l}=1;}close($pf);}{@b=();@a=split(/\t/);push(@b,$a[0]);push(@b,$a[1]);for ($i=2;$i<scalar(@a);$i++){if (! exists($H{$a[$i]})){push(@b,$a[$i]);}} print(join("\t",@b));}' > 13.snpfile.nomono.txt
+exclude_mono.pl --input 11.snpfile.mod.txt --output 13.snpfile.final.txt --exclude 12.mono.variants.txt 2>mono.genes.txt
+#cat 11.snpfile.mod.txt | perl -lne 'BEGIN{open $pf, "< 12.mono.variants.txt";while ($l = <$pf>){chomp $l;$H{$l}=1;}close($pf);}{@b=();@a=split(/\t/);push(@b,$a[0]);push(@b,$a[1]);for ($i=2;$i<scalar(@a);$i++){if (! exists($H{$a[$i]})){push(@b,$a[$i]);}} print(join("\t",@b));}' > 13.snpfile.nomono.txt
 
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Getting genes having only monomorphic variants (saving them in mono.genes.txt). Exclude them from 13.snpfile.nomono.txt and save the result in 14.snpfile.final.txt" >> ${LOGFILE}
-echo  >> ${LOGFILE}
-awk 'BEGIN{FS="\t";}NF  == 2 {print $1;}' 13.snpfile.nomono.txt > mono.genes.txt
-cat 13.snpfile.nomono.txt | perl -lne 'BEGIN{open $pf, "< mono.genes.txt";while ($l = <$pf>){chomp $l;$H{$l}=1;}close($pf);}{@a=split(/\t/); if (! exists($H{$a[0]})){print(join("\t",@a));}}' > 14.snpfile.final.txt
+#echo `date "+%Y.%b.%d_%H:%M"` "[Info] Getting genes having only monomorphic variants (saving them in mono.genes.txt). Exclude them from 13.snpfile.nomono.txt and save the result in 14.snpfile.final.txt" >> ${LOGFILE}
+#echo  >> ${LOGFILE}
+#awk 'BEGIN{FS="\t";}NF  == 2 {print $1;}' 13.snpfile.nomono.txt > mono.genes.txt
+#cat 13.snpfile.nomono.txt | perl -lne 'BEGIN{open $pf, "< mono.genes.txt";while ($l = <$pf>){chomp $l;$H{$l}=1;}close($pf);}{@a=split(/\t/); if (! exists($H{$a[0]})){print(join("\t",@a));}}' > 14.snpfile.final.txt
 
-cp 14.snpfile.final.txt 14.snpfile.final.original.txt
+#cp 14.snpfile.final.txt 14.snpfile.final.original.txt
+
+cp 13.snpfile.final.txt 13.snpfile.final.original.txt
 
 # Calling MONSTER
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] MONSTER call: MONSTER -k 07.kinship.filtered.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.txt  -s 14.snpfile.final.txt ${imputation_method}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] MONSTER call: MONSTER -k 07.kinship.filtered.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.txt  -s 13.snpfile.final.txt ${imputation_method}" >> ${LOGFILE}
 
 flag=0
 while true; do
-    MONSTER  -k 07.kinship.filtered.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.txt  -s 14.snpfile.final.txt ${imputation_method} 2>>${LOGFILE}
+    MONSTER  -k 07.kinship.filtered.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.txt  -s 13.snpfile.final.txt ${imputation_method} 2>>${LOGFILE}
 
     # Break the loop if the run was successful
     if [[ $? -eq 0 ]]; then break; fi
@@ -540,28 +543,28 @@ while true; do
     fi
     
     # Test if we've analyzed all genes
-    if [[ $(awk 'BEGIN{FS="\t";}NF==5{print $0;}' MONSTER.out | tail -n +2 | wc -l ) == $(cat 14.snpfile.final.txt | wc -l) ]]; then break; fi
+    if [[ $(awk 'BEGIN{FS="\t";}NF==5{print $0;}' MONSTER.out | tail -n +2 | wc -l ) == $(cat 13.snpfile.final.txt | wc -l) ]]; then break; fi
 
     # Only header is in MONSTER.out
     if [[ $( cat MONSTER.out | wc -l) -eq 1 ]]; then
-        firstGene=$(cut -f 1 14.snpfile.final.txt | head -n 1)
+        firstGene=$(cut -f 1 13.snpfile.final.txt | head -n 1)
         echo `date "+%Y.%b.%d_%H:%M"` "[Warning] It seems that the first gene (${firstGene}) has failed. Re-running MONSTER after excluding it." >> ${LOGFILE}
-        awk 'BEGIN{FS="\t";}NR>1{print $0;}' 14.snpfile.final.txt | sponge 14.snpfile.final.txt
+        awk 'BEGIN{FS="\t";}NR>1{print $0;}' 13.snpfile.final.txt | sponge 13.snpfile.final.txt
     else
         lastGene=$(awk 'BEGIN{FS="\t";}NF==5{print $1;}' MONSTER.out | tail -n 1 )
-	failedGene=$(awk -v g=${lastGene} 'BEGIN{FS="\t";f=0;}{if (f==1 && $1!=g){print $1;exit;} if ($1==g){f=1;}}' 14.snpfile.final.txt)
+	failedGene=$(awk -v g=${lastGene} 'BEGIN{FS="\t";f=0;}{if (f==1 && $1!=g){print $1;exit;} if ($1==g){f=1;}}' 13.snpfile.final.txt)
         echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Monster has failed after ${lastGene}, next gene (${failedGene}) is removed and re-run." >> ${LOGFILE}
 	
-        awk -v g=${failedGene} 'BEGIN{FS="\t";}$1!=g{print $0;}' 14.snpfile.final.txt | sponge 14.snpfile.final.txt
+        awk -v g=${failedGene} 'BEGIN{FS="\t";}$1!=g{print $0;}' 13.snpfile.final.txt | sponge 13.snpfile.final.txt
     fi
 done
 
 # gene by gene
 if [[ $flag -eq 1 ]];then
-    k=$(cat 14.snpfile.final.txt | wc -l)
+    k=$(cat 13.snpfile.final.txt | wc -l)
     for i in $(seq 1 $k);do
-	head -n $i 14.snpfile.final.txt | tail -n 1 > temp.snpfile.txt
-	gene=$(head -n $i 14.snpfile.final.txt | tail -n 1 | cut -f 1)
+	head -n $i 13.snpfile.final.txt | tail -n 1 > temp.snpfile.txt
+	gene=$(head -n $i 13.snpfile.final.txt | tail -n 1 | cut -f 1)
 	echo `date "+%Y.%b.%d_%H:%M"` "[Info] Trying only one gene ${gene}" >> ${LOGFILE}
 	MONSTER  -k 07.kinship.filtered.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.txt  -s temp.snpfile.txt ${imputation_method} 2>>${LOGFILE}
 	if [[ ! -e MONSTER.out ]]; then
