@@ -675,10 +675,11 @@ sub processVar {
 
     print "[Info] Filtering variants:" if $verbose;
 
+    my $cons;
     # --------------------------------------------------------
-    # we only need consequences if --lof is given to the main script
+    # we only need consequences if --lof option is provided
     if (exists($parameters->{"lof"})){
-	my $cons=getConsequences($variants,$parameters,$stable_ID);
+	$cons=getConsequences($variants,$parameters,$stable_ID);
     }
     my $consequence="NA"; # default
     # --------------------------------------------------------
