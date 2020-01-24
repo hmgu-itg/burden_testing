@@ -150,6 +150,12 @@ if [[ ! -z ${SLURM_ARRAY_TASK_ID} ]];then
     else
 	chunkNo=${SLURM_ARRAY_TASK_ID}
     fi
+elif [[ ! -z ${LSB_JOBINDEX} ]];then
+    if [[ ! -z ${chunkNo} ]];then
+	chunk_warning="WARNING: both LSB_JOBINDEX and chunkNo ( -c ) are defined; using chunkNo"
+    else
+	chunkNo=${LSB_JOBINDEX}
+    fi
 else
     if [[ -z ${chunkNo} ]];then
 	chunkNo=1 # default
