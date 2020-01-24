@@ -634,10 +634,9 @@ sub getConsequences{
 	    next;
 	}
     }
-
     close($vepin);
 
-    my $queryString="vep -i ".$fname1." -o STDOUT --cache --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
+    my $queryString="vep -i ".$fname1." --dir /usr/local/bin/.vep --dir_cache /usr/local/bin/.vep -o STDOUT --cache --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
     my $query =Scoring::backticks_bash($queryString);
     my %max_severity;
     foreach my $line (split (/\n/, $query)){
@@ -677,7 +676,11 @@ sub processVar {
     print "[Info] Filtering variants:" if $verbose;
 
     # --------------------------------------------------------
-    my $cons=getConsequences($variants,$parameters,$stable_ID);
+    # we only need consequences if --lof is given to the main script
+    if (exists($parameters->{"lof"})){
+	my $cons=getConsequences($variants,$parameters,$stable_ID);
+    }
+    my $consequence="NA"; # default
     # --------------------------------------------------------
     
     my @total_vars = split("\n", $variants);
@@ -692,11 +695,12 @@ sub processVar {
 	my ($chr, $pos, $id, $a1, $a2, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
 
 	# --------------------------------------------------------
-        (my $chr2 = $chr ) =~ s/chr//i;
-	my $varID=$chr2."_".$pos."_".$a1."_".$a2;
-	my $consequence="NA";
-	if (exists $cons{$varID}){
-	    $consequence=$cons{$varID};
+	if (exists($parameters->{"lof"})){
+	    (my $chr2 = $chr ) =~ s/chr//i;
+	    my $varID=$chr2."_".$pos."_".$a1."_".$a2;
+	    if (exists($cons->{$varID})){
+		$consequence=$cons->{$varID};
+	    }
 	}
 	# --------------------------------------------------------
 
@@ -727,7 +731,7 @@ sub processVar {
 	#$consequence = "NA" unless $consequence;
 	# --------------------------------------------------------
 
-	# We don't consider multialleleic sites this time.
+	# We don't consider multialleleic sites
 	if ( $a2 =~ /,/){
 	    print  "[Warning] $SNPID will be omitted because it's multiallelic! ($a2).";
 	    next;
@@ -741,7 +745,7 @@ sub processVar {
 	my $MAF = $ac/$an;
 
 	# This flag shows if the non-ref allele is the major one:
-	my $genotypeFlip = 0; #
+	my $genotypeFlip = 0;
 	if ( $MAF > 0.5 ){
 	    print "[Info] MAF of $SNPID is $MAF is greater then 0.5, genotype is flipped.";
 	    $MAF = 1 - $MAF;
