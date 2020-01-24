@@ -695,8 +695,8 @@ sub processVar {
         (my $chr2 = $chr ) =~ s/chr//i;
 	my $varID=$chr2."_".$pos."_".$a1."_".$a2;
 	my $consequence="NA";
-	if (exists $cons{$varID}){
-	    $consequence=$cons{$varID};
+	if (exists($cons->{$varID})){
+	    $consequence=$cons->{$varID};
 	}
 	# --------------------------------------------------------
 
