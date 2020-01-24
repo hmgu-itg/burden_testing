@@ -686,7 +686,6 @@ sub processVar {
     my @total_vars = split("\n", $variants);
     printf "[Info] Total number of overlapping variants: %s\n", scalar(@total_vars) if $verbose;
 
-    # Looping through all variants that satisfy the submitted criteria:
     while (@total_vars){
 	# Removing one variant at a time:
 	my $variant = shift @total_vars;
@@ -701,7 +700,6 @@ sub processVar {
 	    if (exists($cons->{$varID})){
 		$consequence=$cons->{$varID};
 	    }
-	}
 	# --------------------------------------------------------
 
 	# Generating variant name (Sometimes the long allele names cause problems):
