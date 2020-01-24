@@ -13,31 +13,30 @@ my $fh;
 
 $\="\n";
 
-open (my $fh, "<", $excludeFile) or die "[Error] File with variants to exclude ($excludeFile) could not be opened. Exiting.";
+open ($fh, "<", $excludeFile) or die "[Error] File with variants to exclude ($excludeFile) could not be opened. Exiting.";
 while(my $v=<$fh>){
     chomp $v;
     $vars_to_exclude{$v}=1;
 }
 close($fh);
 
-open (my $fh, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened. Exiting.";
+open ($fh, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened. Exiting.";
 my %H;
+my $flag=0;
+    
 while(my $line=<$fh>){
     chomp $line;
     my @a=split(/\t/,$line);
 
-    my @ind=();
-    my $flag=0;
-    
-    if ($a[1]==1){
+    if ($a[1] eq "1"){
 	# this line contains variant IDs
 	# next line contains weights
 	$flag=1;
 	$H{$a[0]}->{"vars"}=join("\t",@a[2..$#a]);
     }
-    elsif($a[1]==0){
+    elsif($a[1] eq "0"){
 	if ($flag==1){
-	    $H{$a[0]}->{"wights"}=join("\t",@a[2..$#a]);
+	    $H{$a[0]}->{"weights"}=join("\t",@a[2..$#a]);
 	}
 	else{
 	    $H{$a[0]}->{"vars"}=join("\t",@a[2..$#a]);
@@ -49,7 +48,6 @@ while(my $line=<$fh>){
     else{
 	die "[Error] The second field in $line is neither 0 nor 1. Exiting.";
     }
-
 }
 close($fh);
 
@@ -59,7 +57,7 @@ foreach my $gene (keys(%H)){
     my @a=split(/\t/,$vars);
     my $c=0;
     for (my $i=0;$i<scalar(@a);$i++){
-	if exists($vars_to_exclude{$a[$i]}){
+	if(exists($vars_to_exclude{$a[$i]})){
 	    $a[$i]="NA";
 	    $c++;
 	}
@@ -72,7 +70,7 @@ foreach my $gene (keys(%H)){
 }
 
 $,="\t";
-open (my $fh, ">", $outputFile) or die "[Error] Output ($outputFile) could not be opened. Exiting.";
+open ($fh, ">", $outputFile) or die "[Error] Output ($outputFile) could not be opened. Exiting.";
 foreach my $gene (keys(%H)){
     if (exists($mono{$gene})){
 	print STDERR $gene;
