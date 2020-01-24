@@ -54,6 +54,7 @@ my $parameters = {
 };
 
 # This is the list of those consequences that will be retained upon switching on --lof
+
 $parameters->{"lof_cons"} = {
     "transcript_ablation"      => 10,
     "splice_acceptor_variant"  => 9,
@@ -628,7 +629,7 @@ sub getConsequences{
 	    print $vepin $c,$pos+1,$pos,"-/".$a,"+",$varID;
 	}
 	else{
-	    print STDERR "[Error] could not determine variant type of $variant";
+	    print "[Error] could not determine variant type of $variant";
 	    $cons{$varID}="NA";
 	    next;
 	}
@@ -675,7 +676,9 @@ sub processVar {
 
     print "[Info] Filtering variants:" if $verbose;
 
-#    my $cons=getConsequences($variants,$parameters,$stable_ID);
+    # --------------------------------------------------------
+    my $cons=getConsequences($variants,$parameters,$stable_ID);
+    # --------------------------------------------------------
     
     my @total_vars = split("\n", $variants);
     printf "[Info] Total number of overlapping variants: %s\n", scalar(@total_vars) if $verbose;
@@ -688,13 +691,15 @@ sub processVar {
 	# line: CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	EGAN00001033155
 	my ($chr, $pos, $id, $a1, $a2, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
 
-#        (my $chr2 = $chr ) =~ s/chr//i;
-#	my $varID=$chr2."_".$pos."_".$a1."_".$a2;
-#	my $consequence="NA";
-#	if (exists $cons{$varID}){
-#	    $consequence=$cons{$varID};
-#	}
-	
+	# --------------------------------------------------------
+        (my $chr2 = $chr ) =~ s/chr//i;
+	my $varID=$chr2."_".$pos."_".$a1."_".$a2;
+	my $consequence="NA";
+	if (exists $cons{$varID}){
+	    $consequence=$cons{$varID};
+	}
+	# --------------------------------------------------------
+
 	# Generating variant name (Sometimes the long allele names cause problems):
 	my $short_a1 = length $a1 > 5 ? substr($a1,0,4) : $a1;
 	my $short_a2 = length $a2 > 5 ? substr($a2,0,4) : $a2;
@@ -715,10 +720,12 @@ sub processVar {
 	    print "[Warning] $SNPID has no AC; skipping";
 	    next;
 	}
-	
+
+	# --------------------------------------------------------
 	# We add NA if consequence was not found:
-	(my $consequence ) = $info =~ /consequence=(.+?)[;\b]/;
-	$consequence = "NA" unless $consequence;
+	#(my $consequence ) = $info =~ /consequence=(.+?)[;\b]/;
+	#$consequence = "NA" unless $consequence;
+	# --------------------------------------------------------
 
 	# We don't consider multialleleic sites this time.
 	if ( $a2 =~ /,/){
