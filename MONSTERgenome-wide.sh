@@ -2,18 +2,25 @@
 
 # if pattern corresponds to a filename (doesn't contain %), check if the file exists
 # otherwise check if files for each chromosome (1-22) exist
+
 function testVCFs {
     pattern=$1
     c=0
     if [[ $pattern =~ % ]];then
 	for i in $(seq 1 22);do
-	    if [[ ! -e $(echo $pattern|sed "s/\%/$i/") ]];then
+	    fname=$(echo $pattern|sed "s/\%/$i/")
+	    ifname=${fname}".tbi"
+	    if [[ ! -e ${fname} ]];then
 		echo `date "+%Y.%b.%d_%H:%M"` "[Warning] No VCF for chromosome $i"
 	    else
+		if [[ ! -e ${ifname} ]];then
+		    echo `date "+%Y.%b.%d_%H:%M"` "[Error] No index file for $fname"
+		    return 1
+		fi
 		c=$((c+1))
 	    fi
 	done
-	if [[ $c -gt 0 ]];then
+	if [[ $c -gt 0 ]];then # some VCFs exist; trying to work with them
 	    return 0
 	else
 	    return 1
@@ -22,9 +29,17 @@ function testVCFs {
 	if [[ -e $pattern ]];then
 	    return 0
 	else
+	    echo `date "+%Y.%b.%d_%H:%M"` "[Error] $pattern does not exist"
 	    return 1
 	fi
     fi
+}
+
+# phenofile should have 2 tab separated columns, no header
+function checkPhenoFile{
+    fname=$1
+    code=$(cat $fname|awk 'BEGIN{FS="\t";c=0;}NF!=2{c=1;}END{exit c;}')
+    return $code
 }
 
 version="v12 Last modified: 2020.Jan.22"
@@ -198,7 +213,6 @@ if [[ -z "${vcfFile}" ]]; then
 else
     testVCFs ${vcfFile}
     if [[ $? -eq 1 ]];then
-	echo `date "+%Y.%b.%d_%H:%M"` "[Error] VCF file could not be opened: $vcfFile"
 	exit 1
     fi
 
@@ -453,6 +467,12 @@ fi
 # At this point the we have to process the above created files to syncronize wi/nfs/team144/ds26/scripts/burden_testing/MONSTERgenome-wide_updated.sh -g exon -x 50 -e promoter,enhancer,TF_bind -l promoter,enhancer,TF_bind -s EigenPCPhred -c 3 -P /lustre/scratch115/projects/t144_helic_15x/analysis/HA/phenotypes/correct_names.andmissing/MANOLIS.HDL.txt -w /lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/burdentesting/arthur_rerun -V /lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/release/postrelease_missingnessfilter/chr%.missingfiltered-0.01_consequences.lof.HWE.vcf.gz -K /lustre/scratch115/realdata/mdt0/projects/t144_helic_15x/analysis/HA/relmat/final/burden/matrix.monster.txt -p HDL -d 50th the phenotype file and the kinship matrix.
 
 # ASSUMING PHENOTYPE FILE HAS 2 COLUMNS: ID PHENOTYPE, TAB DELIMITED, NO HEADER
+checkPhenoFile ${phenotypeFile}
+if [[ $? -eq 1 ]];then
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] wrong format of the phenotype file ($phenotypeFile)"
+    exit 1
+fi
+
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Extracting samples with present phenotype values from the phenotype file and saving them in 01.pheno.txt." >> ${LOGFILE}
 cat ${phenotypeFile} | awk 'BEGIN{FS="\t";OFS="\t";}{if ($2!="NA") {printf "1\t%s\t0\t0\t0\t%s\n", $1, $2} }' > 01.pheno.txt # subset of samples without NA phenotype values
 n1=$(cat ${phenotypeFile} | wc -l)
@@ -515,6 +535,14 @@ tail -n +2 10.genotype.filtered.mod.txt | perl -lne '@f=split(/\s+/);$\="\n";$s=
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Removing monomorphic variants and genes with less than two variants from 11.snpfile.mod.txt; saving result in 13.snpfile.nomono.txt" >> ${LOGFILE}
 echo  >> ${LOGFILE}
 exclude_mono.pl --input 11.snpfile.mod.txt --output 13.snpfile.final.txt --exclude 12.mono.variants.txt 2>mono.genes.txt
+
+# sorting kinship and genotype files
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Sorting 10.genotype.filtered.mod.txt and 07.kinship.filtered.txt; saving results in 10.genotype.filtered.mod.srt.txt and 07.kinship.filtered.srt.txt" >> ${LOGFILE}
+echo  >> ${LOGFILE}
+
+sort -k2,2n -k3,3n 07.kinship.filtered.txt > 07.kinship.filtered.srt.txt
+cat 10.genotype.filtered.mod.txt | transpose | sort -k1,1n | transpose > 10.genotype.filtered.mod.txt
+
 #cat 11.snpfile.mod.txt | perl -lne 'BEGIN{open $pf, "< 12.mono.variants.txt";while ($l = <$pf>){chomp $l;$H{$l}=1;}close($pf);}{@b=();@a=split(/\t/);push(@b,$a[0]);push(@b,$a[1]);for ($i=2;$i<scalar(@a);$i++){if (! exists($H{$a[$i]})){push(@b,$a[$i]);}} print(join("\t",@b));}' > 13.snpfile.nomono.txt
 
 #echo `date "+%Y.%b.%d_%H:%M"` "[Info] Getting genes having only monomorphic variants (saving them in mono.genes.txt). Exclude them from 13.snpfile.nomono.txt and save the result in 14.snpfile.final.txt" >> ${LOGFILE}
@@ -527,11 +555,11 @@ exclude_mono.pl --input 11.snpfile.mod.txt --output 13.snpfile.final.txt --exclu
 cp 13.snpfile.final.txt 13.snpfile.final.original.txt
 
 # Calling MONSTER
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] MONSTER call: MONSTER -k 07.kinship.filtered.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.txt  -s 13.snpfile.final.txt ${imputation_method}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] MONSTER call: MONSTER -k 07.kinship.filtered.srt.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.srt.txt  -s 13.snpfile.final.txt ${imputation_method}" >> ${LOGFILE}
 
 flag=0
 while true; do
-    MONSTER  -k 07.kinship.filtered.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.txt  -s 13.snpfile.final.txt ${imputation_method} 2>>${LOGFILE}
+    MONSTER  -k 07.kinship.filtered.srt.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.srt.txt  -s 13.snpfile.final.txt ${imputation_method} 2>>${LOGFILE}
 
     # Break the loop if the run was successful
     if [[ $? -eq 0 ]]; then break; fi
@@ -572,7 +600,7 @@ if [[ $flag -eq 1 ]];then
 	head -n $i 13.snpfile.final.txt | tail -n 1 > temp.snpfile.txt
 	gene=$(head -n $i 13.snpfile.final.txt | tail -n 1 | cut -f 1)
 	echo `date "+%Y.%b.%d_%H:%M"` "[Info] Trying only one gene ${gene}" >> ${LOGFILE}
-	MONSTER  -k 07.kinship.filtered.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.txt  -s temp.snpfile.txt ${imputation_method} 2>>${LOGFILE}
+	MONSTER  -k 07.kinship.filtered.srt.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.srt.txt -s temp.snpfile.txt ${imputation_method} 2>>${LOGFILE}
 	if [[ ! -e MONSTER.out ]]; then
 	    echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER failed before creating the output file for gene ${gene}" >> ${LOGFILE}
 	elif [[ $( cat MONSTER.out | wc -l) -eq 0 ]]; then
@@ -603,4 +631,4 @@ if [[ ${zipout} = "yes" ]];then
     mv gene_set.${chunkNo}.tar.gz ..
     cd .. && rm -rf gene_set.${chunkNo}
 fi
-echo `date "+%Y.%b.%d_%H:%M"` "DONE"  >> ${LOGFILE}
+#echo `date "+%Y.%b.%d_%H:%M"` "DONE"  >> ${LOGFILE}

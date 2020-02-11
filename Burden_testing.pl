@@ -637,9 +637,12 @@ sub getConsequences{
     close($vepin);
 
     my $queryString="vep -i ".$fname1." --dir /usr/local/bin/.vep --dir_cache /usr/local/bin/.vep -o STDOUT --cache --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
+    print $queryString if $verbose;
+    
     my $query =Scoring::backticks_bash($queryString);
     my %max_severity;
     foreach my $line (split (/\n/, $query)){
+	print "getConsequences output: ".$line if $verbose;
 	my @a=split(/\t/,$line);
 	my $ID=$a[0];
 	my $effs=$a[1];
@@ -700,7 +703,9 @@ sub processVar {
 	    my $varID=$chr2."_".$pos."_".$a1."_".$a2;
 	    if (exists($cons->{$varID})){
 		$consequence=$cons->{$varID};
+		print "CONSEQUENCE: ".$varID." ".$consequence if $verbose;
 	    }
+	}
 	# --------------------------------------------------------
 
 	# Generating variant name (Sometimes the long allele names cause problems):
