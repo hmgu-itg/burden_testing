@@ -36,9 +36,9 @@ function testVCFs {
 }
 
 # phenofile should have 2 tab separated columns, no header
-function checkPhenoFile{
+function checkPhenoFile {
     fname=$1
-    code=$(cat $fname|awk 'BEGIN{FS="\t";c=0;}NF!=2{c=1;}END{exit c;}')
+    code=$(cat $fname|awk 'BEGIN{FS="\t";c=0;}NF!=2{c=1;}END{print c;}')
     return $code
 }
 
