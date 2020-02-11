@@ -541,7 +541,7 @@ echo `date "+%Y.%b.%d_%H:%M"` "[Info] Sorting 10.genotype.filtered.mod.txt and 0
 echo  >> ${LOGFILE}
 
 sort -k2,2n -k3,3n 07.kinship.filtered.txt > 07.kinship.filtered.srt.txt
-cat 10.genotype.filtered.mod.txt | transpose | sort -k1,1n | transpose > 10.genotype.filtered.mod.txt
+cat 10.genotype.filtered.mod.txt | transpose | sort -k1,1n | transpose > 10.genotype.filtered.mod.srt.txt
 
 #cat 11.snpfile.mod.txt | perl -lne 'BEGIN{open $pf, "< 12.mono.variants.txt";while ($l = <$pf>){chomp $l;$H{$l}=1;}close($pf);}{@b=();@a=split(/\t/);push(@b,$a[0]);push(@b,$a[1]);for ($i=2;$i<scalar(@a);$i++){if (! exists($H{$a[$i]})){push(@b,$a[$i]);}} print(join("\t",@b));}' > 13.snpfile.nomono.txt
 
@@ -566,7 +566,7 @@ while true; do
 
     # No MONSTER.out
     if [[ ! -e MONSTER.out ]]; then
-	echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER failed before creating the output file. Exiting" >> ${LOGFILE}
+	echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER failed before creating the output file" >> ${LOGFILE}
     fi
 
     # Empty MONSTER.out
@@ -611,22 +611,34 @@ if [[ $flag -eq 1 ]];then
     done
     
     echo -e 'SNP_set_ID\tn_individual\tn_SNP\trho_MONSTER\tp_MONSTER' > MONSTER.out
-    cat MONSTER.out.* | grep -v "SNP_set_ID" >> MONSTER.out
-    rm MONSTER.out.* temp.snpfile.txt
+
+    shopt -s nullglob
+    mfiles=(MONSTER.out.*)
+    if [[ ${#mfiles[@]} == 0 ]];then
+	echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out files were not found"  >> ${LOGFILE}
+    else
+	for f in "${mfiles[@]}"
+	do
+	    cat $f | grep -v "SNP_set_ID" >> MONSTER.out
+	done
+	rm MONSTER.out.* temp.snpfile.txt
+    fi
+    shopt -u nullglob
+    
 fi
 
 # Copying MONSTER.out to the root directory:
 if [[ -e MONSTER.out ]]; then
     cp MONSTER.out ../MONSTER.${phenotype}.${chunkNo}.out
 else
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out file was not found. Something went wrong."  >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out file was not found"  >> ${LOGFILE}
 fi
 
 cp ${selectorLog} ..
 
 if [[ ${zipout} = "yes" ]];then
     # Compress folder:
-    echo `date "+%Y.%b.%d_%H:%M"` "[Info] Compressing and removing files." >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` "[Info] Compressing and removing files" >> ${LOGFILE}
     tar -zcvf gene_set.${chunkNo}.tar.gz *
     mv gene_set.${chunkNo}.tar.gz ..
     cd .. && rm -rf gene_set.${chunkNo}

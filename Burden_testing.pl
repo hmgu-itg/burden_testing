@@ -234,26 +234,26 @@ while ( my $ID = <$INPUT> ){
     my ($hash, $genotypes) = &processVar($variants, $parameters,$stable_ID);
     # Gene will be skipped if there are no suitable variations left:
     if (scalar keys %{$hash} < 2){
-        print "[Warning] Gene $ID is skipped as not enough variants left to test [NOT_ENOUGH_VAR].";
-        undef $hash;
-        undef $genotypes;
-        next;
+	print "[Warning] Gene $ID is skipped as not enough variants left to test [NOT_ENOUGH_VAR].";
+	undef $hash;
+	undef $genotypes;
+	next;
     }
 
     # The gene will be skipped if there are too many variants:
     if (scalar keys %{$hash} > $parameters->{"maxVars"}){
-        print "[Warning] Gene $ID is skipped as more than ".$parameters->{"maxVars"}." variants are in the set [TOO_MANY_VAR].";
-        undef $hash;
-        undef $genotypes;
-        next;
+	print "[Warning] Gene $ID is skipped as more than ".$parameters->{"maxVars"}." variants are in the set [TOO_MANY_VAR].";
+	undef $hash;
+	undef $genotypes;
+	next;
     }
 
     # If we want we can add scores:
     $hash = $AddScore->AddScore($hash) if $parameters->{"score"} ne "NA";
 
     if ($parameters->{"score"} ne "NA" && scalar keys %{$hash} <1){
-		print "[Warning] Gene $ID is skipped as no variants remaining post-scoring [NO_VAR_REMAIN].";
-	}
+	print "[Warning] Gene $ID is skipped as no variants remaining post-scoring [NO_VAR_REMAIN].";
+    }
 
     # We don't save anything unless there at least two variants:
     next unless scalar keys %{$hash} > 1;
@@ -602,6 +602,7 @@ sub getConsequences{
     open ($vepin, ">", $fname1) or die "[Error] Input file for VEP could not be opened.";
     
     my @total_vars = split("\n", $variants);
+    my $count=0;
     while (@total_vars){
 	my $variant = shift @total_vars;
 
@@ -619,14 +620,17 @@ sub getConsequences{
 	my $vtype=getVariantType($ref,$alt);
 	if ($vtype eq "SNP"){
 	    print $vepin $c,$pos,$pos,$ref."/".$alt,"+",$varID;
+	    $count++;
 	}
 	elsif($vtype eq "DEL"){
 	    my $r=substr($ref,1,length($ref)-1);
 	    print $vepin $c,$pos+1,$pos+length($ref)-1,$r."/-","+",$varID;
+	    $count++;
 	}
 	elsif($vtype eq "INS"){
 	    my $a=substr($alt,1,length($alt)-1);
 	    print $vepin $c,$pos+1,$pos,"-/".$a,"+",$varID;
+	    $count++;
 	}
 	else{
 	    print "[Error] could not determine variant type of $variant";
@@ -636,6 +640,8 @@ sub getConsequences{
     }
     close($vepin);
 
+    return undef unless($count>0);
+    
     my $queryString="vep -i ".$fname1." --dir /usr/local/bin/.vep --dir_cache /usr/local/bin/.vep -o STDOUT --cache --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
     print $queryString if $verbose;
     
@@ -684,13 +690,13 @@ sub processVar {
     if (exists($parameters->{"lof"})){
 	$cons=getConsequences($variants,$parameters,$stable_ID);
     }
-    my $consequence="NA"; # default
     # --------------------------------------------------------
     
     my @total_vars = split("\n", $variants);
     printf "[Info] Total number of overlapping variants: %s\n", scalar(@total_vars) if $verbose;
 
     while (@total_vars){
+	my $consequence="NA"; # default
 	# Removing one variant at a time:
 	my $variant = shift @total_vars;
 
@@ -701,9 +707,11 @@ sub processVar {
 	if (exists($parameters->{"lof"})){
 	    (my $chr2 = $chr ) =~ s/chr//i;
 	    my $varID=$chr2."_".$pos."_".$a1."_".$a2;
-	    if (exists($cons->{$varID})){
-		$consequence=$cons->{$varID};
-		print "CONSEQUENCE: ".$varID." ".$consequence if $verbose;
+	    if (defined($cons)){
+		if (exists($cons->{$varID})){
+		    $consequence=$cons->{$varID};
+		    print "CONSEQUENCE: ".$varID." ".$consequence if $verbose;
+		}
 	    }
 	}
 	# --------------------------------------------------------
