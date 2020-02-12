@@ -412,6 +412,7 @@ sub parseRegulation {
 }
 
 sub print_parameters {
+    local $\="\n";
     $parameters = $_[0];
     printf "\n[Info] Current genome build: GRCh%s", $parameters->{"build"};
     print "\n[Info] Selected features:";
