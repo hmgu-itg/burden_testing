@@ -180,6 +180,11 @@ else
     fi
 fi
 
+if [[ ${chunkNo} -gt ${chunksTotal} ]];then
+    echo "ERROR: current chunk number ($chunkNo) is greater than the total number of chunks ($chunksTotal). EXIT"
+    exit 1
+fi
+
 #--- checking input files - if any of the tests fails, the script exits.---------
 
 if [[ -z "${configFile}" ]]; then
