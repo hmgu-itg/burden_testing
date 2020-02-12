@@ -42,7 +42,7 @@ function checkPhenoFile {
     return $code
 }
 
-version="v12 Last modified: 2020.Jan.22"
+version="v12 Last modified: 2020.Feb.12"
 today=$(date "+%Y.%b.%d")
 
 # The variant selector script, that generates snp and genotype input for MONSTER:
@@ -89,7 +89,7 @@ function display_help() {
     echo "     -k  - below the specified cutoff value, the variants will be excluded (default: 0)"
     echo ""
     echo "Gene list and chunking:"
-    echo "     -L  - file with gene IDs (required, no default)."
+    echo "     -L  - file with gene IDs (if not specified all genes will be analyzed)."
     echo "     -d  - total number of chunks (default: 1)."
     echo "     -c  - chunk number (default: 1)."
     echo ""
@@ -116,6 +116,9 @@ if [ $# == 0 ]; then display_help; fi
 
 zipout="yes" # by default gzip output results
 OPTIND=1
+score=""
+geneListFile=""
+
 while getopts ":hL:c:d:p:P:K:V:bg:m:s:l:e:x:k:t:ofw:jC:z" optname; do
     case "$optname" in
       # Gene list related parameters:
@@ -191,6 +194,17 @@ fi
 
 commandOptions=" --config ${configFile} "
 
+#--------------------------------------------------------------------------------------------
+no_list_warning=""
+if [[ -z ${geneListFile} ]];then
+    gencode_file=$(grep "^gencode_file" ${configFile} | cut -f 2 -d '=')
+    zcat ${gencode_file} | cut -f 4 > temp_gene_list.txt
+    geneListFile="temp_gene_list.txt"
+    no_list_warning="[Warning] No gene list specified; using all genes from $gencode_file"
+fi
+#--------------------------------------------------------------------------------------------
+
+
 if [[ -z "${phenotypeFile}" ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Phenotype file has to be specified!"
     exit 1
@@ -223,8 +237,6 @@ if [[ ! -e "${geneListFile}" ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene list file could not be opened: $geneListFile"
     exit 1
 fi
-
-#commandOptions="${commandOptions} --working-dir ${rootDir} "
 
 # GENCODE -expecting a list of feature names separated by a comma.
 if [[ ! -z "${gencode}" ]]; then
@@ -284,7 +296,7 @@ if [[ ! -z "${score}" ]]; then
         * )            score="noweight";;
     esac
 else
-    warning1="[Warning] Submitted score name is not recognized! Accepted scores: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred or Mixed."
+    warning1="[Warning] Submitted score name ($score) is not recognized! Accepted scores: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred or Mixed."
     warning2="[Warning] No scoring will be applied."
     score="noweight"
 fi
@@ -348,12 +360,35 @@ if [[ ! -z ${chunk_warning} ]];then
     echo `date "+%Y.%b.%d_%H:%M"` ${chunk_warning} >> ${LOGFILE}
 fi
 
-# Creating gene set:
-totalGenes=$(cat ${geneListFile} | wc -l)
-rem=$(( totalGenes % chunksTotal ))
-chunkSize=$(( totalGenes / chunksTotal ))
-lastChunkSize=$(( chunkSize + rem ))
+if [[ ! -z ${no_list_warning} ]];then
+    echo `date "+%Y.%b.%d_%H:%M"` ${no_list_warning} >> ${LOGFILE}
+fi
 
+# -----------------------------------------------------------------------------------------------------------------------------
+# creating gene list
+
+totalGenes=$(cat ${geneListFile} | wc -l)
+if [ $totalGenes -lt $chunksTotal ];then
+    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Number of chunks ($chunksTotal) is larger than number of genes in the gene list ($totalGenes) "  >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Analyzing all genes in one chunk"  >> ${LOGFILE}
+    chunkNo=1
+    cat${geneListFile} > ${outputDir}/input_gene.list    
+else
+    rem=$(( totalGenes % chunksTotal ))
+    chunkSize=$(( totalGenes / chunksTotal ))
+    lastChunkSize=$(( chunkSize + rem ))
+    if [[ ${chunkNo} -eq ${chunksTotal} ]];then
+	tail -n ${lastChunkSize} ${geneListFile} > ${outputDir}/input_gene.list
+    else
+	awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${outputDir}/input_gene.list
+    fi
+
+    n=$( cat ${outputDir}/input_gene.list | wc -l)
+    if [[ $n -eq 0 ]];then
+	echo "Chunk ${chunkNo} is empty; EXIT" >> ${LOGFILE}
+	exit 0
+    fi
+fi
 # --- Reporting parameters ------------------------------------------------------
 echo `date "+%Y.%b.%d_%H:%M"` "##"  >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "## Genome-wide Monster wrapper version ${version}" >> ${LOGFILE}
@@ -401,19 +436,6 @@ echo `date "+%Y.%b.%d_%H:%M"`  "Kinship matrix: ${kinshipFile}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "Phenotype file: ${phenotypeFile}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "Phenotype: ${phenotype}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
-
-# --- Main loop executed for all genes --------------------------------------------
-if [[ ${chunkNo} -eq ${chunksTotal} ]];then
-    tail -n ${lastChunkSize} ${geneListFile} > ${outputDir}/input_gene.list
-else
-    awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${outputDir}/input_gene.list
-fi
-
-n=$( cat ${outputDir}/input_gene.list | wc -l)
-if [[ $n -eq 0 ]];then
-    echo "Chunk ${chunkNo} is empty; EXIT" >> ${LOGFILE}
-    exit 0
-fi
 
 selectorLog=${outputDir}/chunk_${chunkNo}.output.log
 echo `date "+%Y.%b.%d_%H:%M"` "Calling ${scriptDir}/${regionSelector}  --input ${outputDir}/input_gene.list --output gene_set_output --output-dir ${outputDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}"  >> ${LOGFILE}
