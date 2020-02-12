@@ -282,6 +282,7 @@ fi
 
 warning1=""
 warning2=""
+score_tmp=""
 # Score - If score is not given we apply no score. Otherwise we test the submitted value:
 # Accepted scores:
 if [[ ! -z "${score}" ]]; then
@@ -293,9 +294,13 @@ if [[ ! -z "${score}" ]]; then
         EIGENPCPHRED ) score="EigenPCPhred";;
         CADD )         score="CADD";;
         MIXED )        score="Mixed";;
-        * )            score="noweight";;
+        * )            score_tmp="noweight";;
     esac
 else
+    score="noweight"
+fi
+
+if [[ ! -z ${score_tmp} ]];then
     warning1="[Warning] Submitted score name ($score) is not recognized! Accepted scores: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred or Mixed."
     warning2="[Warning] No scoring will be applied."
     score="noweight"
@@ -372,7 +377,7 @@ if [ $totalGenes -lt $chunksTotal ];then
     echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Number of chunks ($chunksTotal) is larger than number of genes in the gene list ($totalGenes) "  >> ${LOGFILE}
     echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Analyzing all genes in one chunk"  >> ${LOGFILE}
     chunkNo=1
-    cat${geneListFile} > ${outputDir}/input_gene.list    
+    cat ${geneListFile} > ${outputDir}/input_gene.list    
 else
     rem=$(( totalGenes % chunksTotal ))
     chunkSize=$(( totalGenes / chunksTotal ))
