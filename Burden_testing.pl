@@ -201,6 +201,7 @@ while ( my $ID = <$INPUT> ){
         # Skipping genes that were not found in the GENCODE dataset.
         if ($start eq "NA") {
             print "[Warning] Gene $ID was not found in the GENCODE data. Is it a valid gene name? This gene will be skipped! [NO_GENE]";
+	    print "";
             next;
         }
 
@@ -213,6 +214,7 @@ while ( my $ID = <$INPUT> ){
         # This should never be a problem, but still be tested:
         unless ( $CollapsedBed ){
             print "[WARNING] Gene $name did not yield any regions. Skipped. [NO_REGION].";
+	    print "";
             next;
         }
     }
@@ -222,7 +224,7 @@ while ( my $ID = <$INPUT> ){
         ($chr, $start, $end) = $ID =~ /(\d+)_(\d+)-(\d+)/i;
         $CollapsedBed = join("\t", $chr, $start-1, $end);
         $name = $ID;
-        printf "\n[Info] Queried region: %s:%s-%s", $chr, $start, $end;
+        printf "[Info] Queried region: %s:%s-%s", $chr, $start, $end;
     }
 
     # CollapsedBed is 0-based
@@ -235,6 +237,7 @@ while ( my $ID = <$INPUT> ){
     # Gene will be skipped if there are no suitable variations left:
     if (scalar keys %{$hash} < 2){
 	print "[Warning] Gene $ID is skipped as not enough variants left to test [NOT_ENOUGH_VAR].";
+	print "";
 	undef $hash;
 	undef $genotypes;
 	next;
@@ -243,6 +246,7 @@ while ( my $ID = <$INPUT> ){
     # The gene will be skipped if there are too many variants:
     if (scalar keys %{$hash} > $parameters->{"maxVars"}){
 	print "[Warning] Gene $ID is skipped as more than ".$parameters->{"maxVars"}." variants are in the set [TOO_MANY_VAR].";
+	print "";
 	undef $hash;
 	undef $genotypes;
 	next;
@@ -253,6 +257,7 @@ while ( my $ID = <$INPUT> ){
 
     if ($parameters->{"score"} ne "NA" && scalar keys %{$hash} <1){
 	print "[Warning] Gene $ID is skipped as no variants remaining post-scoring [NO_VAR_REMAIN].";
+	print "";
     }
 
     # We don't save anything unless there at least two variants:
@@ -457,7 +462,7 @@ sub getVariants {
     my ($chr) = $merged =~ /^(.+?)\t/;  # WATCHOUT !
 
     # Print info:
-    print  "\n[Info] Extracting variants from vcf files:" if $verbose;
+    print  "[Info] Extracting variants from vcf files:" if $verbose;
     (my $vcf = $inputvcfpattern ) =~ s/\%/$chr/g;
     
     if (! -e $vcf){
