@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# if pattern corresponds to a filename (doesn't contain %), check if the file exists
-# otherwise check if files for each chromosome (1-22) exist
-
 # phenofile should have 2 tab separated columns, no header
 function checkPhenoFile {
     fname=$1
@@ -33,7 +30,7 @@ function display_help() {
     echo "     -i  - input directory (required, no default)"
     echo "     -c  - chunk number (if not specified, all chunks will be analyzed)"
     echo "     -p  - phenotype name (required, no default)"
-    echo "     -P  - phenotype file (required, no default)"
+    echo "     -P  - phenotype file (two tab separated columns, no header; required, no default)"
     echo "     -K  - kinship matrix (required, no default)"
     echo ""
     echo "Other options:"
