@@ -141,7 +141,7 @@ for targetDir in ${targetDirs[@]}; do
     LOGFILE=${targetDir}/"MONSTER.log"
 
     dname=$(basename ${targetDir})
-    cn=$(echo ${dname} | sed 's/.*\([0-9][0-9]*\)$/\1/')
+    cn=$(echo ${dname} | sed 's/gene_set\.\([0-9][0-9]*\)$/\1/')
     selectorLog=${targetDir}"/chunk_${cn}.output.log"
     if [[ ! -e ${selectorLog} ]];then
 	echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Selector log (${selectorLog}) does not exist; skipping" >> ${LOGFILE}
