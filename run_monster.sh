@@ -3,38 +3,6 @@
 # if pattern corresponds to a filename (doesn't contain %), check if the file exists
 # otherwise check if files for each chromosome (1-22) exist
 
-function testVCFs {
-    pattern=$1
-    c=0
-    if [[ $pattern =~ % ]];then
-	for i in $(seq 1 22);do
-	    fname=$(echo $pattern|sed "s/\%/$i/")
-	    ifname=${fname}".tbi"
-	    if [[ ! -e ${fname} ]];then
-		echo `date "+%Y.%b.%d_%H:%M"` "[Warning] No VCF for chromosome $i"
-	    else
-		if [[ ! -e ${ifname} ]];then
-		    echo `date "+%Y.%b.%d_%H:%M"` "[Error] No index file for $fname"
-		    return 1
-		fi
-		c=$((c+1))
-	    fi
-	done
-	if [[ $c -gt 0 ]];then # some VCFs exist; trying to work with them
-	    return 0
-	else
-	    return 1
-	fi
-    else
-	if [[ -e $pattern ]];then
-	    return 0
-	else
-	    echo `date "+%Y.%b.%d_%H:%M"` "[Error] $pattern does not exist"
-	    return 1
-	fi
-    fi
-}
-
 # phenofile should have 2 tab separated columns, no header
 function checkPhenoFile {
     fname=$1
@@ -42,22 +10,13 @@ function checkPhenoFile {
     return $code
 }
 
-version="v12 Last modified: 2020.Feb.12"
+version="v12 Last modified: 2020.Feb.14"
 today=$(date "+%Y.%b.%d")
-
-# The variant selector script, that generates snp and genotype input for MONSTER:
-regionSelector="Burden_testing.pl"
 
 # Folder with the variant selector script:
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 MONSTER=$(which MONSTER)
-missing_cutoff=1 # Missingness threshold, individuals having missingness higher than this threshold will be excluded.
 imputation_method='-A' # The default imputation method is BLUP, slowest, but the most accurate. For other options, see MONSTER documentation.
-configFile=""
-
-chunksTotal=1
-chunkNo=""
-MAF=0.05 # By default this is the upper minor allele frequency.
 
 # --- print out help message and exit:
 function display_help() {
@@ -66,35 +25,9 @@ function display_help() {
     echo "Genome-wide Monster wrapper"
     echo "version: ${version}"
     echo ""
-    echo "This script was written to run MONSTER genome wide. This script takes a series of arguments
-          based on which it calls downstream helper scripts, and generates specific directory for the output files.
-          It pools results together within one chunk."
+    echo "This script was written to run MONSTER genome wide"
     echo ""
     echo "Usage: $0 <parameters>"
-    echo ""
-    echo "Variant filter options:"
-    echo "     -g  - list of gencode features."
-    echo "     -e  - list of linked GTEx featuress"
-    echo "     -l  - list of linked overlapping features."
-    echo "     -m  - upper maf thresholds"
-    echo "     -x  - extend genomic regions (bp)."
-    echo "     -o  - include variants with severe consequences only (more severe than missense)."
-    echo "     -f  - include only HC and LC loftee variants."
-    echo "     -j  - include only HC loftee variants."
-    echo "     -C  - config file for Burden_testing.pl."
-    echo ""
-    echo "Parameters to set up scores for variants:"
-    echo "     -s  - turn weights on. Arguments: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred, Mixed"
-    echo "     -t  - the value with which the scores will be shifted (default value: if Eigen score weighting specified: 1, otherwise: 0)"
-    echo "     -k  - below the specified cutoff value, the variants will be excluded (default: 0)"
-    echo ""
-    echo "Gene list and chunking:"
-    echo "     -L  - file with gene IDs (if not specified all genes will be analyzed)."
-    echo "     -d  - total number of chunks (default: 1)."
-    echo "     -c  - chunk number (default: 1)."
-    echo ""
-    echo "General options:"
-    echo "     -w  - output directory where the chunk subdirectories will be created (required, no default)"
     echo ""
     echo "Monster parameters:"
     echo "     -p  - phenotype name (required, no default)"
@@ -107,48 +40,25 @@ function display_help() {
     echo ""
     echo ""
 
-    exit 1
+    exit 0
 }
 
 # --- Capture command line options --------------------------------------------
 
 if [ $# == 0 ]; then display_help; fi
 
-zipout="yes" # by default gzip output results
 OPTIND=1
-score=""
 geneListFile=""
 
-while getopts ":hL:c:d:p:P:K:V:bg:m:s:l:e:x:k:t:ofw:jC:z" optname; do
+while getopts ":hp:P:K:V:" optname; do
     case "$optname" in
-      # Gene list related parameters:
-        "L") geneListFile=${OPTARG} ;;
-        "c") chunkNo=${OPTARG} ;;
-        "d") chunksTotal=${OPTARG} ;;
-
       # MONSTER input files:
         "p" ) phenotype=${OPTARG} ;;
         "P" ) phenotypeFile=${OPTARG} ;;
         "K" ) kinshipFile=${OPTARG} ;;
         "V" ) vcfFile=${OPTARG} ;;
 
-      # variant filter parameters:
-        "g") gencode=${OPTARG} ;;
-        "m") MAF=${OPTARG} ;;
-        "s") score=${OPTARG} ;;
-        "l") overlap=${OPTARG} ;;
-        "e") gtex=${OPTARG} ;;
-        "x") xtend=${OPTARG} ;;
-        "k") cutoff=${OPTARG} ;;
-        "t") scoreshift=${OPTARG} ;;
-        "o") lof=1 ;;
-        "z") zipout="no" ;;
-        "f") loftee=1 ;;
-        "j") lofteeHC=1 ;;
-        "C") configFile=${OPTARG} ;;
-
       # Other parameters:
-        "w") outputDir=${OPTARG} ;;
         "h") display_help ;;
         "?") display_help "[Error] Unknown option $OPTARG" ;;
         ":") display_help "[Error] No argument value for option $OPTARG" ;;

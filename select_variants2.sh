@@ -71,6 +71,7 @@ function display_help() {
     echo "     -f  - include only HC and LC loftee variants."
     echo "     -j  - include only HC loftee variants."
     echo "     -C  - config file for Burden_testing.pl."
+    echo "     -V  - VCF file(s) (required, no default; use % character for chromosome name eg 'chr%.vcf.gz')"
     echo ""
     echo "Parameters to set up scores for variants:"
     echo "     -s  - turn weights on. Arguments: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred, Mixed"
@@ -101,7 +102,7 @@ OPTIND=1
 score=""
 geneListFile=""
 
-while getopts ":hL:c:d:bg:m:s:l:e:x:k:t:ofw:jC:" optname; do
+while getopts ":hL:c:d:bg:m:s:l:e:x:k:t:ofw:jC:V:" optname; do
     case "$optname" in
       # Gene list related parameters:
         "L") geneListFile=${OPTARG} ;;
@@ -121,6 +122,7 @@ while getopts ":hL:c:d:bg:m:s:l:e:x:k:t:ofw:jC:" optname; do
         "f") loftee=1 ;;
         "j") lofteeHC=1 ;;
         "C") configFile=${OPTARG} ;;
+        "V") vcfFile=${OPTARG} ;;
 
       # Other parameters:
         "w") outputDir=${OPTARG} ;;

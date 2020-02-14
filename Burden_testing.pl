@@ -648,7 +648,7 @@ sub getConsequences{
 
     return undef unless($count>0);
     
-    my $queryString="vep -i ".$fname1." --dir /usr/local/bin/.vep --dir_cache /usr/local/bin/.vep -o STDOUT --cache --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
+    my $queryString="vep -i ".$fname1." --dir /usr/local/bin/.vep --dir_cache /usr/local/bin/.vep -o STDOUT --offline --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
     print $queryString if $verbose;
     
     my $query =Scoring::backticks_bash($queryString);
@@ -693,7 +693,7 @@ sub processVar {
     my $cons;
     # --------------------------------------------------------
     # we only need consequences if --lof option is provided
-    if (exists($parameters->{"lof"})){
+    if (defined($parameters->{"lof"})){
 	$cons=getConsequences($variants,$parameters,$stable_ID);
     }
     # --------------------------------------------------------
@@ -710,7 +710,7 @@ sub processVar {
 	my ($chr, $pos, $id, $a1, $a2, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
 
 	# --------------------------------------------------------
-	if (exists($parameters->{"lof"})){
+	if (defined($parameters->{"lof"})){
 	    (my $chr2 = $chr ) =~ s/chr//i;
 	    my $varID=$chr2."_".$pos."_".$a1."_".$a2;
 	    if (defined($cons)){
