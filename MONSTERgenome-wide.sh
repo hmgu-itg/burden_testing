@@ -98,7 +98,7 @@ function display_help() {
     echo ""
     echo "Monster parameters:"
     echo "     -p  - phenotype name (required, no default)"
-    echo "     -P  - phenotype file (required, no default)"
+    echo "     -P  - phenotype file (two tab separated columns, no header; required, no default)"
     echo "     -K  - kinship matrix (required, no default)"
     echo "     -V  - VCF file(s) (required, no default; use % character for chromosome name eg 'chr%.vcf.gz')"
     echo ""
