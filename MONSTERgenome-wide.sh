@@ -599,6 +599,7 @@ while true; do
     # No MONSTER.out
     if [[ ! -e MONSTER.out ]]; then
 	echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER failed before creating the output file" >> ${LOGFILE}
+	break
     fi
 
     # Empty MONSTER.out
