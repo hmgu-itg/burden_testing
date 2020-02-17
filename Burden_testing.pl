@@ -875,29 +875,6 @@ sub print_SNPlist {
     return 1;
 }
 
-sub print_genotypes {
-
-    my %genotype      = %{$_[0]};
-    my $outputhandler = $_[1];
-    my $parameters    = $_[2];
-    my $gene_counter  = $_[3];
-
-    my $vcfChrFile = &getVCF($parameters->{"vcf"});
-
-    # Assembling header for the first gene:
-    if ( $gene_counter == 0){
-        # Get list of sample IDs:
-        my $samples = `zgrep -m1 "#CHROM"  $vcfChrFile | cut -f10-`;
-	chomp($samples);
-        print $outputhandler "0\t$samples";
-    }
-
-    # Saving data:
-    for my $var (keys %genotype){
-        print $outputhandler "$var\t", join("\t", @{$genotype{$var}});
-    }
-}
-
 sub print_SNP_info {
     my %hash = %{$_[0]};
     my $gene_name = $_[1];
@@ -932,6 +909,30 @@ sub print_SNP_info {
         print $outfilehandle $line;
     }
 }
+
+sub print_genotypes {
+
+    my %genotype      = %{$_[0]};
+    my $outputhandler = $_[1];
+    my $parameters    = $_[2];
+    my $gene_counter  = $_[3];
+
+    my $vcfChrFile = &getVCF($parameters->{"vcf"});
+
+    # Assembling header for the first gene:
+    if ( $gene_counter == 0){
+        # Get list of sample IDs:
+        my $samples = `zgrep -m1 "#CHROM"  $vcfChrFile | cut -f10-`;
+	chomp($samples);
+        print $outputhandler "0\t$samples";
+    }
+
+    # Saving data:
+    for my $var (keys %genotype){
+        print $outputhandler "$var\t", join("\t", @{$genotype{$var}});
+    }
+}
+
 ###
 
 sub usage {
