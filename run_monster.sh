@@ -27,7 +27,7 @@ function display_help() {
     echo "Usage: $0 <parameters>"
     echo ""
     echo "Options:"
-    echo "     -i  - input directory (required, no default)"
+    echo "     -i  - input directory (required, no default; this directory should contain output \"gene_set\" sub-directories from the \"select-variants\" run)"
     echo "     -c  - chunk number (if not specified, all chunks will be analyzed)"
     echo "     -p  - phenotype name (required, no default)"
     echo "     -P  - phenotype file (two tab separated columns, no header; required, no default)"
@@ -290,7 +290,7 @@ for targetDir in ${targetDirs[@]}; do
     nrows=$(cat 10.genotype.filtered.mod.txt| wc -l)
     ncols=$(head 10.genotype.filtered.mod.txt| tr '\t' '\n' | wc -l)
     #cat 10.genotype.filtered.mod.txt | transpose | sort -k1,1n | transpose > 10.genotype.filtered.mod.srt.txt
-    transpose2 -i ${nrows}"x"${ncols} -t 10.genotype.filtered.mod.txt | sort -k1,1n | transpose2 -i ${ncols}"x"${nrows} -t  > 10.genotype.filtered.mod.srt.txt
+    transpose2 -i ${nrows}"x"${ncols} -t 10.genotype.filtered.mod.txt | sort -k1,1n | transpose2 -i ${ncols}"x"${nrows } -t  > 10.genotype.filtered.mod.srt.txt
     cp 13.snpfile.final.txt 13.snpfile.final.original.txt
 
     # Calling MONSTER
