@@ -76,6 +76,8 @@ if [[ ! -e "${inputDir}" ]]; then
     exit 1
 fi
 
+inputDir=${inputDir%/}
+
 if [[ ! -z ${chunkNo} ]];then
     if [[ ${chunkNo} -le 0 ]];then
 	echo `date "+%Y.%b.%d_%H:%M"` "[Error] Chunk number should be a positive integer; provided value: ${chunkNo}"
@@ -133,6 +135,7 @@ if [[ -z "${phenotype}" ]]; then
 fi
 
 destDir=${inputDir}"/"${phenotype}
+mkdir -p ${destDir}
 for targetDir in ${targetDirs[@]}; do
     if [[ ! -e ${targetDir} ]];then
 	echo "[Warning]: ${targetDir} does not exist; skipping"
@@ -284,7 +287,10 @@ for targetDir in ${targetDirs[@]}; do
     echo  >> ${LOGFILE}
 
     sort -k2,2n -k3,3n 07.kinship.filtered.txt > 07.kinship.filtered.srt.txt
-    cat 10.genotype.filtered.mod.txt | transpose | sort -k1,1n | transpose > 10.genotype.filtered.mod.srt.txt
+    nrows=$(cat 10.genotype.filtered.mod.txt| wc -l)
+    ncols=$(head 10.genotype.filtered.mod.txt| tr '\t' '\n' | wc -l)
+    #cat 10.genotype.filtered.mod.txt | transpose | sort -k1,1n | transpose > 10.genotype.filtered.mod.srt.txt
+    transpose2 -i ${nrows}"x"${ncols} -t 10.genotype.filtered.mod.txt | sort -k1,1n | transpose2 -i ${ncols}"x"${nrows} -t  > 10.genotype.filtered.mod.srt.txt
     cp 13.snpfile.final.txt 13.snpfile.final.original.txt
 
     # Calling MONSTER
@@ -362,12 +368,12 @@ for targetDir in ${targetDirs[@]}; do
     
     # Copying MONSTER.out to the root directory:
     if [[ -e MONSTER.out ]]; then
-	cp MONSTER.out ../MONSTER.${phenotype}.${cn}.out
+	cp MONSTER.out ${destDir}/MONSTER.${phenotype}.${cn}.out
     else
 	echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out file was not found"  >> ${LOGFILE}
     fi
 
-    cp ${selectorLog} ..
+    cp ${selectorLog} ${destDir}
 
     # Compress folder:
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Compressing and removing files" >> ${LOGFILE}
