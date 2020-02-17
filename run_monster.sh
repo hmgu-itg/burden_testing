@@ -132,9 +132,10 @@ if [[ -z "${phenotype}" ]]; then
     exit 1
 fi
 
+destDir=${inputDir}"/"${phenotype}
 for targetDir in ${targetDirs[@]}; do
     if [[ ! -e ${targetDir} ]];then
-	echo "[Warning]: ${targetDir}; skipping"
+	echo "[Warning]: ${targetDir} does not exist; skipping"
 	continue
     fi
     
@@ -371,7 +372,7 @@ for targetDir in ${targetDirs[@]}; do
     # Compress folder:
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Compressing and removing files" >> ${LOGFILE}
     tar -zcvf gene_set.${cn}.tar.gz *
-    mv gene_set.${cn}.tar.gz ..
+    mv gene_set.${cn}.tar.gz ${destDir}
     cd .. && rm -rf ${targetDir}    
 done
 
