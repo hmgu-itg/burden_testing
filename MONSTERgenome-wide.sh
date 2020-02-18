@@ -564,7 +564,7 @@ echo `date "+%Y.%b.%d_%H:%M"` "[Info] Looking for monomorphic variants in 10.gen
 echo  >> ${LOGFILE}
 tail -n +2 10.genotype.filtered.mod.txt | perl -lne '@f=split(/\s+/);$\="\n";$s=shift(@f);%H=();foreach $x (@f){$H{$x}=1;}if (scalar(keys(%H))==1){print $s;}' > 12.mono.variants.txt
 
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Removing monomorphic variants and genes with less than two variants from 11.snpfile.mod.txt; saving result in 13.snpfile.nomono.txt" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] Removing monomorphic variants and genes with less than two variants from 11.snpfile.mod.txt; saving result in 13.snpfile.final.txt" >> ${LOGFILE}
 echo  >> ${LOGFILE}
 exclude_mono.pl --input 11.snpfile.mod.txt --output 13.snpfile.final.txt --exclude 12.mono.variants.txt 2>mono.genes.txt
 
@@ -573,17 +573,9 @@ echo `date "+%Y.%b.%d_%H:%M"` "[Info] Sorting 10.genotype.filtered.mod.txt and 0
 echo  >> ${LOGFILE}
 
 sort -k2,2n -k3,3n 07.kinship.filtered.txt > 07.kinship.filtered.srt.txt
-cat 10.genotype.filtered.mod.txt | transpose | sort -k1,1n | transpose > 10.genotype.filtered.mod.srt.txt
-
-#cat 11.snpfile.mod.txt | perl -lne 'BEGIN{open $pf, "< 12.mono.variants.txt";while ($l = <$pf>){chomp $l;$H{$l}=1;}close($pf);}{@b=();@a=split(/\t/);push(@b,$a[0]);push(@b,$a[1]);for ($i=2;$i<scalar(@a);$i++){if (! exists($H{$a[$i]})){push(@b,$a[$i]);}} print(join("\t",@b));}' > 13.snpfile.nomono.txt
-
-#echo `date "+%Y.%b.%d_%H:%M"` "[Info] Getting genes having only monomorphic variants (saving them in mono.genes.txt). Exclude them from 13.snpfile.nomono.txt and save the result in 14.snpfile.final.txt" >> ${LOGFILE}
-#echo  >> ${LOGFILE}
-#awk 'BEGIN{FS="\t";}NF  == 2 {print $1;}' 13.snpfile.nomono.txt > mono.genes.txt
-#cat 13.snpfile.nomono.txt | perl -lne 'BEGIN{open $pf, "< mono.genes.txt";while ($l = <$pf>){chomp $l;$H{$l}=1;}close($pf);}{@a=split(/\t/); if (! exists($H{$a[0]})){print(join("\t",@a));}}' > 14.snpfile.final.txt
-
-#cp 14.snpfile.final.txt 14.snpfile.final.original.txt
-
+nrows=$(cat 10.genotype.filtered.mod.txt| wc -l)
+ncols=$(head -n 1 10.genotype.filtered.mod.txt| tr '\t' '\n' | wc -l)
+transpose2 -i ${nrows}"x"${ncols} -t 10.genotype.filtered.mod.txt | sort -k1,1n | transpose2 -i ${ncols}"x"${nrows} -t  > 10.genotype.filtered.mod.srt.txt
 cp 13.snpfile.final.txt 13.snpfile.final.original.txt
 
 # Calling MONSTER
@@ -628,16 +620,15 @@ done
 
 # gene by gene
 if [[ $flag -eq 1 ]];then
-    k=$(cat 13.snpfile.final.txt | wc -l)
-    for i in $(seq 1 $k);do
-	head -n $i 13.snpfile.final.txt | tail -n 1 > temp.snpfile.txt
-	gene=$(head -n $i 13.snpfile.final.txt | tail -n 1 | cut -f 1)
-	echo `date "+%Y.%b.%d_%H:%M"` "[Info] Trying only one gene ${gene}" >> ${LOGFILE}
+    cut -f 1 13.snpfile.final.txt| sort|uniq > temp_gene_list.txt
+    cat temp_gene_list.txt|while read gene;do
+	awk -v g=${gene} 'BEGIN{FS="\t";OFS="\t";}$1==g{print $0;}' 13.snpfile.final.txt > temp.snpfile.txt
+	echo `date "+%Y.%b.%d_%H:%M"` "[Info] Trying gene ${gene}" >> ${LOGFILE}
 	MONSTER  -k 07.kinship.filtered.srt.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.srt.txt -s temp.snpfile.txt ${imputation_method} 2>>${LOGFILE}
 	if [[ ! -e MONSTER.out ]]; then
 	    echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER failed before creating the output file for gene ${gene}" >> ${LOGFILE}
 	elif [[ $( cat MONSTER.out | wc -l) -eq 0 ]]; then
-            echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out for gene ${gene} is empty" >> ${LOGFILE}
+	    echo `date "+%Y.%b.%d_%H:%M"` "[Error] MONSTER.out for gene ${gene} is empty" >> ${LOGFILE}
 	else
 	    mv MONSTER.out MONSTER.out."$i"	    
 	fi
@@ -656,8 +647,7 @@ if [[ $flag -eq 1 ]];then
 	done
 	rm MONSTER.out.* temp.snpfile.txt
     fi
-    shopt -u nullglob
-    
+    shopt -u nullglob	
 fi
 
 # Copying MONSTER.out to the root directory:

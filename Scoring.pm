@@ -79,6 +79,7 @@ sub _get_mixed {
     # REQUIRES CONSEQUENCE !
     my $self = $_[0];
     my %hash = %{$_[1]};
+    my @to_delete=();
     
     # Looping throuh all variants and return the Eigen score for all:
     foreach my $var (keys %hash){
@@ -93,7 +94,7 @@ sub _get_mixed {
 
 	if ($consequence eq "NA"){
 	    printf("[Warning] In Scoring->_get_mixed(): variant %s has not been annotated with a consequence; removing it\n",$var);
-            delete $hash{$var};
+            push @to_delete,$var;
 	    next;
 	}
 	
@@ -107,7 +108,8 @@ sub _get_mixed {
             my $EigenFile = $self->{"EigenPath"};
 	    $EigenFile=~s/\%/$chr37/i;
 	    if (! -e $EigenFile){
-		print "[Warning] file with Eigen scores for chromosome $chr37 does not exist.";
+		print "[Warning] file with Eigen scores for chromosome $chr37 does not exist. Variant $var will be removed.";
+		push @to_delete,$var;
 		next;
 	    }
 	    
@@ -150,13 +152,13 @@ sub _get_mixed {
 		}
             }
         }
-
-        # Reporting if no score has been found for the variant:
-        #if ( $hash{$var}{"score"} eq "NA") {
-        #    printf ( "[Warning] %s score was not found for variant %s! Removing variant.\n", $self->{"score"}, $var);
-        #    delete $hash{$var};
-        #}
     }
+
+    for my $v (@to_delete){
+	print "[Warning]: Variant $v has NA score; removing it";
+	delete($hash{$v});
+    }
+    
     print "[Info] Mixed EigenPhred/CADDPhred scores have been added to variants.\n" if $self->{"verbose"};
     my $fflag=scalar(keys(%hash))==0;
     print("[Warning] No variants remain after adding mixed weights. \n") if($fflag);
@@ -169,6 +171,7 @@ sub _get_mixed {
 sub _get_CADD {
     my $self = $_[0];
     my %hash = %{$_[1]};
+    my @to_delete=();
     
     # Looping throuh all variants and returning the CADD PHRED score:
     foreach my $var (keys %hash){
@@ -189,10 +192,18 @@ sub _get_CADD {
                     $hash{$var}{"score"} = $phred;
             }
         }
+
+	push @to_delete,$var if ($hash{$var}{"score"} eq "NA");
     }
+    
     printf "[Info] %s scores have been added to variants.\n", $self->{"score"} if $self->{"verbose"};
-    #my $fflag=scalar(keys(%hash))==0;
-    #print("[Warning] No variants remaining after CADD scoring\n") if($fflag);
+    for my $v (@to_delete){
+	print "[Warning]: Variant $v has no CADD score; removing it";
+	delete($hash{$v});
+    }
+    
+    my $fflag=scalar(keys(%hash))==0;
+    print("[Warning] No variants remaining after CADD scoring\n") if($fflag);
     return \%hash
 }
 
@@ -200,7 +211,8 @@ sub _get_CADD {
 sub _get_Eigen_Score {
     my $self = $_[0];
     my %hash = %{$_[1]};
-
+    my @to_delete=();
+    
     print  "[Info] Adding Eigen scores\n" if $self->{"verbose"};
 
     # Looping throuh all variants and return the Eigen score for all:
@@ -210,7 +222,8 @@ sub _get_Eigen_Score {
         (my $chr = $hash{$var}{GRCh37}[0] ) =~ s/chr//i;
 	$EigenFile=~s/\%/$chr/i;
 	if (! -e $EigenFile){
-	    print "[Warning] File with Eigen scores for chromosome $chr does not exist.";
+	    print "[Warning] File with Eigen scores for chromosome $chr does not exist. Variant $var will be removed.";
+	    push @to_delete,$var;
 	    next;
 	}
 
@@ -225,6 +238,7 @@ sub _get_Eigen_Score {
 
         foreach my $line (split("\n", $lines)){
             chomp $line;
+	    
             # chr     pos     a1      a2      Eigen   EigenPhred    EigenPC    EigenPCPhred
             my @array = split("\t", $line);
 
@@ -241,11 +255,15 @@ sub _get_Eigen_Score {
 
         # Reporting if no score has been found for the variant:
         if ( $hash{$var}{"score"} eq "NA") {
-            printf ( "[Warning] %s score was not found for variant %s in the non-coding set! Removing variant.\n\n", $self->{"score"}, $var);
-            delete $hash{$var};
+            printf ( "[Warning] %s score was not found for variant %s in the non-coding set; removing it\n\n", $self->{"score"}, $var);
+	    push @to_delete,$var;
         }
     }
 
+    for my $v (@to_delete){
+	delete $hash{$v};
+    }
+    
     printf "[Info] Eigen scores have been added to variants (Number of variants: %s).\n\n", scalar keys %hash if $self->{"verbose"};
     my $fflag=scalar(keys(%hash))==0;
     print("[Warning] No variants remaining after Eigen score annotation\n") if($fflag);
@@ -290,6 +308,7 @@ sub _liftover {
         $hash{$SNPID}{"GRCh37"} = [$chr, $start, $end]; # still 0-based
         $liftedVarNo ++;
     }
+    close($lifted);
     
     # Removing variants where the liftover failed:
     foreach my $variant (keys %hash){

@@ -254,8 +254,9 @@ while ( my $ID = <$INPUT> ){
 
     # If we want we can add scores:
     $hash = $AddScore->AddScore($hash) if $parameters->{"score"} ne "NA";
+    checkScores($hash) if $parameters->{"score"} ne "NA";
 
-    if ($parameters->{"score"} ne "NA" && scalar keys %{$hash} <1){
+    if ($parameters->{"score"} ne "NA" && scalar keys %{$hash} < 1){
 	print "[Warning] Gene $ID is skipped as no variants remaining post-scoring [NO_VAR_REMAIN].";
 	print "";
     }
@@ -264,9 +265,11 @@ while ( my $ID = <$INPUT> ){
     next unless scalar keys %{$hash} > 1;
 
     # Once we have the scores we have to print out the SNP file:
-    &print_SNPlist($hash, $ID, $SNPfile);
+    my $flag=0;
+    $flag=1 if $parameters->{"score"} ne "NA";
+    &print_SNPlist($hash, $ID, $SNPfile,$flag);
 
-    &print_SNP_info($hash, $ID, $SNPinfo, $gene_count, $parameters->{"build"});
+    &print_SNP_info($hash, $ID, $SNPinfo, $gene_count, $parameters->{"build"},$flag);
     &print_genotypes($genotypes, $genotypeFile, $parameters, $gene_count);
 
     $gene_count ++; # So the header will only be printed once.
@@ -578,6 +581,13 @@ sub FilterLines {
     return $merged;
 }
 
+sub checkScores{
+    my %hash = %{$_[0]};
+    for my $v (keys(%hash)){
+	die "[Error]: score for $v is not defined" unless (defined($hash{$v}{"score"}));
+    }
+}
+
 sub getVariantType{
     my ($ref,$alt)=@_;
 
@@ -847,14 +857,10 @@ sub print_SNPlist {
     my %hash = %{$_[0]};
     my $gene_name = $_[1];
     my $outputhandle = $_[2];
+    my $flag = $_[3];
 
     # Get the list of variants:
     my @snpIDs = keys %hash;
-
-    # Check if we have scores as well:
-    my $flag=0;
-    $flag=1 if exists($hash{$snpIDs[0]}{"score"});
-#    my $flag = $hash{$snpIDs[0]}{"score"} ? 1 : 0; # <- WRONG (score might be 0)
 
     # The line with the snps will be written anyways:
     print $outputhandle "$gene_name\t$flag\t", join("\t", @snpIDs),"\n";
@@ -866,8 +872,7 @@ sub print_SNPlist {
     print $outputhandle "$gene_name\t0\t";
     my @scores = ();
     foreach my $snpid (keys %hash){
-        # print  $outputhandle "$hash{$snpid}{score}\t"
-        # push (@scores, $hash{$snpid}{"score"}{"processed_eigen"}) if $score eq "Eigen";
+	die "[Error]: variant $snpid has no defined score" unless defined($hash{$snpid}{"score"});
         push (@scores, $hash{$snpid}{"score"});
     }
     print $outputhandle join("\t", @scores),"\n";
@@ -881,37 +886,37 @@ sub print_SNP_info {
     my $outfilehandle = $_[2];
     my $gene_counter = $_[3];
     my $build = $_[4];
-
+    my $flag=$_[5];
+    
     # Extract variant names:
     my @variants = keys %hash;
 
     # Assembling header for the first gene:
     if ( $gene_counter == 0){
         my $header = "Gene_name\tSNPID(GRCh${build})\trsID\tAlleles\tconsequences\tMAF\tAC\tmissigness";
-        $header .= "\tScore" if exists $hash{$variants[0]}{"score"};
+        $header .= "\tScore" if ($flag==1);
         print $outfilehandle $header;
     }
 
     # printing out info for each gene and variant:
     foreach my $variant (values %hash){
-
+        my $rsID = $variant->{'rsID'};
+	die "[Error]: variant $rsID has no defined score" unless($flag==0 || defined($variant->{"score"}));
         # generating all the required fields:
         my $alleleString = join("/", @{$variant->{'alleles'}});
-        my $rsID = $variant->{'rsID'};
         my $MAF = sprintf "%.4f", $variant->{'frequencies'}->[2];
         my $missingness = sprintf "%.4f", $variant->{'missingness'};
-        my $weight = $variant->{'score'} if exists $variant->{"score"};
+        my $weight = $variant->{'score'} if ($flag==1);
         my $consequence = $variant->{'consequence'};
         my $AC = $variant->{'frequencies'}->[0];
         my $SNPID = $variant->{'GRCh'.$build}->[0].":".$variant->{'GRCh'.$build}->[2];
         my $line = join ("\t", $gene_name, $SNPID, $rsID, $alleleString, $consequence, $MAF, $AC, $missingness);
-        $line .= "\t$weight" if exists $variant->{"score"};
+        $line .= "\t$weight" if ($flag==1);
         print $outfilehandle $line;
     }
 }
 
 sub print_genotypes {
-
     my %genotype      = %{$_[0]};
     my $outputhandler = $_[1];
     my $parameters    = $_[2];
