@@ -50,7 +50,10 @@ my $parameters = {
     "cutoff"  => 0, # Score threshold below which the variants will be removed.
     "floor"   => 0, # All the scores below threshold will be set to this value.
     "shift"   => 0, # A value with which the scores of the variants will be shifted.
-    "chr_prefix" => "chr" # Chromosome prefix in VCF files
+    "chr_prefix" => "chr", # Chromosome prefix in VCF files or list
+    "lof" => undef,	
+    "smmat" => undef,	
+    "vcf" => undef	
 };
 
 # This is the list of those consequences that will be retained upon switching on --lof
@@ -99,6 +102,9 @@ GetOptions(
     # Verbose output:
     'verbose' => \$parameters->{"verbose"},
 
+    # bgizipped, indexed, 1-based input list for SMMAT
+    'smmat=s' => \$parameters->{"smmat"},
+
     # specifying config file:
     'config=s' => \$parameters->{"configName"},
 
@@ -123,7 +129,7 @@ GetOptions(
     'cutoff=s' => \$parameters->{"cutoff"}, # hard threshold that will be applied on scores:
     'floor=s'  => \$parameters->{"floor"},  # How do we want to floor Eigen values:
 
-    'chromosome-prefix=s'  => \$parameters->{"chr_prefix"},  # Chromosome prefix in VCF files
+    'chromosome-prefix=s'  => \$parameters->{"chr_prefix"},  # Chromosome prefix in VCF file(s) or SMMAT input list
     'vcf=s' => \$parameters->{"vcf"},
     'help|h' => \$help
     );
@@ -150,8 +156,10 @@ if (! -d $parameters->{"tempdir"}){
 &usage && die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
 &usage && die "[Error] The specified input gene list does not exist. Exiting." unless -e $inputFile;
 &usage && die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
-&usage && die "[Error] VCF files have to be specified with the --vcf option. Exiting." unless $parameters->{"vcf"};
-&usage && die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcf"});
+&usage && die "[Error] VCF files or a SMMAT input list have to be specified with the --vcf or --smmat option. Exiting." unless($parameters->{"vcf"} || $parameters->{"smmat"});
+if (! $parameters->{"smmat"}){
+    &usage && die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcf"});
+}
 
 $parameters = &readConfigFile($parameters);
 #$parameters->{"gencode_file"}=$parameters->{"workingDir"}."/gencode.basic.annotation.tsv.gz";
@@ -191,7 +199,7 @@ while ( my $ID = <$INPUT> ){
     
     chomp $ID;
 
-    # At first we have to extract all the associated genomic coordinates for the gene.
+    # genomic coordinates of the current the gene
     my ($chr, $start, $end, $stable_ID, $name, $CollapsedBed);
 
     # If the input is not a region a few extra steps will be taken:
@@ -200,7 +208,7 @@ while ( my $ID = <$INPUT> ){
 	#print "DATA FROM GENCODE FOR $ID: $chr, $start, $end, $stable_ID, $name" if $verbose;
         # Skipping genes that were not found in the GENCODE dataset.
         if ($start eq "NA") {
-            print "[Warning] Gene $ID was not found in the GENCODE data. Is it a valid gene name? This gene will be skipped! [NO_GENE]";
+            print "[Warning] Gene $ID was not found in the GENCODE data; skipping [NO_GENE]";
 	    print "";
             next;
         }
@@ -230,7 +238,7 @@ while ( my $ID = <$INPUT> ){
     # CollapsedBed is 0-based
     
     # Once we have the genomic regions, the overlapping variants have to be extracted:
-    my $variants = &getVariants($CollapsedBed, $parameters->{"vcf"},$parameters->{"chr_prefix"});
+    my $variants = &getVariants($CollapsedBed, $parameters);
 
     # Filtering variants based on the provided parameters:
     my ($hash, $genotypes) = &processVar($variants, $parameters,$stable_ID);
@@ -459,35 +467,46 @@ sub formatLines {
 
 sub getVariants {
     # merged is 0-based
-    my ($merged, $inputvcfpattern,$prefix) = @_;
+    my ($merged, $parameters) = @_;
+    my $inputvcfpattern=$parameters->{"vcf"};
+    my $prefix=$parameters->{"chr_prefix"};
+    my $smmat=$parameters->{"smmat"};
     my $distance = 0;
-
+    my $variants;
+    my $source;
+    
     # Finding out which chromosome are we on:
     my ($chr) = $merged =~ /^(.+?)\t/;  # WATCHOUT !
 
-    # Print info:
-    print  "[Info] Extracting variants from vcf files:" if $verbose;
-    (my $vcf = $inputvcfpattern ) =~ s/\%/$chr/g;
-    
-    if (! -e $vcf){
-	print "[Warning] VCF file for chromosome $chr does not exist";
-	return "";
+    if (defined($smmat)){
+	print  "[Info] Extracting variants from the list:" if $verbose;
+	$source=$smmat;
+    }
+    else{
+	print  "[Info] Extracting variants from vcf file(s):" if $verbose;
+	(my $vcf = $inputvcfpattern ) =~ s/\%/$chr/g;
+	
+	if (! -e $vcf){
+	    print "[Warning] VCF file for chromosome $chr does not exist";
+	    return "";
+	}
+	$source=$vcf;
     }
     
-    my $tabix_query = sprintf("tabix %s ", $vcf);
+    my $tabix_query = sprintf("tabix %s ", $source);
 
     # looping through all lines:
     foreach my $line (split("\n", $merged)){
-        my ($chr, $start, $end) = split("\t", $line);
-        $distance += $end - $start;
-        $tabix_query .= sprintf(" %s%s:%s-%s", $prefix, $chr, $start+1, $end); # VCFs are 1-based
+	my ($chr, $start, $end) = split("\t", $line);
+	$distance += $end - $start;
+	$tabix_query .= sprintf(" %s%s:%s-%s", $prefix, $chr, $start+1, $end); # VCFs and lists are 1-based
     }
 
     print  "$tabix_query" if $verbose;
-    my $variants = Scoring::backticks_bash($tabix_query);
+    $variants = Scoring::backticks_bash($tabix_query);
 
     print sprintf("[Info] Total covered genomic regions: %s bp", $distance) if $verbose;
-
+    
     return $variants;
 }
 
@@ -623,11 +642,14 @@ sub getConsequences{
 	my $variant = shift @total_vars;
 
 	# line: CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	EGAN00001033155
-	my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
+#	my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
+	my ($chr, $pos, $id, $ref, $alt, @therest) = split(/\t/, $variant);
 	
         (my $c = $chr ) =~ s/chr//i;
 	
 	my $varID=$c."_".$pos."_".$ref."_".$alt;
+
+	# skip multiallelics
 	if ($alt=~/,/){
 	    $cons{$varID}="NA";
 	    next;
@@ -698,7 +720,7 @@ sub processVar {
     # Which build are we using?
     my $build = "GRCh".$parameters->{"build"};
 
-    print "[Info] Filtering variants:" if $verbose;
+    print "[Info] Processing variants:" if $verbose;
 
     my $cons;
     # --------------------------------------------------------
@@ -711,140 +733,191 @@ sub processVar {
     my @total_vars = split("\n", $variants);
     printf "[Info] Total number of overlapping variants: %s\n", scalar(@total_vars) if $verbose;
 
-    while (@total_vars){
-	my $consequence="NA"; # default
-	# Removing one variant at a time:
-	my $variant = shift @total_vars;
+    if ($parameters->{"smmat"}){
+	while (@total_vars){
+	    my $consequence="NA"; # default
+	    # Removing one variant at a time:
+	    my $variant = shift @total_vars;
 
-	# line: CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	EGAN00001033155
-	my ($chr, $pos, $id, $a1, $a2, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
+	    # line: CHROM	POS	ID	REF	ALT	...
+	    my ($chr, $pos, $id, $a1, $a2, @therest) = split(/\t/, $variant);
+	    # We don't consider indels if weights are used:
+	    if (( length($a2) > 1 or length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
+		print  "[Warning] $SNPID will be omitted because it's an indel and we use scores for weighting! ($a1/$a2).";
+		next;
+	    }
+	    # We don't consider multialleleic sites
+	    if ( $a2 =~ /,/){
+		print  "[Warning] $SNPID will be omitted because it's multiallelic! ($a2).";
+		next;
+	    }
 
-	# --------------------------------------------------------
-	if (defined($parameters->{"lof"})){
-	    (my $chr2 = $chr ) =~ s/chr//i;
-	    my $varID=$chr2."_".$pos."_".$a1."_".$a2;
-	    if (defined($cons)){
-		if (exists($cons->{$varID})){
-		    $consequence=$cons->{$varID};
-		    print "CONSEQUENCE: ".$varID." ".$consequence if $verbose;
+	    # --------------------------------------------------------
+	    if (defined($parameters->{"lof"})){
+		(my $chr2 = $chr ) =~ s/chr//i;
+		my $varID=$chr2."_".$pos."_".$a1."_".$a2;
+		if (defined($cons)){
+		    if (exists($cons->{$varID})){
+			$consequence=$cons->{$varID};
+			print "CONSEQUENCE: ".$varID." ".$consequence if $verbose;
+		    }
 		}
 	    }
+
+	    # If loss of function variants are required, we skip all those variants that are not LoF:
+	    if ( $parameters->{"lof"} && ! exists $parameters->{"lof_cons"}->{$consequence} ) {
+		printf "[Warning] $SNPID will be omitted because its consequence (%s) is not lof\n", $consequence;
+		next;
+	    }
+
+	    # --------------------------------------------------------
+
+	    # TODO: check if we need that for SMMAT
+	    # Generating variant name (Sometimes the long allele names cause problems):
+	    my $short_a1 = length $a1 > 5 ? substr($a1,0,4) : $a1;
+	    my $short_a2 = length $a2 > 5 ? substr($a2,0,4) : $a2;
+	    my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $short_a1, $short_a2);
+	    $hash{$SNPID}{"alleles"} = [$a1, $a2];
+	    $hash{$SNPID}{$build} = [$chr, $pos - 1, $pos]; # 0-based
+	    $hash{$SNPID}{"consequence"} = $consequence;
 	}
-	# --------------------------------------------------------
+    }
+    else{	
+	while (@total_vars){
+	    my $consequence="NA"; # default
+	    # Removing one variant at a time:
+	    my $variant = shift @total_vars;
 
-	# Generating variant name (Sometimes the long allele names cause problems):
-	my $short_a1 = length $a1 > 5 ? substr($a1,0,4) : $a1;
-	my $short_a2 = length $a2 > 5 ? substr($a2,0,4) : $a2;
+	    # line: CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	EGAN00001033155
+	    my ($chr, $pos, $id, $a1, $a2, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
 
-	my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $short_a1, $short_a2);
+	    # --------------------------------------------------------
+	    if (defined($parameters->{"lof"})){
+		(my $chr2 = $chr ) =~ s/chr//i;
+		my $varID=$chr2."_".$pos."_".$a1."_".$a2;
+		if (defined($cons)){
+		    if (exists($cons->{$varID})){
+			$consequence=$cons->{$varID};
+			print "CONSEQUENCE: ".$varID." ".$consequence if $verbose;
+		    }
+		}
+	    }
+	    # --------------------------------------------------------
 
-	# Parsing info field for relevant information:
-	(my $ac )= $info =~ /AC=(.+?)[;\b]/;
-	(my $an )= $info =~ /AN=(.+?)[;\b]/;
-	
-	# If AN and AC values are not found we skip the variant:
-	if (! $an){
-	    print "[Warning] $SNPID has no AN; skipping";
-	    next;
-	}
+	    # Generating variant name (Sometimes the long allele names cause problems):
+	    my $short_a1 = length $a1 > 5 ? substr($a1,0,4) : $a1;
+	    my $short_a2 = length $a2 > 5 ? substr($a2,0,4) : $a2;
 
-	if (! $ac){
-	    print "[Warning] $SNPID has no AC; skipping";
-	    next;
-	}
+	    my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $short_a1, $short_a2);
 
-	# --------------------------------------------------------
-	# We add NA if consequence was not found:
-	#(my $consequence ) = $info =~ /consequence=(.+?)[;\b]/;
-	#$consequence = "NA" unless $consequence;
-	# --------------------------------------------------------
+	    # Parsing info field for relevant information:
+	    (my $ac )= $info =~ /AC=(.+?)[;\b]/;
+	    (my $an )= $info =~ /AN=(.+?)[;\b]/;
+	    
+	    # If AN and AC values are not found we skip the variant:
+	    if (! $an){
+		print "[Warning] $SNPID has no AN; skipping";
+		next;
+	    }
 
-	# We don't consider multialleleic sites
-	if ( $a2 =~ /,/){
-	    print  "[Warning] $SNPID will be omitted because it's multiallelic! ($a2).";
-	    next;
-	}
+	    if (! $ac){
+		print "[Warning] $SNPID has no AC; skipping";
+		next;
+	    }
 
-	print "[Warning] $variant has no AC" if $ac eq "NA";
-	print "[Warning] $variant has no AN" if $an eq "NA";
+	    # --------------------------------------------------------
+	    # We add NA if consequence was not found:
+	    #(my $consequence ) = $info =~ /consequence=(.+?)[;\b]/;
+	    #$consequence = "NA" unless $consequence;
+	    # --------------------------------------------------------
 
-	# Calculating values for filtering:
-	my $missingness = (scalar(@genotypes)*2 - $an)/(scalar(@genotypes)*2);
-	my $MAF = $ac/$an;
+	    # We don't consider multialleleic sites
+	    if ( $a2 =~ /,/){
+		print  "[Warning] $SNPID will be omitted because it's multiallelic! ($a2).";
+		next;
+	    }
 
-	# This flag shows if the non-ref allele is the major one:
-	my $genotypeFlip = 0;
-	if ( $MAF > 0.5 ){
-	    print "[Info] MAF of $SNPID is $MAF is greater then 0.5, genotype is flipped.";
-	    $MAF = 1 - $MAF;
-	    $genotypeFlip = 1;
-	}
+	    print "[Warning] $variant has no AC" if $ac eq "NA";
+	    print "[Warning] $variant has no AN" if $an eq "NA";
 
-	my $MAC = $ac;
-	$MAC = $an - $ac if $MAC > $an / 2;
+	    # Calculating values for filtering:
+	    my $missingness = (scalar(@genotypes)*2 - $an)/(scalar(@genotypes)*2);
+	    my $MAF = $ac/$an;
 
-	# We don't consider indels if weights are used:
-	if (( length($a2) > 1 or length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
-	    print  "[Warning] $SNPID will be omitted because it's an indel and we use scores for weighting! ($a1/$a2).";
-	    next;
-	}
-	# Filter out variants because of high missingness:
-	if ( $missingness > $parameters->{"missingthreshold"} ){
-	    print  "[Warning] $SNPID will be omitted because of high missingness ($missingness).";
-	    next;
-	}
-	# Filter out variant because of high MAF (regardless of the applied weight):
-	if ( $MAF > $parameters->{'MAF'} ){
-	    printf "[Warning] $SNPID will be omitted because of high MAF (%.3f, cutoff: %s)\n", $MAF, $parameters->{'MAF'};
-	    next;
-	}
-	# Filter out variant because of high MAF:
-	if ( $ac < $parameters->{'MAC'} ){
-	    printf "[Warning] $SNPID will be omitted because of low minor allele count ($ac, cutoff: %s)\n", $parameters->{'MAC'};
-	    next;
-	}
-	# If loss of function variants are required, we skip all those variants that are not LoF:
-	if ( $parameters->{"lof"} && ! exists $parameters->{"lof_cons"}->{$consequence} ) {
-	    printf "[Warning] $SNPID will be omitted because its consequence (%s) is not lof\n", $consequence;
-	    next;
-	}
-	# If loftee or lofteeHC are enabled, the script exits if no LoF_conf tag is present in the info field.
-	if (( $parameters->{"lofteeHC"} or $parameters->{"loftee"}) and $info !~ /LoF_conf/ ){
-	    die "[Error] Based on the provided parameters, variant selection based on the loftee prediction was requested.\n\tHowever the provided vcf file does not contain the obligatory LoF_conf tag.Exiting.";
-	}
+	    # This flag shows if the non-ref allele is the major one:
+	    my $genotypeFlip = 0;
+	    if ( $MAF > 0.5 ){
+		print "[Info] MAF of $SNPID is $MAF is greater then 0.5, genotype is flipped.";
+		$MAF = 1 - $MAF;
+		$genotypeFlip = 1;
+	    }
 
-	# If loftee is enabled, only low and high-confidence loss-of-function variants will be selected:
-	if ( $parameters->{"loftee"} && $info =~ /LoF_conf\=-/ ) {
-	    print "[Warning] $SNPID will be omitted because it is not a high- or low-confidence loss of function variant";
-	    next;
-	}
+	    my $MAC = $ac;
+	    $MAC = $an - $ac if $MAC > $an / 2;
 
-	# If lofteeHC is enabled, only high-confidence loss-of-function variants will be selected:
-	if ( $parameters->{"lofteeHC"} && $info !~ /LoF_conf\=HC/ ) {
-	    print "[Warning] $SNPID will be omitted because it is not a high- confidence loss of function variant";
-	    next;
-	}
+	    # We don't consider indels if weights are used:
+	    if (( length($a2) > 1 or length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
+		print  "[Warning] $SNPID will be omitted because it's an indel and we use scores for weighting! ($a1/$a2).";
+		next;
+	    }
+	    # Filter out variants because of high missingness:
+	    if ( $missingness > $parameters->{"missingthreshold"} ){
+		print  "[Warning] $SNPID will be omitted because of high missingness ($missingness).";
+		next;
+	    }
+	    # Filter out variant because of high MAF (regardless of the applied weight):
+	    if ( $MAF > $parameters->{'MAF'} ){
+		printf "[Warning] $SNPID will be omitted because of high MAF (%.3f, cutoff: %s)\n", $MAF, $parameters->{'MAF'};
+		next;
+	    }
+	    # Filter out variant because of high MAF:
+	    if ( $ac < $parameters->{'MAC'} ){
+		printf "[Warning] $SNPID will be omitted because of low minor allele count ($ac, cutoff: %s)\n", $parameters->{'MAC'};
+		next;
+	    }
+	    # If loss of function variants are required, we skip all those variants that are not LoF:
+	    if ( $parameters->{"lof"} && ! exists $parameters->{"lof_cons"}->{$consequence} ) {
+		printf "[Warning] $SNPID will be omitted because its consequence (%s) is not lof\n", $consequence;
+		next;
+	    }
+	    # If loftee or lofteeHC are enabled, the script exits if no LoF_conf tag is present in the info field.
+	    if (( $parameters->{"lofteeHC"} or $parameters->{"loftee"}) and $info !~ /LoF_conf/ ){
+		die "[Error] Based on the provided parameters, variant selection based on the loftee prediction was requested.\n\tHowever the provided vcf file does not contain the obligatory LoF_conf tag.Exiting.";
+	    }
 
-	# If everything went fine, initializing variant by adding missingness to the hash:
-	$hash{$SNPID}{"missingness"} = $missingness;
+	    # If loftee is enabled, only low and high-confidence loss-of-function variants will be selected:
+	    if ( $parameters->{"loftee"} && $info =~ /LoF_conf\=-/ ) {
+		print "[Warning] $SNPID will be omitted because it is not a high- or low-confidence loss of function variant";
+		next;
+	    }
 
-	# Storing variant data for all variants:
-	# TODO: if genotypeFlip == 1, then ac, an and MAF refer to a1, not a2
-	$hash{$SNPID}{"alleles"} = [$a1, $a2];
+	    # If lofteeHC is enabled, only high-confidence loss-of-function variants will be selected:
+	    if ( $parameters->{"lofteeHC"} && $info !~ /LoF_conf\=HC/ ) {
+		print "[Warning] $SNPID will be omitted because it is not a high- confidence loss of function variant";
+		next;
+	    }
 
-	# TODO: for indels end should be different
-	$hash{$SNPID}{$build} = [$chr, $pos - 1, $pos]; # 0-based
-	$hash{$SNPID}{"frequencies"} = [$ac, $an, $MAF];
-	$hash{$SNPID}{"consequence"} = $consequence;
-	$hash{$SNPID}{"rsID"} = $id;
+	    # If everything went fine, initializing variant by adding missingness to the hash:
+	    $hash{$SNPID}{"missingness"} = $missingness;
 
-	# Parsing genotypes:
-	foreach my $gt (@genotypes){
-	    my @fields = split(":", $gt);
-	    if    ($fields[0] eq "0/0") { push(@{$genotypeContainer{$SNPID}}, $genotypeFlip == 1 ? 2 : 0) }
-	    elsif ($fields[0] eq "1/1") { push(@{$genotypeContainer{$SNPID}}, $genotypeFlip == 1 ? 0 : 2) }
-	    elsif ($fields[0] eq "1/0" or $fields[0] eq "0/1") { push(@{$genotypeContainer{$SNPID}}, 1) }
-	    else {push(@{$genotypeContainer{$SNPID}}, "-9")}
+	    # Storing variant data for all variants:
+	    # TODO: if genotypeFlip == 1, then ac, an and MAF refer to a1, not a2
+	    $hash{$SNPID}{"alleles"} = [$a1, $a2];
+
+	    # TODO: for indels end should be different
+	    $hash{$SNPID}{$build} = [$chr, $pos - 1, $pos]; # 0-based
+	    $hash{$SNPID}{"frequencies"} = [$ac, $an, $MAF];
+	    $hash{$SNPID}{"consequence"} = $consequence;
+	    $hash{$SNPID}{"rsID"} = $id;
+
+	    # Parsing genotypes:
+	    foreach my $gt (@genotypes){
+		my @fields = split(":", $gt);
+		if    ($fields[0] eq "0/0") { push(@{$genotypeContainer{$SNPID}}, $genotypeFlip == 1 ? 2 : 0) }
+		elsif ($fields[0] eq "1/1") { push(@{$genotypeContainer{$SNPID}}, $genotypeFlip == 1 ? 0 : 2) }
+		elsif ($fields[0] eq "1/0" or $fields[0] eq "0/1") { push(@{$genotypeContainer{$SNPID}}, 1) }
+		else {push(@{$genotypeContainer{$SNPID}}, "-9")}
+	    }
 	}
     }
 
