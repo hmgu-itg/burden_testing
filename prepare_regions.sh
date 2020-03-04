@@ -635,6 +635,17 @@ tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${
     ${targetDir}/${today}/processed
 info "Intermediate files are backed in in ${today}_annotation.backup.tar.gz\n" 
 
+info "Downloading Eigen Phred scores\n"
+cd $baseDir
+mkdir -p scores
+cd scores
+wget -c ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
+
+if [[ $? -ne 0 ]];then
+    echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
+    echo "Try downloading later\n"
+fi
+
 # Exit.
 info "Program finished.\n"
 exit 0
