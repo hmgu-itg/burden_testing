@@ -39,7 +39,7 @@ last_modified=2020.Mar.09
 
 ## Built in versions:
 GENCODE_release=32
-Ensembl_release=97 
+Ensembl_release=98 
 GTExRelease=8
 
 # Get script dir:
@@ -49,7 +49,8 @@ scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 function usage {
     echo ""
     echo "Usage: $0 -G <path to GTEx file>"
-    echo "          -n : for not downloading Eigen scores"
+    echo "          -n : optional, for not downloading Eigen scores"
+    echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
     echo ""
@@ -146,12 +147,14 @@ if [[ $# == 0 ]]; then usage; fi
 
 # Processing command line options:
 getScores="yes"
+ensftp="ftp://ftp.ensembl.org"
 OPTIND=1
-while getopts "G:hn" optname; do
+while getopts "G:hne:" optname; do
     case "$optname" in
         "G" ) GTExFile="${OPTARG}" ;;
         "h" ) usage ;;
         "n" ) getScores="no" ;;
+        "e" ) ensftp="${OPTARG}" ;;
         "?" ) usage ;;
         *) usage ;;
     esac;
@@ -193,7 +196,7 @@ info "Working directory: ${targetDir}/${today}\n\n"
 
 # Get the most recent version of the data:
 mkdir -p ${targetDir}/${today}/GENCODE
-info "Downloading GENCODE annotation from ftp://ftp.ebi.ac.uk/. Release version: ${GENCODE_release}... "
+info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
 wget -q ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -O ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 echo -e "done."
 
@@ -211,12 +214,12 @@ mkdir -p ${targetDir}/${today}/EnsemblRegulation
 info "Downloading cell specific regulatory features from Ensembl.\n"
 
 # Get list of all cell types:
-cells=$(curl -s ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/ | perl -lane 'print $F[-1]')
+cells=$(curl -s ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/ | perl -lane 'print $F[-1]')
 
 # If there are no cell types present in the downloaded set, it means there were some problems. We are exiting.
 if [ -z "${cells}" ]; then
     echo "[Error] No cell types were found in the Ensembl regulation folder."
-    echo "[Error] URL: ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/regulatory_features/RegulatoryFeatureActivity/"
+    echo "[Error] URL: ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/regulatory_features/RegulatoryFeatureActivity/"
     echo "Exiting."
     exit 1
 fi
@@ -225,7 +228,7 @@ fi
 #GFF is 1-based
 for cell in ${cells}; do
     echo -n "."
-    wget -q ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -O ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+    wget -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -O ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
 done
 echo "Done."
