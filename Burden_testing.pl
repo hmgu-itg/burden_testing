@@ -345,7 +345,7 @@ sub check_scores {
     elsif ($params->{"score"} =~ /eigen/i){
         if (! exists $params->{"EigenPath"} ) {
             print "[Warning] The config file has not entry for 'EigenPath', pointing to the genome-wide Eigen scores.";
-            print "[Warning] Eigen scores as weight cannot be used. No weights will be applied.";
+            print "[Warning] Eigen scores as weights cannot be used. No weights will be applied.";
             $params->{"score"} = "NA";
             return $params;
         }

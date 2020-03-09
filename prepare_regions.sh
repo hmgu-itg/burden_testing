@@ -35,7 +35,7 @@
 ##
 
 script_version=3.0
-last_modified=2019.12.20
+last_modified=2020.Mar.09
 
 ## Built in versions:
 GENCODE_release=32
@@ -49,17 +49,13 @@ scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 function usage {
     echo ""
     echo "Usage: $0 -G <path to GTEx file>"
+    echo "          -n : for not downloading Eigen scores"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
     echo ""
     echo ""
     echo "Version: ${script_version}, Last modified: ${last_modified}"
     echo ""
-    echo "Requirements:"
-#    echo "  bgzip, tabix in PATH"
-#    echo "  liftOver in path"
-#    echo "  hg19ToHg38.over.chain chain file in script dir"
-#    echo "  bedtools in PATH"
     echo "  downloaded GTEx datafile with the single eQTLs (eg. GTEx_Analysis_V6_eQTLs.tar.gz)"
     echo ""
     echo ""
@@ -73,6 +69,7 @@ function usage {
     echo "  7: Links regulatory features to genes based on overlapping."
     echo "  8: Combined GENCODE, GTEx and Overlap data together into a single bedfile."
     echo "  9: Tabix output"
+    echo "  10: optionally download Egen Phred scores (if \"-n\" is not sepcified)"
     echo ""
     echo ""
     echo "This script produces two output files, both in the same directory as the input GTEx file."
@@ -82,6 +79,8 @@ formatted string describing one genomic region associated to the given gene. Thi
 line contains all information of the association."
     echo ""
     echo "2) the second file is \"gencode.basic.annotation.tsv.gz\"; it's a trimmed version of the downloaded GENCODE file."
+    echo ""
+    echo "Optionally, a \"scores\" folder will be created and Eigen Phred scores will be saved in it"
     echo ""
     echo "JSON tags:"
     echo "  -source: from which source the given region is coming from (GENCODE, GTEx, Overlap)."
@@ -146,11 +145,13 @@ function info {
 if [[ $# == 0 ]]; then usage; fi
 
 # Processing command line options:
+getScores="yes"
 OPTIND=1
-while getopts "G:h" optname; do
+while getopts "G:hn" optname; do
     case "$optname" in
         "G" ) GTExFile="${OPTARG}" ;;
         "h" ) usage ;;
+        "n" ) getScores="no" ;;
         "?" ) usage ;;
         *) usage ;;
     esac;
@@ -635,18 +636,19 @@ tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${
     ${targetDir}/${today}/processed
 info "Intermediate files are backed in in ${today}_annotation.backup.tar.gz\n" 
 
-info "Downloading Eigen Phred scores\n"
-cd $baseDir
-mkdir -p scores
-cd scores
-wget -c ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
-wget -c ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
+if [[ $getScores == "yes" ]];then
+    info "Downloading Eigen Phred scores\n"
+    cd $baseDir
+    mkdir -p scores
+    cd scores
+    wget -c ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
+    wget -c ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
 
-if [[ $? -ne 0 ]];then
-    echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
-    echo "Try downloading later\n"
+    if [[ $? -ne 0 ]];then
+	echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
+	echo "Try downloading later\n"
+    fi
 fi
 
-# Exit.
 info "Program finished.\n"
 exit 0
