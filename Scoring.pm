@@ -99,10 +99,10 @@ sub _get_mixed {
 	}
 	
         # If the consequence is not severe, we use Eigen, otherwise CADD:
-	# Eigen-raw       30
-	# Eigen-phred     31
-	# Eigen-PC-raw    32
-	# Eigen-PC-phred  33
+	# Eigen-raw       5
+	# Eigen-phred     7
+	# Eigen-PC-raw    6
+	# Eigen-PC-phred  8
 	if (! exists($self->{"lof_cons"}->{$consequence})){
         #if ( $consequence =~ /intron|intergenic|regulatory|non_coding|upstream|downstream/i ){
             my $EigenFile = $self->{"EigenPath"};
@@ -113,7 +113,7 @@ sub _get_mixed {
 		next;
 	    }
 	    
-            my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,31 | grep %s", $EigenFile, $chr37, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
+            my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,7 | grep %s", $EigenFile, $chr37, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]);
             printf "[Info] %s has benign consequences (%s), so EigenPhred scores are used.\n", $var, $consequence;
             print "$tabix_query\n" if $self->{"verbose"};
 	    my $lines=backticks_bash($tabix_query);
@@ -230,7 +230,7 @@ sub _get_Eigen_Score {
 	#print "EIGENFILE=$EigenFile" if $self->{"verbose"};
 
         # Two tabix queries will be submitted regardless of the output...
-        my $tabix_query = sprintf("tabix %s %s:%s-%s | cut -f 1-4,30-33 | grep %s ", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]); # Eigen file is 1-based
+        my $tabix_query = sprintf("tabix %s %s:%s-%s | grep %s ", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]); # Eigen file is 1-based
         print "$tabix_query" if $self->{"verbose"};
 	my $lines=backticks_bash($tabix_query);
 
@@ -239,7 +239,7 @@ sub _get_Eigen_Score {
         foreach my $line (split("\n", $lines)){
             chomp $line;
 	    
-            # chr     pos     a1      a2      Eigen   EigenPhred    EigenPC    EigenPCPhred
+            # chr     pos     a1      a2      Eigen   EigenPC    EigenPhred    EigenPCPhred
             my @array = split("\t", $line);
 
             # Testing alleles:
@@ -247,8 +247,8 @@ sub _get_Eigen_Score {
                 ($array[2] eq $hash{$var}{alleles}[1] and $array[3] eq $hash{$var}{alleles}[0])) {
 
                 $hash{$var}{"score"} = $array[4] || "NA" if $self->{"score"} eq "Eigen"; # Un-scaled raw Eigen score.
-                $hash{$var}{"score"} = $array[5] || "NA" if $self->{"score"} eq "EigenPhred"; # Phred scaled Eigen score.
-                $hash{$var}{"score"} = $array[6] || "NA" if $self->{"score"} eq "EigenPC"; # Un-scaled Eigen PC score. 
+                $hash{$var}{"score"} = $array[6] || "NA" if $self->{"score"} eq "EigenPhred"; # Phred scaled Eigen score.
+                $hash{$var}{"score"} = $array[5] || "NA" if $self->{"score"} eq "EigenPC"; # Un-scaled Eigen PC score. 
                 $hash{$var}{"score"} = $array[7] || "NA" if $self->{"score"} eq "EigenPCPhred"; # Phred scaled Eigen PC score.
             }
         }
