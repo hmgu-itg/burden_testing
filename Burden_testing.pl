@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use JSON;
-use DateTime;
+#use DateTime;
 use File::Basename;
 use Getopt::Long qw(GetOptions);
 use Data::Types;
@@ -35,7 +35,7 @@ use Scoring;
 
 # Status report:
 print "[Info] Script version: $version";
-printf "[Info] Run date: %s", DateTime->now->strftime("%Y. %b %d %H:%M");
+#printf "[Info] Run date: %s", DateTime->now->strftime("%Y. %b %d %H:%M");
 printf "[Info] The script was called with the following parameters:\n%s\n", join(" ", $0, @ARGV);
 
 # In the new version, all the parameters will be stored in a hash reference:
