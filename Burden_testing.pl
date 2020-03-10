@@ -11,10 +11,10 @@ use Data::Types;
 use File::Path qw(make_path);
 
 # For debugging:
-use Devel::Size qw(total_size);
+#use Devel::Size qw(total_size);
 
 # Version information:
-our $version = "v5.1 Last modified: 14.Jan.2020";
+our $version = "v5.1 Last modified: 10.Mar.2020";
 
 # Get script directory:
 our $scriptDir = dirname(__FILE__);
