@@ -741,6 +741,7 @@ sub processVar {
 
 	    # line: CHROM	POS	ID	REF	ALT	...
 	    my ($chr, $pos, $id, $a1, $a2, @therest) = split(/\t/, $variant);
+	    my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $a1, $a2);
 	    # We don't consider indels if weights are used:
 	    if (( length($a2) > 1 or length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
 		print  "[Warning] $SNPID will be omitted because it's an indel and we use scores for weighting! ($a1/$a2).";
@@ -776,7 +777,8 @@ sub processVar {
 	    # Generating variant name (Sometimes the long allele names cause problems):
 	    my $short_a1 = length $a1 > 5 ? substr($a1,0,4) : $a1;
 	    my $short_a2 = length $a2 > 5 ? substr($a2,0,4) : $a2;
-	    my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $short_a1, $short_a2);
+	    
+	    $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $short_a1, $short_a2);
 	    $hash{$SNPID}{"alleles"} = [$a1, $a2];
 	    $hash{$SNPID}{$build} = [$chr, $pos - 1, $pos]; # 0-based
 	    $hash{$SNPID}{"consequence"} = $consequence;
