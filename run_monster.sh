@@ -128,7 +128,7 @@ elif [[ ! -e "${kinshipFile}" ]]; then
     exit;
 fi
 
-# Checking if phenotype is provided and if that phenotype file:
+# Checking if phenotype is provided:
 if [[ -z "${phenotype}" ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Phenotype was not set"
     exit 1
@@ -136,6 +136,7 @@ fi
 
 destDir=${inputDir}"/"${phenotype}
 mkdir -p ${destDir}
+declare -a todelete
 for targetDir in ${targetDirs[@]}; do
     if [[ ! -e ${targetDir} ]];then
 	echo "[Warning]: ${targetDir} does not exist; skipping"
@@ -171,7 +172,8 @@ for targetDir in ${targetDirs[@]}; do
     echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
     cd ${targetDir}
-
+    todelete=()
+    
     # We have to check if both files are generated AND they have enough lines.
     gene_notenough=$(cat ${selectorLog} | grep -c NOT_ENOUGH_VAR)
     gene_toomany=$(cat ${selectorLog} | grep -c TOO_MANY_VAR)
@@ -225,12 +227,14 @@ for targetDir in ${targetDirs[@]}; do
     n2=$(cat 01.pheno.txt | wc -l)
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Original number of samples in the phenofile: ${n1}; samples in 01.pheno.txt: ${n2}" >> ${LOGFILE}
     echo  >> ${LOGFILE}
-
+    todelete+=("01.pheno.txt")
+    
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Selecting sample names from gene_set_output_genotype_file.txt that are already in 01.pheno.txt; saving the result in 02.pheno.ordered.txt" >> ${LOGFILE}
     head -n 1 gene_set_output_genotype_file.txt | tr "\t" "\n" | tail -n +2 |sort| perl -lne 'BEGIN {open $pf, "< 01.pheno.txt";while ($l = <$pf>){chomp $l;@a = split(/\s/, $l);$h{$a[1]} = $l;}close($pf);}{print $h{$_} if exists $h{$_}}' > 02.pheno.ordered.txt
     n3=$(cat 02.pheno.ordered.txt | wc -l)
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Samples in 02.pheno.ordered.txt: ${n3}" >> ${LOGFILE}
     echo  >> ${LOGFILE}
+    todelete+=("02.pheno.ordered.txt")
 
     # Get samples from gene_set_output_genotype_file.txt that are not in the 02.pheno.ordered.txt file:
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Getting samples from gene_set_output_genotype_file.txt that are not in the 02.pheno.ordered.txt file; saving results in 03.samples.to.exclude.txt" >> ${LOGFILE}
@@ -241,57 +245,71 @@ for targetDir in ${targetDirs[@]}; do
     n4=$(cat  03.samples.to.exclude.txt | wc -l)
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Samples in 03.samples.to.exclude.txt: ${n4}" >> ${LOGFILE}
     echo  >> ${LOGFILE}
+    todelete+=("03.samples.to.exclude.txt")
 
     # From the genotype file, extract only those samples that are present in the pheno file:
     echo `date "+%Y.%b.%d_%H:%M"` "[info] Removing samples in 03.samples.to.exclude.txt from gene_set_output_genotype_file.txt; saving results in 04.genotype.filtered.txt" >> ${LOGFILE}
     echo  >> ${LOGFILE}
     head -n 1 gene_set_output_genotype_file.txt | tr "\t" "\n" | perl -lne 'BEGIN {open $pf, "< 03.samples.to.exclude.txt";while ($l = <$pf>){chomp $l;$h{$l} = 1;}close($pf);}{push @a, $. unless exists $h{$_}} END{$s = sprintf("cut -f%s gene_set_output_genotype_file.txt > 04.genotype.filtered.txt", join(",", @a));`$s`}'
-
+    todelete+=("04.genotype.filtered.txt")
+    
     # Generate a mapping file that helps to convert IDs to numbers:
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Generate SED sample ID to integer mapping file; saving result in 05.sample.map.sed" >> ${LOGFILE}
     echo  >> ${LOGFILE}
     cut -f 2 02.pheno.ordered.txt | awk '{printf "s/%s/%s/g\n", $1, NR+2 }' > 05.sample.map.sed
-
+    todelete+=("05.sample.map.sed")
+    
     # Generate an inclusion list with the samples to be kept:
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Generate an inclusion list from 02.pheno.ordered.txt with the samples to be kept; saving result in 06.samples.to.keep.txt" >> ${LOGFILE}
     echo  >> ${LOGFILE}
     cut -f 2 02.pheno.ordered.txt > 06.samples.to.keep.txt
-
+    todelete+=("06.samples.to.keep.txt")
+    
     # Get the kinship matrix:
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Selecting samples in 06.samples.to.keep.txt from the kinship file;saving result in 07.kinship.filtered.txt" >> ${LOGFILE}
     echo  >> ${LOGFILE}
     R --slave -e 'library(data.table); mlong=fread("'$kinshipFile'"); tokeep=fread("06.samples.to.keep.txt", header=F)$V1; direct=mlong[(mlong$V2 %in% tokeep) & (mlong$V3 %in% tokeep),]; mapping = fread("05.sample.map.sed", sep="/", header=FALSE);direct$V3 = mapping[match(direct$V3, mapping$V2),]$V3; direct$V2 = mapping[match(direct$V2, mapping$V2),]$V3;write.table(direct, file="07.kinship.filtered.txt", quote=FALSE, sep=" ", col.names = FALSE, row.names=FALSE)'
+    todelete+=("07.kinship.filtered.txt")
 
     # Remap IDs and remove special characters from the snp, phenotype and genotype files:
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Changing sample names in 02.pheno.ordered.txt and 04.genotype.filtered.txt (using 05.sample.map.sed); saving results in 08.pheno.ordered.txt and 09.genotype.filtered.txt" >> ${LOGFILE}
     echo  >> ${LOGFILE}
     sed -f 05.sample.map.sed 02.pheno.ordered.txt > 08.pheno.ordered.txt
     sed -f 05.sample.map.sed 04.genotype.filtered.txt > 09.genotype.filtered.txt
-
+    todelete+=("08.pheno.ordered.txt")
+    todelete+=("09.genotype.filtered.txt")    
+    
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Renaming variants in 09.genotype.filtered.txt and gene_set_output_variant_file.txt; saving results in 10.genotype.filtered.mod.txt and 11.snpfile.mod.txt" >> ${LOGFILE}
     echo  >> ${LOGFILE}
     cat 09.genotype.filtered.txt | perl -lane '$_ =~ s/[^0-9A-Za-z\-\t\._]//gi;$_ =~ s/_/x/g; print $_'  > 10.genotype.filtered.mod.txt
     cat gene_set_output_variant_file.txt | perl -lane '$_ =~ s/[^0-9A-Za-z\-\t\._]//gi;$_ =~ s/_/x/g; $_ =~ s/Inf/0.0001/g;print $_'  > 11.snpfile.mod.txt
+    todelete+=("10.genotype.filtered.mod.txt")
+    todelete+=("11.snpfile.mod.txt")    
 
     # Filter out genes which have only monomorphic variants, as it might cause a crash:
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Looking for monomorphic variants in 10.genotype.filtered.mod.txt; saving them in 12.mono.variants.txt" >> ${LOGFILE}
     echo  >> ${LOGFILE}
     tail -n +2 10.genotype.filtered.mod.txt | perl -lne '@f=split(/\s+/);$\="\n";$s=shift(@f);%H=();foreach $x (@f){$H{$x}=1;}if (scalar(keys(%H))==1){print $s;}' > 12.mono.variants.txt
-
+    todelete+=("12.mono.variants.txt")
+    
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Removing monomorphic variants and genes with less than two variants from 11.snpfile.mod.txt; saving result in 13.snpfile.final.txt" >> ${LOGFILE}
     echo  >> ${LOGFILE}
     exclude_mono.pl --input 11.snpfile.mod.txt --output 13.snpfile.final.txt --exclude 12.mono.variants.txt 2>mono.genes.txt
-
+    todelete+=("13.snpfile.final.txt")
+    todelete+=("mono.genes.txt")
+    
     # sorting kinship and genotype files
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] Sorting 10.genotype.filtered.mod.txt and 07.kinship.filtered.txt; saving results in 10.genotype.filtered.mod.srt.txt and 07.kinship.filtered.srt.txt" >> ${LOGFILE}
     echo  >> ${LOGFILE}
-
     sort -k2,2n -k3,3n 07.kinship.filtered.txt > 07.kinship.filtered.srt.txt
     nrows=$(cat 10.genotype.filtered.mod.txt| wc -l)
     ncols=$(head -n 1 10.genotype.filtered.mod.txt| tr '\t' '\n' | wc -l)
     #cat 10.genotype.filtered.mod.txt | transpose | sort -k1,1n | transpose > 10.genotype.filtered.mod.srt.txt
     transpose2 -i ${nrows}"x"${ncols} -t 10.genotype.filtered.mod.txt | sort -k1,1n | transpose2 -i ${ncols}"x"${nrows} -t  > 10.genotype.filtered.mod.srt.txt
     cp 13.snpfile.final.txt 13.snpfile.final.original.txt
+    todelete+=("10.genotype.filtered.mod.srt.txt")
+    todelete+=("07.kinship.filtered.srt.txt")
+    todelete+=("13.snpfile.final.original.txt")
 
     # Calling MONSTER
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] MONSTER call: MONSTER -k 07.kinship.filtered.srt.txt -p 08.pheno.ordered.txt -m 1 -g 10.genotype.filtered.mod.srt.txt  -s 13.snpfile.final.txt ${imputation_method}" >> ${LOGFILE}
@@ -375,10 +393,17 @@ for targetDir in ${targetDirs[@]}; do
     cp ${selectorLog} ${destDir}
 
     # Compress folder:
-    echo `date "+%Y.%b.%d_%H:%M"` "[Info] Compressing and removing files" >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` "[Info] Compressing" >> ${LOGFILE}
     tar -zcvf gene_set.${cn}.tar.gz *
     mv gene_set.${cn}.tar.gz ${destDir}
-    cd .. && rm -rf ${targetDir}    
+    
+    echo `date "+%Y.%b.%d_%H:%M"` "[Info] Deleting intermediate files" >> ${LOGFILE}
+    rm -f MONSTER.*
+    for f in "${todelete[@]}";do
+	rm -f "$f"
+    done
+    
+    #cd .. && rm -rf ${targetDir}    
 done
 
 
