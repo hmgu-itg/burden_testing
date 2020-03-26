@@ -996,7 +996,7 @@ sub print_SNP_info {
     }
 }
 
-# if no scores exist, then output 1
+# if no scores provided, then output score=1
 sub print_SNP_info_smmat {
     my %hash = %{$_[0]};
     my $gene_name = $_[1];
@@ -1020,10 +1020,8 @@ sub print_SNP_info_smmat {
 	
         my $rsID = $variant->{'rsID'};
 	die "[Error]: variant $rsID has no defined score" unless($flag==0 || defined($variant->{"score"}));
-        # generating all the required fields:
-
-	my $chr=$variant->{'GRCh'.$build}->[0];
-	my $pos=$variant->{'GRCh'.$build}->[2];
+	my $chr=$variant->{'GRCh'.$build}[0];
+	my $pos=$variant->{'GRCh'.$build}[2];
 	my $ref=$variant->{'alleles'}->[0];
 	my $alt=$variant->{'alleles'}->[1];
         $weight = $variant->{'score'} if ($flag==1);
