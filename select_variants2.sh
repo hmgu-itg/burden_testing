@@ -81,7 +81,7 @@ function display_help() {
     echo "Gene list and chunking:"
     echo "     -L  - file with gene IDs (if not specified all genes will be analyzed)."
     echo "     -d  - total number of chunks (default: 1)."
-    echo "     -c  - chunk number (default: 1)."
+    echo "     -c  - chunk number (default: 1). Takes precedence over SLURM_ARRAY_TASK_ID etc."
     echo ""
     echo "General options:"
     echo "     -w  - output directory where the chunk subdirectories will be created (required, no default)"

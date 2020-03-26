@@ -743,7 +743,7 @@ sub processVar {
 	    my ($chr, $pos, $id, $a1, $a2, @therest) = split(/\t/, $variant);
 	    my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $a1, $a2);
 	    # We don't consider indels if weights are used:
-	    if (( length($a2) > 1 or length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
+	    if (( length($a2) > 1 || length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
 		print  "[Warning] $SNPID will be omitted because it's an indel and we use scores for weighting! ($a1/$a2).";
 		next;
 	    }
@@ -858,7 +858,7 @@ sub processVar {
 	    $MAC = $an - $ac if $MAC > $an / 2;
 
 	    # We don't consider indels if weights are used:
-	    if (( length($a2) > 1 or length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
+	    if (( length($a2) > 1 || length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
 		print  "[Warning] $SNPID will be omitted because it's an indel and we use scores for weighting! ($a1/$a2).";
 		next;
 	    }
@@ -1025,6 +1025,7 @@ sub usage {
     print("          --vcf <input VCF>");
     print("          --config <config file>");
     print("      Optional:");    
+    print("          --smmat <6 column tab-delimited input list of variants, for SMMAT>");
 #    print("          --build <genome build; default: 38>");
     print("          --GENCODE <comma separated list of GENCODE features (gene, exon, transcript, CDS or UTR)>");
     print("          --GTEx <comma separated list of GTEx features (promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind or allreg)>");
