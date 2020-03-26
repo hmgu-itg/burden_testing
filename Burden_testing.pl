@@ -1022,10 +1022,10 @@ sub print_SNP_info_smmat {
 	die "[Error]: variant $rsID has no defined score" unless($flag==0 || defined($variant->{"score"}));
         # generating all the required fields:
 
-	my $chr=$variant->{'GRCh'.$build}->[0]
-	my $pos=$variant->{'GRCh'.$build}->[2]
-	my $ref=$variant->{'alleles'}->[0]:
-	my $alt=$variant->{'alleles'}->[1]:
+	my $chr=$variant->{'GRCh'.$build}->[0];
+	my $pos=$variant->{'GRCh'.$build}->[2];
+	my $ref=$variant->{'alleles'}->[0];
+	my $alt=$variant->{'alleles'}->[1];
         my $weight = $variant->{'score'} if ($flag==1);
         my $consequence = $variant->{'consequence'};
         my $line = join ("\t", $gene_name, $chr, $pos, $ref,$alt, $consequence, $weight);
