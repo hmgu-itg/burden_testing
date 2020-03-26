@@ -275,9 +275,14 @@ while ( my $ID = <$INPUT> ){
     # Once we have the scores we have to print out the SNP file:
     my $flag=0;
     $flag=1 if $parameters->{"score"} ne "NA";
+    
     &print_SNPlist($hash, $ID, $SNPfile,$flag);
-
-    &print_SNP_info($hash, $ID, $SNPinfo, $gene_count, $parameters->{"build"},$flag);
+    if (defined($parameters->{"smmat"})){
+	&print_SNP_info_smmat($hash, $ID, $SNPinfo, $gene_count, $parameters->{"build"},$flag);
+    }
+    else{
+	&print_SNP_info($hash, $ID, $SNPinfo, $gene_count, $parameters->{"build"},$flag);
+    }
     &print_genotypes($genotypes, $genotypeFile, $parameters, $gene_count);
 
     $gene_count ++; # So the header will only be printed once.
@@ -987,6 +992,43 @@ sub print_SNP_info {
         my $SNPID = $variant->{'GRCh'.$build}->[0].":".$variant->{'GRCh'.$build}->[2];
         my $line = join ("\t", $gene_name, $SNPID, $rsID, $alleleString, $consequence, $MAF, $AC, $missingness);
         $line .= "\t$weight" if ($flag==1);
+        print $outfilehandle $line;
+    }
+}
+
+# if no scores exist, then output 1
+sub print_SNP_info_smmat {
+    my %hash = %{$_[0]};
+    my $gene_name = $_[1];
+    my $outfilehandle = $_[2];
+    my $gene_counter = $_[3];
+    my $build = $_[4];
+    my $flag=$_[5];
+    
+    # Extract variant names:
+    my @variants = keys %hash;
+
+    # Assembling header for the first gene:
+    if ( $gene_counter == 0){
+        my $header = "Gene_name\tChr\tPos\tRef\tAlt\tconsequence\tScore";
+        print $outfilehandle $header;
+    }
+
+    # printing out info for each gene and variant:
+    foreach my $variant (values %hash){
+	my $weight=1;
+	
+        my $rsID = $variant->{'rsID'};
+	die "[Error]: variant $rsID has no defined score" unless($flag==0 || defined($variant->{"score"}));
+        # generating all the required fields:
+
+	my $chr=$variant->{'GRCh'.$build}->[0]
+	my $pos=$variant->{'GRCh'.$build}->[2]
+	my $ref=$variant->{'alleles'}->[0]:
+	my $alt=$variant->{'alleles'}->[1]:
+        my $weight = $variant->{'score'} if ($flag==1);
+        my $consequence = $variant->{'consequence'};
+        my $line = join ("\t", $gene_name, $chr, $pos, $ref,$alt, $consequence, $weight);
         print $outfilehandle $line;
     }
 }
