@@ -7,9 +7,6 @@ use Getopt::Long qw(GetOptions);
 use lib dirname(__FILE__);
 use Scoring;
 
-my $gene;
-my $variant;
-
 my %C = (
     "transcript_ablation"      => 36,
     "splice_acceptor_variant"  => 35,
@@ -49,6 +46,10 @@ my %C = (
     "intergenic_variant" => 1
 );
 
+sub usage{
+    print "Get the most severe consequence vor a give variant/gene pair.\n";
+    print "Options: --gene <gene Ensembl ID> --variant <chr:pos:ref:slt>\n";
+}
     
 sub getVariantType{
     my ($ref,$alt)=@_;
@@ -131,7 +132,15 @@ sub getConsequences{
     return $cons;
 }
 
+my $gene;
+my $variant;
+
 GetOptions('gene=s' => \$gene,'variant=s' => \$variant);
+
+if (!defined($gene) || !defined($variant)){
+    usage();
+    exit 1;
+}
 
 my $c=getConsequences($variant,\%C,$gene);
 $,="\t";
