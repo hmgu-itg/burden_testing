@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 use Getopt::Long qw(GetOptions);
+use lib dirname(__FILE__);
 use Scoring;
 
 my $gene;
