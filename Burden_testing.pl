@@ -744,8 +744,8 @@ sub processVar {
 	    # Removing one variant at a time:
 	    my $variant = shift @total_vars;
 
-	    # line: CHROM	POS	ID	REF	ALT	...
-	    my ($chr, $pos, $id, $a1, $a2, @therest) = split(/\t/, $variant);
+	    # line: CHROM	POS    	REF	ALT	...
+	    my ($chr, $pos, $a1, $a2, @therest) = split(/\t/, $variant);
 	    my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $a1, $a2);
 	    # We don't consider indels if weights are used:
 	    if (( length($a2) > 1 || length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
