@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+use File::Basename;
 use Getopt::Long qw(GetOptions);
 use lib dirname(__FILE__);
 use Scoring;
@@ -9,7 +10,7 @@ use Scoring;
 my $gene;
 my $variant;
 
-%C = {
+my %C = (
     "transcript_ablation"      => 10,
     "splice_acceptor_variant"  => 9,
     "splice_donor_variant"     => 8,
@@ -20,7 +21,7 @@ my $variant;
     "transcript_amplification" => 3,
     "inframe_insertion"        => 2,
     "inframe_deletion"         => 1
-};
+);
 
 
 sub getVariantType{
@@ -47,7 +48,6 @@ sub getConsequences{
     local $,="\t";
 
     my $fname1="temp_vep_input.txt";
-    my $fname2="temp_vep_output.txt";
 
     open ($vepin, ">", $fname1) or die "[Error] Input file for VEP could not be opened.";
     
@@ -64,17 +64,14 @@ sub getConsequences{
     my $vtype=getVariantType($ref,$alt);
     if ($vtype eq "SNP"){
 	print $vepin $c,$pos,$pos,$ref."/".$alt,"+",$varID;
-	$count++;
     }
     elsif($vtype eq "DEL"){
 	my $r=substr($ref,1,length($ref)-1);
 	print $vepin $c,$pos+1,$pos+length($ref)-1,$r."/-","+",$varID;
-	$count++;
     }
     elsif($vtype eq "INS"){
 	my $a=substr($alt,1,length($alt)-1);
 	print $vepin $c,$pos+1,$pos,"-/".$a,"+",$varID;
-	$count++;
     }
     else{
 	print "[Error] could not determine variant type of $variant";
