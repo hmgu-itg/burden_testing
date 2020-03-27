@@ -11,19 +11,45 @@ my $gene;
 my $variant;
 
 my %C = (
-    "transcript_ablation"      => 10,
-    "splice_acceptor_variant"  => 9,
-    "splice_donor_variant"     => 8,
-    "stop_gained"              => 7,
-    "frameshift_variant"       => 6,
-    "stop_lost"                => 5,
-    "start_lost"               => 4,
-    "transcript_amplification" => 3,
-    "inframe_insertion"        => 2,
-    "inframe_deletion"         => 1
+    "transcript_ablation"      => 36,
+    "splice_acceptor_variant"  => 35,
+    "splice_donor_variant"     => 34,
+    "stop_gained"              => 33,
+    "frameshift_variant"       => 32,
+    "stop_lost"                => 31,
+    "start_lost"               => 30,
+    "transcript_amplification" => 29,
+    "inframe_insertion"        => 28,
+    "inframe_deletion"         => 27,
+    "missense_variant" => 26,
+    "protein_altering_variant" => 25,
+    "splice_region_variant" => 24,
+    "incomplete_terminal_codon_variant" => 23,
+    "start_retained_variant" => 22,
+    "stop_retained_variant" => 21,
+    "synonymous_variant" => 20,
+    "coding_sequence_variant" => 19,
+    "mature_miRNA_variant" => 18,
+    "5_prime_UTR_variant" => 17,
+    "3_prime_UTR_variant" => 16,
+    "non_coding_transcript_exon_variant" => 15,
+    "intron_variant" => 14,
+    "NMD_transcript_variant" => 13,
+    "non_coding_transcript_variant" => 12,
+    "upstream_gene_variant" => 11,
+    "downstream_gene_variant" => 10,
+    "TFBS_ablation" => 9,
+    "TFBS_amplification" => 8,
+    "TF_binding_site_variant" => 7,
+    "regulatory_region_ablation" => 6,
+    "regulatory_region_amplification" => 5,
+    "feature_elongation" => 4,
+    "regulatory_region_variant" => 3,
+    "feature_truncation" => 2,
+    "intergenic_variant" => 1
 );
 
-
+    
 sub getVariantType{
     my ($ref,$alt)=@_;
 
