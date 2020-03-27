@@ -68,7 +68,7 @@ sub getConsequences{
     my $vepin;
     my $vepout;
     
-    my $cons;
+    my $cons="NA";
 
     local $\="\n";
     local $,="\t";
