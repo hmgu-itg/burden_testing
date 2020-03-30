@@ -637,7 +637,6 @@ sub getConsequences{
     local $,="\t";
     
     my $fname1=$parameters->{"tempdir"}."/vep_input.txt";
-    my $fname2=$parameters->{"tempdir"}."/vep_output.txt";
 
     open ($vepin, ">", $fname1) or die "[Error] Input file for VEP could not be opened.";
     
@@ -744,8 +743,8 @@ sub processVar {
 	    # Removing one variant at a time:
 	    my $variant = shift @total_vars;
 
-	    # line: CHROM	POS    	REF	ALT	...
-	    my ($chr, $pos, $a1, $a2, @therest) = split(/\t/, $variant);
+	    # line: CHROM	POS    	REF	ALT    AC AN
+	    my ($chr, $pos, $a1, $a2, $ac,$an) = split(/\t/, $variant);
 	    my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $a1, $a2);
 	    # We don't consider indels if weights are used:
 	    if (( length($a2) > 1 || length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
