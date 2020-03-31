@@ -4,20 +4,16 @@ use strict;
 use warnings;
 use Data::Dumper;
 use JSON;
-#use DateTime;
 use File::Basename;
 use Getopt::Long qw(GetOptions);
 use Data::Types;
 use File::Path qw(make_path);
 
-# For debugging:
-#use Devel::Size qw(total_size);
-
 # Version information:
-our $version = "v5.1 Last modified: 10.Mar.2020";
+our $version = "v6.0 Last modified: 31.Mar.2020";
 
 # Get script directory:
-our $scriptDir = dirname(__FILE__);
+#our $scriptDir = dirname(__FILE__);
 
 use lib dirname(__FILE__);
 
@@ -28,7 +24,6 @@ $\="\n";
 #
 ##-----------------------------------------------------------------------------------------------------------
 
-
 # Loading custom modules:
 use GENCODE;
 use Scoring;
@@ -38,10 +33,9 @@ print "[Info] Script version: $version";
 #printf "[Info] Run date: %s", DateTime->now->strftime("%Y. %b %d %H:%M");
 printf "[Info] The script was called with the following parameters:\n%s\n", join(" ", $0, @ARGV);
 
-# In the new version, all the parameters will be stored in a hash reference:
+# some default parameter values
 my $parameters = {
-    "scriptDir" => $scriptDir,
-    "build"   => "38", # !!! HARDCODED BUILD !!!
+    "build"   => "38",
     "extend"  => 0, # Basepairs with which the GENCODE features will be extended.
     "MAF"     => 0.05, # The upper threshold of the minor allel frequency.
     "MAC"     => 0, # The lower threshold of the minor allele count.
@@ -56,8 +50,7 @@ my $parameters = {
     "vcf" => undef	
 };
 
-# This is the list of those consequences that will be retained upon switching on --lof
-
+# LoF VEP consequences
 $parameters->{"lof_cons"} = {
     "transcript_ablation"      => 10,
     "splice_acceptor_variant"  => 9,
@@ -89,9 +82,6 @@ GetOptions(
     # Extending regions with a defined length:
     'extend=s' => \$parameters->{"extend"},
 
-    # GENCODE file
-    #'gencode-file=s' => \$parameters->{"gencode_file"},
-    
     # Skipping minor transcripts by APPRIS:
     'SkipMinor' => \$parameters->{"minor"},
 
@@ -108,15 +98,12 @@ GetOptions(
     # specifying config file:
     'config=s' => \$parameters->{"configName"},
 
-    # specifying working directory:
-#    'working-dir=s' => \$parameters->{"workingDir"},
-
     # Which score do we need:
     'score=s' => \$parameters->{"score"},
     
     'maxVars=s' => \$parameters->{"maxVars"},
 
-    # Do we need only loss of function:
+    # Do we need LoF variants only:
     'lof' => \$parameters->{"lof"},
     'loftee' => \$parameters->{"loftee"}, # Filters only high and low confident loss of function variants
     'lofteeHC' => \$parameters->{"lofteeHC"}, # Filters for only high confident loss of function variants
@@ -129,17 +116,12 @@ GetOptions(
     'cutoff=s' => \$parameters->{"cutoff"}, # hard threshold that will be applied on scores:
     'floor=s'  => \$parameters->{"floor"},  # How do we want to floor Eigen values:
 
-    'chromosome-prefix=s'  => \$parameters->{"chr_prefix"},  # Chromosome prefix in VCF file(s) or SMMAT input list
+    'chromosome-prefix=s'  => \$parameters->{"chr_prefix"},  # Chromosome prefix in VCF file(s)
     'vcf=s' => \$parameters->{"vcf"},
     'help|h' => \$help
     );
 
 $parameters->{"maxVars"}=1000 unless $parameters->{"maxVars"};
-
-#&usage && die "[Error] No working directory specified. Exiting." unless $parameters->{"workingDir"};
-#&usage && die "[Error] The specified working directory does not exist. Exiting." unless -d $parameters->{"workingDir"};
-# remove trailing slash
-#$parameters->{"workingDir"} = $1 if($parameters->{"workingDir"}=~/(.*)\/$/);
 
 &usage && die "[Error] No output directory specified. Exiting." unless $outputDir;
 if (! -d $outputDir){
@@ -162,8 +144,6 @@ if (! $parameters->{"smmat"}){
 }
 
 $parameters = &readConfigFile($parameters);
-#$parameters->{"gencode_file"}=$parameters->{"workingDir"}."/gencode.basic.annotation.tsv.gz";
-#$parameters->{"Linked_features"}=$parameters->{"workingDir"}."/Linked_features.bed.gz";
 
 # If the score option is not empty, we have to check if it's a valid score, and the
 # required files are exists. If any problem found, the score parameter will be set to its
@@ -317,12 +297,12 @@ sub check_scores {
 
     # Check if the specified score is a valid, supported score:
     my %acceptedScores = ("CADD" => 1,
-                      "Eigen" => 1,
-                      "EigenPC" => 1,
-                      "EigenPhred" => 1,
-                      "EigenPCPhred" => 1,
-                      "Linsight" => 1,
-                      "Mixed" => 1);
+			  #                      "Eigen" => 1,
+			  #                      "EigenPC" => 1,
+			  "EigenPhred" => 1);
+#                      "EigenPCPhred" => 1,
+#                      "Linsight" => 1,
+#                      "Mixed" => 1);
 
     # Let's report if the specified score is not supported:
     unless (exists $acceptedScores{$params->{"score"}}){
@@ -361,13 +341,8 @@ sub check_scores {
 
 sub readConfigFile {
     my $params = $_[0];
+    open(my $CONF, "<", $params->{"configName"}) or die "[Error] In readConfigFile: config file could not be oppended. Exiting.";
 
-#    printf "[Info] Config file: %s", $params->{"configName"};
-
-    # Reading file:
-    open(my $CONF, "<", $params->{"configName"}) or die "[Error] Config file could not be oppended. Exiting.";
-
-    # Reading file:
     while ( my $line = <$CONF>) {
         chomp $line;
         next unless $line;
@@ -390,7 +365,7 @@ sub parseGENCODE {
             $parameters->{"GENCODE"}->{$feature} = 1;
         }
         else {
-            printf STDERR "[Error] The provided GENCODE feature name is not supported: %s. Use these: %s", $feature, join(", ", keys %AcceptedFeatures);
+            printf STDERR "[Error] The provided GENCODE feature name ($feature) is not supported: %s. Use these: %s", $feature, join(", ", keys %AcceptedFeatures);
         }
     }
     return $parameters
@@ -408,7 +383,7 @@ sub parseRegulation {
         # Looping through all the submitted features:
         foreach my $feature (split(",",$parameters->{"input"}->{$class})){
             unless (exists $AcceptedFeatures{$feature}){
-                printf STDERR "[Error] The provided regulatory feature name is not supported: %s. Use these: %s", $feature, join(", ", keys %AcceptedFeatures);
+                printf STDERR "[Error] The provided regulatory feature name ($feature) is not supported: %s. Use these: %s", $feature, join(", ", keys %AcceptedFeatures);
                 next;
             }
 
@@ -616,9 +591,9 @@ sub getVariantType{
     my ($ref,$alt)=@_;
 
     return "SNP" if length($ref)==1 && length($alt)==1;
-    return "DEL" if length($ref)>1 && length($alt)==1;
-    return "INS" if length($ref)==1 && length($alt)>1;
-
+    return "DEL" if length($ref)>length($alt);
+    return "INS" if length($ref)<length($alt);
+    
     return "NA";    
 }
 
@@ -645,8 +620,7 @@ sub getConsequences{
     while (@total_vars){
 	my $variant = shift @total_vars;
 
-	# line: CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	EGAN00001033155
-#	my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @genotypes) = split(/\t/, $variant);
+	# line: CHROM	POS	ID	REF	ALT	...
 	my ($chr, $pos, $id, $ref, $alt, @therest) = split(/\t/, $variant);
 	
         (my $c = $chr ) =~ s/chr//i;
@@ -665,13 +639,27 @@ sub getConsequences{
 	    $count++;
 	}
 	elsif($vtype eq "DEL"){
-	    my $r=substr($ref,1,length($ref)-1);
-	    print $vepin $c,$pos+1,$pos+length($ref)-1,$r."/-","+",$varID;
+	    if (length($alt)==1){
+		my $r=substr($ref,1,length($ref)-1);
+		print $vepin $c,$pos+1,$pos+length($ref)-1,$r."/-","+",$varID;
+	    }
+	    else{
+		my $L1=length($alt);
+		my $r=substr($ref,$L1,length($ref)-1);
+		print $vepin $c,$pos+$L1,$pos+length($ref)-1,$r."/-","+",$varID;
+	    }
 	    $count++;
 	}
 	elsif($vtype eq "INS"){
-	    my $a=substr($alt,1,length($alt)-1);
-	    print $vepin $c,$pos+1,$pos,"-/".$a,"+",$varID;
+	    if (length($ref)==1){
+		my $a=substr($alt,1,length($alt)-1);
+		print $vepin $c,$pos+1,$pos,"-/".$a,"+",$varID;
+	    }
+	    else{
+		my $L1=length($ref);
+		my $a=substr($alt,$L1,length($alt)-$L1);
+		print $vepin $c,$pos+$L1,$pos+$L1-1,"-/".$a,"+",$varID;	    
+	    }
 	    $count++;
 	}
 	else{
@@ -743,14 +731,15 @@ sub processVar {
 	    # Removing one variant at a time:
 	    my $variant = shift @total_vars;
 
-	    # line: CHROM	POS    	REF	ALT    AC AN
-	    my ($chr, $pos, $a1, $a2, $ac,$an) = split(/\t/, $variant);
+	    # line: CHROM	POS    	ID REF	ALT
+	    my ($chr, $pos, $id,$a1, $a2) = split(/\t/, $variant);
 	    my $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $a1, $a2);
 	    # We don't consider indels if weights are used:
 	    if (( length($a2) > 1 || length($a1) > 1 ) && $parameters->{"score"} ne "NA"){
 		print  "[Warning] $SNPID will be omitted because it's an indel and we use scores for weighting! ($a1/$a2).";
 		next;
 	    }
+	    
 	    # We don't consider multialleleic sites
 	    if ( $a2 =~ /,/){
 		print  "[Warning] $SNPID will be omitted because it's multiallelic! ($a2).";
@@ -779,10 +768,11 @@ sub processVar {
 
 	    # TODO: check if we need that for SMMAT
 	    # Generating variant name (Sometimes the long allele names cause problems):
-	    my $short_a1 = length $a1 > 5 ? substr($a1,0,4) : $a1;
-	    my $short_a2 = length $a2 > 5 ? substr($a2,0,4) : $a2;
+	    #my $short_a1 = length $a1 > 5 ? substr($a1,0,4) : $a1;
+	    #my $short_a2 = length $a2 > 5 ? substr($a2,0,4) : $a2;
 	    
-	    $SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $short_a1, $short_a2);
+	    #$SNPID = sprintf("%s_%s_%s_%s", $chr, $pos, $short_a1, $short_a2);
+	    
 	    $hash{$SNPID}{"alleles"} = [$a1, $a2];
 	    $hash{$SNPID}{$build} = [$chr, $pos - 1, $pos]; # 0-based
 	    $hash{$SNPID}{"consequence"} = $consequence;
@@ -1059,31 +1049,31 @@ sub usage {
     print("      Required:");
     print("          --input <input file>");
 #    print("          --working-dir <working directory containing Linked_features.bed.gz and gencode.basic.annotation.tsv.gz>");
-    print("          --output-dir <output directory>");
+    print("          --output-dir <output directory where output and temporary files will be created>");
     print("          --output <output filename prefix>");
-    print("          --vcf <input VCF>");
+    print("          --vcf <input VCF(s); either --vcf or --smmat is required>");
+    print("          --smmat <5 column tab-delimited input list of variants, for SMMAT; either --vcf or --smmat is required>");
     print("          --config <config file>");
     print("      Optional:");    
-    print("          --smmat <6 column tab-delimited input list of variants, for SMMAT>");
 #    print("          --build <genome build; default: 38>");
     print("          --GENCODE <comma separated list of GENCODE features (gene, exon, transcript, CDS or UTR)>");
     print("          --GTEx <comma separated list of GTEx features (promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind or allreg)>");
     print("          --overlap <comma separated list of overlap features (promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind or allreg)>");
     print("          --extend <by how many basepairs the GENCODE features should be extended.>");
-    print("          --MAF <MAF upper threshold>");
-    print("          --MAC <MAC lower threshold>");
-    print("          --maxVars <max number of variants in a gene (default: 1000)>");
+    print("          --MAF <MAF upper threshold; default: 0.05>");
+    print("          --MAC <MAC lower threshold; default: 0>");
+    print("          --maxVars <max number of variants in a gene; default: 1000>");
     print("          --SkipMinor <skip minor transcripts by APPRIS>");
     print("          --verbose <increase verbosity>");
-    print("          --score <which score to use to weight variants; one of: CADD, Eigen, EigenPC, EigenPhred, EigenPCPhred, Mixed >");
+    print("          --score <which score to use to weight variants; one of: CADD, EigenPhred >");
     print("          --lof <only select high impact variants: transcript_ablation, splice_acceptor_variant, splice_donor_variant, stop_gained, frameshift_variant, stop_lost, start_lost, transcript_amplification, inframe_insertion, inframe_deletion>");
-    print("          --loftee <only select high and low confident loss of function variants>");
-    print("          --lofteeHC <only select high confident loss of function variants>");
-    print("          --missingness <missingness upper threshold>");
-    print("          --shift <shift scores by this value>");
-    print("          --cutoff <score threshold below which the variants will be removed>");
-    print("          --no-filtering <skip MAF, missingness and MAC variant filtering>");
-    print("          --floor <scores below this threshold will be set to this value>");
+#    print("          --loftee <only select high and low confident loss of function variants>");
+#    print("          --lofteeHC <only select high confident loss of function variants>");
+    print("          --missingness <missingness upper threshold; default: 0.01>");
+    print("          --shift <shift scores by this value; default: 0>");
+    print("          --cutoff <score threshold below which the variants will be removed; default: 0>");
+#    print("          --no-filtering <skip MAF, missingness and MAC variant filtering>");
+    print("          --floor <scores below this threshold will be set to this value; default: 0>");
     print("          --chromosome-prefix <chromosome prefix in VCF files; default: \"chr\">");
     print("          --help <this help>");
 }
