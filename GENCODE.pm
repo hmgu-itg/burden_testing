@@ -32,7 +32,6 @@ sub _initialize {
     my $self = shift;
     my $gencodeFile = shift;
 
-
     # Reading the file and create and return two hashes. Each contain the chromosome and
     # coordinate of the genes. Keys:
     
@@ -74,7 +73,6 @@ sub GetCoordinates {
     else {
         print  "[Warning] $ID was not found in the GENCODE database. Only HGNC names and stable Ensembl IDs are accepted. 'NA'-s will be returned!\n";
     }
-
 
     return ($chr, $start, $end, $stable_ID, $name);
 }

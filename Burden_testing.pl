@@ -138,8 +138,10 @@ if (! -d $parameters->{"tempdir"}){
 &usage && die "[Error] Gene list input file has to be specified with the --input option. Exiting." unless $inputFile;
 &usage && die "[Error] The specified input gene list does not exist. Exiting." unless -e $inputFile;
 &usage && die "[Error] Output file has to be specified with the --output option. Exiting." unless $outputFile;
-&usage && die "[Error] VCF files or a SMMAT input list have to be specified with the --vcf or --smmat option. Exiting." unless($parameters->{"vcf"} || $parameters->{"smmat"});
-if (! $parameters->{"smmat"}){
+&usage && die "[Error] VCF files or a SMMAT input list have to be specified with the --vcf or --smmat option. Exiting." unless(defined($parameters->{"vcf"}) || defined($parameters->{"smmat"}));
+&usage && die "[Error] both VCF files and a SMMAT input list are specified. Exiting." if(defined($parameters->{"vcf"}) && defined($parameters->{"smmat"}));
+
+if (! defined($parameters->{"smmat"})){
     &usage && die "[Error] No VCF files exist." unless &checkVCFs($parameters->{"vcf"});
 }
 
@@ -169,50 +171,42 @@ my $AddScore = Scoring->new($parameters);
 open (my $INPUT, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened. Exiting.";
 open (my $SNPfile, ">", $outputDir."/".$outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.";
 open (my $genotypeFile, ">", $outputDir."/".$outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.";
-open (my $SNPinfo, ">", $outputDir."/".$outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
+if (defined(defined($parameters->{"vcf"}))){
+    open (my $SNPinfo, ">", $outputDir."/".$outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
+}
+else{
+    open (my $SNPinfo, ">", $outputDir."/".$outputFile."_group_file.txt") or die "[Error] Output group file could not be opened.";
+}
 
 # Processing the input file gene by gene:
-# looping through all the genes in the list:
 my $gene_count = 0;
 while ( my $ID = <$INPUT> ){
     next if $ID=~/^\s*$/;
     
     chomp $ID;
 
-    # genomic coordinates of the current the gene
+    # genomic coordinates of the current gene
     my ($chr, $start, $end, $stable_ID, $name, $CollapsedBed);
 
-    # If the input is not a region a few extra steps will be taken:
-    unless ($ID =~ /(\d+)_(\d+)-(\d+)/i){
-        ($chr, $start, $end, $stable_ID, $name) = $GENCODE_data->GetCoordinates($ID);
-	#print "DATA FROM GENCODE FOR $ID: $chr, $start, $end, $stable_ID, $name" if $verbose;
-        # Skipping genes that were not found in the GENCODE dataset.
-        if ($start eq "NA") {
-            print "[Warning] Gene $ID was not found in the GENCODE data; skipping [NO_GENE]";
-	    print "";
-            next;
-        }
-
-        print "[Info] Queried gene: $name (Ensembl ID: $stable_ID), Genomic location: $chr:$start-$end (Input: $ID)";
-
-        my $bedlines = &BedToolsQuery($chr, $start, $end, $stable_ID, $parameters->{"Linked_features"});
-	#print "BEDLINES:\n".$bedlines."\n" if $verbose;
-        $CollapsedBed = &FilterLines($bedlines, $stable_ID, $parameters);
-
-        # This should never be a problem, but still be tested:
-        unless ( $CollapsedBed ){
-            print "[WARNING] Gene $name did not yield any regions. Skipped. [NO_REGION].";
-	    print "";
-            next;
-        }
+    ($chr, $start, $end, $stable_ID, $name) = $GENCODE_data->GetCoordinates($ID);
+    if ($start eq "NA") {
+	print "[Warning] Gene $ID was not found in the GENCODE data; skipping [NO_GENE]";
+	print "";
+	next;
     }
 
-    # If the submitted input is a genomic region, we have to do something else:
-    else {
-        ($chr, $start, $end) = $ID =~ /(\d+)_(\d+)-(\d+)/i;
-        $CollapsedBed = join("\t", $chr, $start-1, $end);
-        $name = $ID;
-        printf "[Info] Queried region: %s:%s-%s", $chr, $start, $end;
+    print "[Info] Queried gene: $name (Ensembl ID: $stable_ID), Genomic location: $chr:$start-$end (Input: $ID)";
+
+    # all lines from the Linked_features file that are associated with the current gene
+    my $bedlines = &BedToolsQuery($chr, $start, $end, $stable_ID, $parameters->{"Linked_features"});
+    # remove some lines we're not interested in
+    $CollapsedBed = &FilterLines($bedlines, $stable_ID, $parameters);
+
+    # This should never be a problem, but still be tested:
+    unless ( $CollapsedBed ){
+	print "[WARNING] Gene $name did not yield any regions. Skipped. [NO_REGION].";
+	print "";
+	next;
     }
 
     # CollapsedBed is 0-based
@@ -255,16 +249,16 @@ while ( my $ID = <$INPUT> ){
     # Once we have the scores we have to print out the SNP file:
     my $flag=0;
     $flag=1 if $parameters->{"score"} ne "NA";
-    
-    &print_SNPlist($hash, $ID, $SNPfile,$flag);
-    if (defined($parameters->{"smmat"})){
-	&print_SNP_info_smmat($hash, $ID, $SNPinfo, $gene_count, $parameters->{"build"},$flag);
-    }
-    else{
-	&print_SNP_info($hash, $ID, $SNPinfo, $gene_count, $parameters->{"build"},$flag);
-    }
-    &print_genotypes($genotypes, $genotypeFile, $parameters, $gene_count);
 
+    if (defined($parameters->{"smmat"})){
+	&print_group_file($hash, $ID, $SNPinfo, $parameters->{"build"},$flag);
+    }
+    else{# outut for MONSTER from VCFs
+	&print_SNPlist($hash, $ID, $SNPfile,$flag);
+	&print_SNP_info($hash, $ID, $SNPinfo, $gene_count, $parameters->{"build"},$flag);
+	&print_genotypes($genotypes, $genotypeFile, $parameters, $gene_count);
+    }
+    
     $gene_count ++; # So the header will only be printed once.
 }
 
@@ -429,6 +423,7 @@ sub print_parameters {
     }
 }
 
+# get relevant lines from Linked_features file
 sub BedToolsQuery {
     my ($chr, $start, $end, $stable_ID, $geneBedFile) = @_;
     my $queryString = sprintf("intersectBed -wb -a <(echo -e \"%s\\t%s\\t%s\\t%s\") -b %s -sorted 2>/dev/null | cut -f9-",$chr, $start-1, $end, $stable_ID, $geneBedFile); # start and end are from GENCODE (1-based), bed is 0-based
@@ -461,6 +456,8 @@ sub getVariants {
     if (defined($smmat)){
 	print  "[Info] Extracting variants from the list:" if $verbose;
 	$source=$smmat;
+	# SMMAT lists have no chromosome prefix
+	$prefix="";
     }
     else{
 	print  "[Info] Extracting variants from vcf file(s):" if $verbose;
@@ -513,7 +510,7 @@ sub FilterLines {
         my $class =  exists $annot_hash{"class"} ? $annot_hash{"class"} :  "?";
         # print "\n$source $class";
 
-        if ($source eq "GENCODE" and exists $GENCODE{$class}) {
+        if ($source eq "GENCODE" && exists $GENCODE{$class}) {
 
             # If the user has specified, minor transcripts will be excluded:
             next if exists $GENCODE{"minor"} && $annot_hash{"appris"} == "Minor";
@@ -521,14 +518,14 @@ sub FilterLines {
             push (@output_lines, formatLines(\%annot_hash, $parameters->{'extend'}));
             $hash{GENCODE}{$class} ++;
         }
-        elsif (($source eq "GTEx" and exists $GTEx{$class})
-               or ($source eq "GTEx" and exists $GTEx{'allreg'})){
+        elsif (($source eq "GTEx" && exists $GTEx{$class})
+               || ($source eq "GTEx" && exists $GTEx{'allreg'})){
 
             push (@output_lines, formatLines(\%annot_hash));
             $hash{GTEx}{$class} ++;
         }
-        elsif (($source eq "overlap" and exists $overlap{$class})
-               or ($source eq "overlap" and exists $overlap{'allreg'})){
+        elsif (($source eq "overlap" && exists $overlap{$class})
+               || ($source eq "overlap" && exists $overlap{'allreg'})){
 
             push (@output_lines, formatLines(\%annot_hash));
             $hash{overlap}{$class} ++;
@@ -570,12 +567,11 @@ sub FilterLines {
         print $tempbed $line;
     }
     close $tempbed;
-    #sortString=sprintf("sort -k1,1 -k2,2n %s | sponge %s",$tmpName);
+    
     `sort -k1,1n -k2,2n $tmpName | sponge $tmpName`;
 
     # Collapsing overlapping features:
     my $queryString = "mergeBed -i $tmpName";
-    #my $merged = `bash -O extglob -c \'$queryString\'`;
     my $merged = Scoring::backticks_bash($queryString);
     return $merged;
 }
@@ -986,22 +982,15 @@ sub print_SNP_info {
 }
 
 # if no scores provided, then output score=1
-sub print_SNP_info_smmat {
+sub print_group_file {
     my %hash = %{$_[0]};
     my $gene_name = $_[1];
     my $outfilehandle = $_[2];
-    my $gene_counter = $_[3];
-    my $build = $_[4];
-    my $flag=$_[5];
+    my $build = $_[3];
+    my $flag=$_[4]; # if we  have scores
     
     # Extract variant names:
     my @variants = keys %hash;
-
-    # Assembling header for the first gene:
-    if ( $gene_counter == 0){
-        my $header = "Gene_name\tChr\tPos\tRef\tAlt\tconsequence\tScore";
-        print $outfilehandle $header;
-    }
 
     # printing out info for each gene and variant:
     foreach my $variant (values %hash){

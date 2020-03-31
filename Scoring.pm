@@ -12,7 +12,7 @@ package Scoring;
 # Adding scores:
 # $hash = $Scoring->AddScore($hash);
 
-# ASSUMING ALL SCORES ARE 37 BASED
+# ASSUMING EIGEN SCORES ARE 37 BASED, CADD 38 BASED
 
 # TODO: ASSUMING SCORE FILES HAVE CHROMOSOME NAMES LIKE 1,2,3 ...
 
@@ -227,8 +227,6 @@ sub _get_Eigen_Score {
 	    next;
 	}
 
-	#print "EIGENFILE=$EigenFile" if $self->{"verbose"};
-
         # Two tabix queries will be submitted regardless of the output...
         my $tabix_query = sprintf("tabix %s %s:%s-%s | grep %s ", $EigenFile, $chr, $hash{$var}{GRCh37}[2], $hash{$var}{GRCh37}[2], $hash{$var}{alleles}[1]); # Eigen file is 1-based
         print "$tabix_query" if $self->{"verbose"};
@@ -277,8 +275,7 @@ sub _liftover {
     my $tempFileName = $self->{"tempdir"}."/temp_GRCH38.bed";
     my $tempFileName37 = $self->{"tempdir"}."/temp_GRCH37.bed";
     my $tempFileNameU = $self->{"tempdir"}."/temp_unmapped.bed";
-    
-    
+        
     # Checking if the file exists, in which case we delete it:
     `rm $tempFileName` if -e $tempFileName; 
     `rm $tempFileName37` if -e $tempFileName37; 
