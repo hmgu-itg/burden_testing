@@ -55,8 +55,8 @@ sub getVariantType{
     my ($ref,$alt)=@_;
 
     return "SNP" if length($ref)==1 && length($alt)==1;
-    return "DEL" if length($ref)>1 && length($alt)==1;
-    return "INS" if length($ref)==1 && length($alt)>1;
+    return "DEL" if length($ref)>length($alt);
+    return "INS" if length($ref)<length($alt);
 
     return "NA";    
 }
@@ -93,12 +93,26 @@ sub getConsequences{
 	print $vepin $c,$pos,$pos,$ref."/".$alt,"+",$varID;
     }
     elsif($vtype eq "DEL"){
-	my $r=substr($ref,1,length($ref)-1);
-	print $vepin $c,$pos+1,$pos+length($ref)-1,$r."/-","+",$varID;
+	if (length($alt)==1){
+	    my $r=substr($ref,1,length($ref)-1);
+	    print $vepin $c,$pos+1,$pos+length($ref)-1,$r."/-","+",$varID;
+	}
+	else{
+	    my $L1=length($alt);
+	    my $r=substr($ref,$L1,length($ref)-1);
+	    print $vepin $c,$pos+$L1,$pos+length($ref)-1,$r."/-","+",$varID;
+	}
     }
     elsif($vtype eq "INS"){
-	my $a=substr($alt,1,length($alt)-1);
-	print $vepin $c,$pos+1,$pos,"-/".$a,"+",$varID;
+	if (length($ref)==1){
+	    my $a=substr($alt,1,length($alt)-1);
+	    print $vepin $c,$pos+1,$pos,"-/".$a,"+",$varID;
+	}
+	else{
+	    my $L1=length($ref);
+	    my $a=substr($alt,$L1,length($alt)-$L1);
+	    print $vepin $c,$pos+$L1,$pos+$L1-1,"-/".$a,"+",$varID;	    
+	}
     }
     else{
 	print "[Error] could not determine variant type of $variant";
