@@ -188,7 +188,7 @@ else
 fi
 # -----------------------------------------------------------------------------------------------------------------------------
 
-outFile="group_file"
+outFile="output"
 # GENCODE -expecting a list of feature names separated by a comma.
 if [[ ! -z "${gencode}" ]]; then
     commandOptions="${commandOptions} --GENCODE ${gencode}"
@@ -217,7 +217,7 @@ fi
 # If lof is set, only variants with severe consequences will be selected.
 if [[ ! -z "$lof" ]]; then
     commandOptions="${commandOptions} --lof "
-    outFile=${out_file}"_severe_"${str}
+    outFile=${out_file}"_severe"
 fi
 
 warning1=""
@@ -267,11 +267,10 @@ if [[ ! -z "${scoreshift}" ]]; then
     commandOptions="${commandOptions} --shift ${scoreshift}"
 fi
 
-# Updating working dir, and creating folder:
-outFile=${outFile}_gene_set.${chunkNo}".txt"
+outFile=${outFile}_gene_set.${chunkNo}
 commandOptions="${commandOptions} --smmat ${inputFile} --output-dir ${outputDir} --output ${outFile}"
 
-LOGFILE=${outputDir}/"make_group_file.log"
+LOGFILE=${outputDir}/"make_group_file_gene_set.${chunkNo}.log"
 
 if [[ ! -z ${warning1} ]];then
     echo `date "+%Y.%b.%d_%H:%M"` ${warning1} >> ${LOGFILE}
@@ -327,11 +326,11 @@ echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] command line options for the selector script: ${commandOptions}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
-selectorLog=${outputDir}/chunk_${chunkNo}.output.log
+selectorLog=${outputDir}/selector_chunk_${chunkNo}.log
 echo `date "+%Y.%b.%d_%H:%M"` "Calling ${scriptDir}/${regionSelector}  --input ${outputDir}/input_gene.list --output ${outFile} --output-dir ${outputDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}"  >> ${LOGFILE}
 ${scriptDir}/${regionSelector} --input ${outputDir}/input_gene.list --output gene_set_output --output-dir ${outputDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}
 
-# We are expecting to get 2 files: gene_set_output_genotype_file.txt & gene_set_output_SNPinfo_file.txt
+# We are expecting to get ${out_File}_group_file.txt
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Checking output..." >> ${LOGFILE}
 
 cd ${outputDir}
@@ -362,16 +361,10 @@ if [[ "$region_absent" -ne 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] No region in gene [NO_REGION]: $(cat ${selectorLog} | grep NO_REGION | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 
-if [[ ! -e gene_set_output_genotype_file.txt ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed. No genotype file has been generated. Exiting." >> ${LOGFILE}
+if [[ ! -e ${outFile}_group_file.txt ]]; then
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed. No group file has been generated. Exiting." >> ${LOGFILE}
     exit 1
-elif [[ $(cat gene_set_output_genotype_file.txt | wc -l ) -lt 2 ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, genotype file is empty. Exiting." >> ${LOGFILE}
-    exit 1
-elif [[ ! -e gene_set_output_variant_file.txt ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, SNP file was not generated. Exiting." >> ${LOGFILE}
-    exit 1
-elif [[ $( cat gene_set_output_variant_file.txt | wc -l ) -lt 1 ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, SNP file is empty. Exiting." >> ${LOGFILE}
+elif [[ $(cat ${outFile}_group_file.txt | wc -l ) -lt 1 ]]; then
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, group file is empty. Exiting." >> ${LOGFILE}
     exit 1
 fi
