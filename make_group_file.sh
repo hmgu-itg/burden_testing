@@ -193,21 +193,21 @@ outFile="output"
 if [[ ! -z "${gencode}" ]]; then
     commandOptions="${commandOptions} --GENCODE ${gencode}"
     str=$( echo "${gencode}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-    outFile=${out_file}"_GENCODE_"${str}
+    outFile=${outFile}"_GENCODE_"${str}
 fi
 
 # GTEx - expecting a list of feature names separeted by comma.
 if [[ ! -z "$gtex" ]]; then
     commandOptions="${commandOptions} --GTEx ${gtex}"
     str=$( echo "${gtex}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-    outFile=${out_file}"_GTEx_"${str}
+    outFile=${outFile}"_GTEx_"${str}
 fi
 
 # Overlap - expecting a list of features separeated by comma.
 if [[ ! -z "${overlap}" ]]; then
     commandOptions="${commandOptions} --overlap ${overlap}"
     str=$( echo "${overlap}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-    outFile=${out_file}"_overlap_"${str}
+    outFile=${outFile}"_overlap_"${str}
 fi
 
 if [[ ! -z "$MAF" ]]; then
@@ -217,7 +217,7 @@ fi
 # If lof is set, only variants with severe consequences will be selected.
 if [[ ! -z "$lof" ]]; then
     commandOptions="${commandOptions} --lof "
-    outFile=${out_file}"_severe"
+    outFile=${outFile}"_severe"
 fi
 
 warning1=""
@@ -246,7 +246,7 @@ fi
 if [[ "${score}" != "noweight" ]]; then
     commandOptions="${commandOptions} --score ${score}";
 fi
-outFile=${out_file}"_score_"${score}
+outFile=${outFile}"_score_"${score}
 
 # If Eigen score is applied, we shift the scores by 1, if no other value is specified:
 #if [[ ("${score}" == "Eigen") && (-z "${scoreshift}" ) ]]; then scoreshift=1; fi
@@ -254,7 +254,7 @@ outFile=${out_file}"_score_"${score}
 # Exons might be extended with a given number of bps:
 if [[ ! -z "${xtend}" ]]; then
     commandOptions="${commandOptions} --extend ${xtend}"
-    outFile=${out_file}"_extend_"${xtend}
+    outFile=${outFile}"_extend_"${xtend}
 fi
 
 # Setting score cutoff, below which the variant will be removed from the test:
@@ -330,7 +330,7 @@ selectorLog=${outputDir}/selector_chunk_${chunkNo}.log
 echo `date "+%Y.%b.%d_%H:%M"` "Calling ${scriptDir}/${regionSelector}  --input ${outputDir}/input_gene.list --output ${outFile} --output-dir ${outputDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}"  >> ${LOGFILE}
 ${scriptDir}/${regionSelector} --input ${outputDir}/input_gene.list --output gene_set_output --output-dir ${outputDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}
 
-# We are expecting to get ${out_File}_group_file.txt
+# We are expecting to get ${outFile}_group_file.txt
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Checking output..." >> ${LOGFILE}
 
 cd ${outputDir}
