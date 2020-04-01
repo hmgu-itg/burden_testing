@@ -151,12 +151,12 @@ fi
 commandOptions=" --config ${configFile} "
 # -----------------------------------------------------------------------------------------------------------------------------
 
-outprefix=""
+outprefix="goup_file"
 # GENCODE -expecting a list of feature names separated by a comma.
 if [[ ! -z "${gencode}" ]]; then
     commandOptions="${commandOptions} --GENCODE ${gencode}"
     str=$( echo "${gencode}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-    outprefix=${outprefix}"GENCODE_"${str}
+    outprefix=${outprefix}"_GENCODE_"${str}
 fi
 
 # GTEx - expecting a list of feature names separeted by comma.
