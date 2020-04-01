@@ -109,6 +109,9 @@ if [[ -z "${outputDir}" ]]; then
     exit 1
 fi
 
+# remove trailing slash
+outputDir=${outputDir%/}
+
 chunk_warning=""
 if [[ ! -z ${SLURM_ARRAY_TASK_ID} ]];then
     if [[ ! -z ${chunkNo} ]];then
