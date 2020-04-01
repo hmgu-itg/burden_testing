@@ -181,7 +181,7 @@ if (defined($parameters->{"vcf"})){
     open ($SNPinfo, ">", $outputDir."/".$outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
 }
 else{
-    open ($SNPinfo, ">", $outputDir."/".$outputFile."_group_file.txt") or die "[Error] Output group file could not be opened.";
+    open ($SNPinfo, ">", $outputDir."/".$outputFile.".txt") or die "[Error] Output group file could not be opened.";
 }
 
 # Processing the input file gene by gene:
