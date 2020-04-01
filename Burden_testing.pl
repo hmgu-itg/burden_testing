@@ -13,7 +13,7 @@ use File::Path qw(make_path);
 our $version = "v6.0 Last modified: 31.Mar.2020";
 
 # Get script directory:
-#our $scriptDir = dirname(__FILE__);
+our $scriptDir = dirname(__FILE__);
 
 use lib dirname(__FILE__);
 
