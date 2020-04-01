@@ -224,7 +224,7 @@ if [[ ! -z "${scoreshift}" ]]; then
 fi
 
 outFile="group_file_gene_set."${chunkNo}
-outputDir2=${$outputDir}"/"${outprefix}
+outputDir2=${outputDir}"/"${outprefix}
 commandOptions="${commandOptions} --smmat ${inputFile} --output-dir ${outputDir2} --output ${outFile}"
 
 LOGFILE=${outputDir2}/"make_group_file_gene_set.${chunkNo}.log"
