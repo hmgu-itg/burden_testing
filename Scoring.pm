@@ -34,6 +34,7 @@ sub new {
     $self->{"verbose"} = $parameters->{"verbose"};
     $self->{"scriptDir"} = $parameters->{"scriptDir"};
     $self->{"tempdir"} = $parameters->{"tempdir"};
+    $self->{"smmat"} = $parameters->{"smmat"}; # so that we know if we have to prepend chromosome name with "chr" when lifting over
 
     foreach my $k (keys(%{$parameters->{"lof_cons"}})){
 	$self->{"lof_cons"}->{$k}=$parameters->{"lof_cons"}->{$k};
@@ -275,7 +276,10 @@ sub _liftover {
     my $tempFileName = $self->{"tempdir"}."/temp_GRCH38.bed";
     my $tempFileName37 = $self->{"tempdir"}."/temp_GRCH37.bed";
     my $tempFileNameU = $self->{"tempdir"}."/temp_unmapped.bed";
-        
+
+    my $prefix="";
+    $prefix="chr" if (defined$self->{"smmat"});
+    
     # Checking if the file exists, in which case we delete it:
     `rm $tempFileName` if -e $tempFileName; 
     `rm $tempFileName37` if -e $tempFileName37; 
@@ -284,7 +288,7 @@ sub _liftover {
     # Saving the GRCh38 coordinates:
     open( my $tempbed, ">", $tempFileName) or die "[Error] Temporary bedfile could not be opened for writing: $tempFileName\n";
     foreach my $variant (keys %hash){
-        printf $tempbed "%s\t%s\t%s\t%s\n", $hash{$variant}{"GRCh38"}[0], $hash{$variant}{"GRCh38"}[1], $hash{$variant}{"GRCh38"}[2], $variant;
+        printf $tempbed "%s%s\t%s\t%s\t%s\n", $prefix,$hash{$variant}{"GRCh38"}[0], $hash{$variant}{"GRCh38"}[1], $hash{$variant}{"GRCh38"}[2], $variant;
     }
 
     # Liftover query:

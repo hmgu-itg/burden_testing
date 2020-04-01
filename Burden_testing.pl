@@ -1010,6 +1010,8 @@ sub print_group_file {
         my $rsID = $variant->{'rsID'};
 	die "[Error]: variant $rsID has no defined score" unless($flag==0 || defined($variant->{"score"}));
 	my $chr=$variant->{'GRCh'.$build}[0];
+	$chr  =~ s/chr//i; # after liftover in AddScore we will have "chr" prefix
+
 	my $pos=$variant->{'GRCh'.$build}[2];
 	my $ref=$variant->{'alleles'}->[0];
 	my $alt=$variant->{'alleles'}->[1];
