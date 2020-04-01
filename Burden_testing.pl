@@ -169,9 +169,14 @@ my $AddScore = Scoring->new($parameters);
 
 # Open files:
 open (my $INPUT, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened. Exiting.";
-open (my $SNPfile, ">", $outputDir."/".$outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.";
-open (my $genotypeFile, ">", $outputDir."/".$outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.";
-my $SNPinfo;
+
+my ($SNPinfo,$SNPfile,$genotypeFile);
+
+if (defined($parameters->{"vcf"})){
+    open ($SNPfile, ">", $outputDir."/".$outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.";
+    open ($genotypeFile, ">", $outputDir."/".$outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.";
+}
+
 if (defined($parameters->{"vcf"})){
     open ($SNPinfo, ">", $outputDir."/".$outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
 }
@@ -266,8 +271,10 @@ while ( my $ID = <$INPUT> ){
 }
 
 close $INPUT;
-close $SNPfile;
-close $genotypeFile;
+if (defined($parameters->{"vcf"})){
+    close $SNPfile;
+    close $genotypeFile;
+}
 close $SNPinfo;
 
 sub check_parameters {
