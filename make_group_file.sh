@@ -229,7 +229,7 @@ fi
 outFile="group_file_gene_set."${chunkNo}
 outputDir2=${outputDir}"/"${outprefix}
 mkdir -p ${outputDir2}
-if [[! -d ${outputDir2} ]];then
+if [[ ! -d ${outputDir2} ]];then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Could not create ${outputDir2}"
     exit1
 fi
