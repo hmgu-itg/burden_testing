@@ -45,6 +45,7 @@ my $parameters = {
     "floor"   => 0, # All the scores below threshold will be set to this value.
     "shift"   => 0, # A value with which the scores of the variants will be shifted.
     "chr_prefix" => "chr", # Chromosome prefix in VCF files or list
+    "scriptDir"=>${scriptDir}, 
     "lof" => undef,	
     "smmat" => undef,	
     "vcf" => undef	
