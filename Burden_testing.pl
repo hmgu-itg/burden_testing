@@ -172,7 +172,7 @@ open (my $INPUT, "<", $inputFile) or die "[Error] Input file ($inputFile) could 
 open (my $SNPfile, ">", $outputDir."/".$outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.";
 open (my $genotypeFile, ">", $outputDir."/".$outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.";
 my $SNPinfo;
-if (defined(defined($parameters->{"vcf"}))){
+if (defined($parameters->{"vcf"})){
     open ($SNPinfo, ">", $outputDir."/".$outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
 }
 else{
