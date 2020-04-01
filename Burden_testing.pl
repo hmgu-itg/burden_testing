@@ -171,11 +171,12 @@ my $AddScore = Scoring->new($parameters);
 open (my $INPUT, "<", $inputFile) or die "[Error] Input file ($inputFile) could not be opened. Exiting.";
 open (my $SNPfile, ">", $outputDir."/".$outputFile."_variant_file.txt") or die "[Error] Output file could not be opened.";
 open (my $genotypeFile, ">", $outputDir."/".$outputFile."_genotype_file.txt") or die "[Error] Output genotype file could not be opened.";
+my $SNPinfo;
 if (defined(defined($parameters->{"vcf"}))){
-    open (my $SNPinfo, ">", $outputDir."/".$outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
+    open ($SNPinfo, ">", $outputDir."/".$outputFile."_SNPinfo_file.txt") or die "[Error] Output SNPinfo file could not be opened.";
 }
 else{
-    open (my $SNPinfo, ">", $outputDir."/".$outputFile."_group_file.txt") or die "[Error] Output group file could not be opened.";
+    open ($SNPinfo, ">", $outputDir."/".$outputFile."_group_file.txt") or die "[Error] Output group file could not be opened.";
 }
 
 # Processing the input file gene by gene:
