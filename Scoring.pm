@@ -289,6 +289,8 @@ sub _liftover {
 
     # Liftover query:
     my $liftover_query = sprintf("liftOver %s %s/hg38ToHg19.over.chain %s %s  2> /dev/null", $tempFileName, $self->{"scriptDir"},$tempFileName37,$tempFileNameU);
+
+    print "Liftover query: ".$liftover_query if $self->{"verbose"};
     
     # Calling liftover:
      backticks_bash($liftover_query);
