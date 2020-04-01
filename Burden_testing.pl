@@ -245,7 +245,9 @@ while ( my $ID = <$INPUT> ){
     }
 
     # We don't save anything unless there at least two variants:
-    next unless scalar keys %{$hash} > 1;
+    if (!defined($parameters->{"smmat"})){
+	next unless scalar keys %{$hash} > 1;
+    }
 
     # Once we have the scores we have to print out the SNP file:
     my $flag=0;
