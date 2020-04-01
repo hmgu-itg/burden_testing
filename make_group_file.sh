@@ -151,12 +151,12 @@ fi
 commandOptions=" --config ${configFile} "
 # -----------------------------------------------------------------------------------------------------------------------------
 
-outprefix="group_file"
+outprefix=""
 # GENCODE -expecting a list of feature names separated by a comma.
 if [[ ! -z "${gencode}" ]]; then
     commandOptions="${commandOptions} --GENCODE ${gencode}"
     str=$( echo "${gencode}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-    outprefix=${outprefix}"_GENCODE_"${str}
+    outprefix=${outprefix}"GENCODE_"${str}
 fi
 
 # GTEx - expecting a list of feature names separeted by comma.
@@ -228,6 +228,12 @@ fi
 
 outFile="group_file_gene_set."${chunkNo}
 outputDir2=${outputDir}"/"${outprefix}
+mkdir -p ${outputDir2}
+if [[! -d ${outputDir2} ]];then
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Could not create ${outputDir2}"
+    exit1
+fi
+
 commandOptions="${commandOptions} --smmat ${inputFile} --output-dir ${outputDir2} --output ${outFile}"
 
 LOGFILE=${outputDir2}/"make_group_file_gene_set.${chunkNo}.log"
