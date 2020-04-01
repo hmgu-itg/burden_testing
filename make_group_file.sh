@@ -8,13 +8,13 @@ today=$(date "+%Y.%b.%d")
 regionSelector="Burden_testing.pl"
 
 # Folder with the variant selector script:
-scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-missing_cutoff=1 # Missingness threshold, individuals having missingness higher than this threshold will be excluded.
+#scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+#missing_cutoff=1 # Missingness threshold, individuals having missingness higher than this threshold will be excluded.
 configFile=""
 
 chunksTotal=1
 chunkNo=""
-MAF=1.0
+#MAF=1.0
 
 # --- print out help message and exit:
 function display_help() {
@@ -98,6 +98,12 @@ while getopts ":hL:c:d:bg:s:l:e:x:k:t:ow:C:i:" optname; do
     esac
 done
 
+
+if [[ -z "${inputFile}" ]]; then
+    "[Error] input file not specified!"
+    exit 1
+fi
+
 if [[ -z "${outputDir}" ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Output directory not specified";
     exit 1
@@ -140,84 +146,34 @@ if [[ ! -e "${configFile}" ]]; then
 fi
 
 commandOptions=" --config ${configFile} "
-
-#--------------------------------------------------------------------------------------------
-no_list_warning=""
-if [[ -z ${geneListFile} ]];then
-    gencode_file=$(grep "^gencode_file" ${configFile} | cut -f 2 -d '=')
-    zcat ${gencode_file} | cut -f 4 > "${outputDir}/temp_gene_list.txt"
-    geneListFile="${outputDir}/temp_gene_list.txt"
-    no_list_warning="[Warning] No gene list specified; using all genes from $gencode_file"
-fi
-#--------------------------------------------------------------------------------------------
-
-if [[ -z "${inputFile}" ]]; then
-    "[Error] input file not specified!"
-    exit 1
-fi
-
-if [[ ! -e "${geneListFile}" ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene list file could not be opened: $geneListFile"
-    exit 1
-fi
-
-# -----------------------------------------------------------------------------------------------------------------------------
-# creating gene list
-
-totalGenes=$(cat ${geneListFile} | wc -l)
-if [ $totalGenes -lt $chunksTotal ];then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Number of chunks ($chunksTotal) is larger than number of genes in the gene list ($totalGenes) "  >> ${LOGFILE}
-    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Analyzing all genes in one chunk"  >> ${LOGFILE}
-    chunkNo=1
-    cat ${geneListFile} > ${outputDir}/input_gene.list    
-else
-    rem=$(( totalGenes % chunksTotal ))
-    chunkSize=$(( totalGenes / chunksTotal ))
-    lastChunkSize=$(( chunkSize + rem ))
-    if [[ ${chunkNo} -eq ${chunksTotal} ]];then
-	tail -n ${lastChunkSize} ${geneListFile} > ${outputDir}/input_gene.list
-    else
-	awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${outputDir}/input_gene.list
-    fi
-
-    n=$( cat ${outputDir}/input_gene.list | wc -l)
-    if [[ $n -eq 0 ]];then
-	echo "Chunk ${chunkNo} is empty; EXIT" >> ${LOGFILE}
-	exit 0
-    fi
-fi
 # -----------------------------------------------------------------------------------------------------------------------------
 
-outFile="output"
+outprefix="group_file"
 # GENCODE -expecting a list of feature names separated by a comma.
 if [[ ! -z "${gencode}" ]]; then
     commandOptions="${commandOptions} --GENCODE ${gencode}"
     str=$( echo "${gencode}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-    outFile=${outFile}"_GENCODE_"${str}
+    outprefix=${outprefix}"_GENCODE_"${str}
 fi
 
 # GTEx - expecting a list of feature names separeted by comma.
 if [[ ! -z "$gtex" ]]; then
     commandOptions="${commandOptions} --GTEx ${gtex}"
     str=$( echo "${gtex}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-    outFile=${outFile}"_GTEx_"${str}
+    outprefix=${outprefix}"_GTEx_"${str}
 fi
 
 # Overlap - expecting a list of features separeated by comma.
 if [[ ! -z "${overlap}" ]]; then
     commandOptions="${commandOptions} --overlap ${overlap}"
     str=$( echo "${overlap}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-    outFile=${outFile}"_overlap_"${str}
-fi
-
-if [[ ! -z "$MAF" ]]; then
-    commandOptions="${commandOptions} --maf ${MAF}"
+    outprefix=${outprefix}"_overlap_"${str}
 fi
 
 # If lof is set, only variants with severe consequences will be selected.
 if [[ ! -z "$lof" ]]; then
     commandOptions="${commandOptions} --lof "
-    outFile=${outFile}"_severe"
+    outprefix=${outprefix}"_severe"
 fi
 
 warning1=""
@@ -246,7 +202,7 @@ fi
 if [[ "${score}" != "noweight" ]]; then
     commandOptions="${commandOptions} --score ${score}";
 fi
-outFile=${outFile}"_score_"${score}
+outprefix=${outprefix}"_score_"${score}
 
 # If Eigen score is applied, we shift the scores by 1, if no other value is specified:
 #if [[ ("${score}" == "Eigen") && (-z "${scoreshift}" ) ]]; then scoreshift=1; fi
@@ -254,7 +210,7 @@ outFile=${outFile}"_score_"${score}
 # Exons might be extended with a given number of bps:
 if [[ ! -z "${xtend}" ]]; then
     commandOptions="${commandOptions} --extend ${xtend}"
-    outFile=${outFile}"_extend_"${xtend}
+    outprefix=${outprefix}"_extend_"${xtend}
 fi
 
 # Setting score cutoff, below which the variant will be removed from the test:
@@ -267,11 +223,54 @@ if [[ ! -z "${scoreshift}" ]]; then
     commandOptions="${commandOptions} --shift ${scoreshift}"
 fi
 
-outFile=${outFile}_gene_set.${chunkNo}
-commandOptions="${commandOptions} --smmat ${inputFile} --output-dir ${outputDir} --output ${outFile}"
+outFile="group_file_gene_set."${chunkNo}
+outputDir2=${$outputDir}"/"${outprefix}
+commandOptions="${commandOptions} --smmat ${inputFile} --output-dir ${outputDir2} --output ${outFile}"
 
-LOGFILE=${outputDir}/"make_group_file_gene_set.${chunkNo}.log"
+LOGFILE=${outputDir2}/"make_group_file_gene_set.${chunkNo}.log"
 
+#--------------------------------------------------------------------------------------------
+no_list_warning=""
+if [[ -z ${geneListFile} ]];then
+    gencode_file=$(grep "^gencode_file" ${configFile} | cut -f 2 -d '=')
+    zcat ${gencode_file} | cut -f 4 > "${outputDir2}/temp_gene_list.txt"
+    geneListFile="${outputDir2}/temp_gene_list.txt"
+    no_list_warning="[Warning] No gene list specified; using all genes from $gencode_file"
+fi
+#--------------------------------------------------------------------------------------------
+
+if [[ ! -e "${geneListFile}" ]]; then
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene list file could not be opened: $geneListFile"
+    exit 1
+fi
+
+# -----------------------------------------------------------------------------------------------------------------------------
+# creating gene list
+
+totalGenes=$(cat ${geneListFile} | wc -l)
+if [ $totalGenes -lt $chunksTotal ];then
+    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Number of chunks ($chunksTotal) is larger than number of genes in the gene list ($totalGenes) "  >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Analyzing all genes in one chunk"  >> ${LOGFILE}
+    chunkNo=1
+    cat ${geneListFile} > ${outputDir2}/input_gene.list    
+else
+    rem=$(( totalGenes % chunksTotal ))
+    chunkSize=$(( totalGenes / chunksTotal ))
+    lastChunkSize=$(( chunkSize + rem ))
+    if [[ ${chunkNo} -eq ${chunksTotal} ]];then
+	tail -n ${lastChunkSize} ${geneListFile} > ${outputDir2}/input_gene.list
+    else
+	awk -v cn="${chunkNo}" -v cs="${chunkSize}" 'NR > (cn-1)*cs && NR <= cn*cs' ${geneListFile} > ${outputDir2}/input_gene.list
+    fi
+
+    n=$( cat ${outputDir2}/input_gene.list | wc -l)
+    if [[ $n -eq 0 ]];then
+	echo "Chunk ${chunkNo} is empty; EXIT" >> ${LOGFILE}
+	exit 0
+    fi
+fi
+
+# -----------------------------------------------------------------------------------------------------------------------------
 if [[ ! -z ${warning1} ]];then
     echo `date "+%Y.%b.%d_%H:%M"` ${warning1} >> ${LOGFILE}
 fi
@@ -290,14 +289,14 @@ fi
 
 # --- Reporting parameters ------------------------------------------------------
 echo `date "+%Y.%b.%d_%H:%M"` "##"  >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "## Variant selector version ${version}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "## Version ${version}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "## Date: ${today}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "##" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] General options:" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "Variant selector: ${regionSelector}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "Script dir: ${scriptDir}" >> ${LOGFILE}
+#echo `date "+%Y.%b.%d_%H:%M"`  "Script dir: ${scriptDir}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "Output directory: ${outputDir}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
@@ -326,14 +325,14 @@ echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] command line options for the selector script: ${commandOptions}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
-selectorLog=${outputDir}/selector_chunk_${chunkNo}.log
-echo `date "+%Y.%b.%d_%H:%M"` "Calling ${scriptDir}/${regionSelector}  --input ${outputDir}/input_gene.list --output ${outFile} --output-dir ${outputDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}"  >> ${LOGFILE}
-${scriptDir}/${regionSelector} --input ${outputDir}/input_gene.list --output gene_set_output --output-dir ${outputDir} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}
+selectorLog=${outputDir2}/"selector_chunk_"${chunkNo}.log
 
-# We are expecting to get ${outFile}_group_file.txt
+echo `date "+%Y.%b.%d_%H:%M"` "Calling ${regionSelector} --input ${outputDir2}/input_gene.list ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}"  >> ${LOGFILE}
+${regionSelector} --input ${outputDir2}/input_gene.list ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}
+
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Checking output..." >> ${LOGFILE}
 
-cd ${outputDir}
+cd ${outputDir2}
 
 # We have to check if both files are generated AND they have enough lines.
 gene_notenough=$(cat ${selectorLog} | grep -c NOT_ENOUGH_VAR)
@@ -361,10 +360,10 @@ if [[ "$region_absent" -ne 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] No region in gene [NO_REGION]: $(cat ${selectorLog} | grep NO_REGION | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 
-if [[ ! -e ${outFile}_group_file.txt ]]; then
+if [[ ! -e ${outFile} ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed. No group file has been generated. Exiting." >> ${LOGFILE}
     exit 1
-elif [[ $(cat ${outFile}_group_file.txt | wc -l ) -lt 1 ]]; then
+elif [[ $(cat ${outFile} | wc -l ) -lt 1 ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, group file is empty. Exiting." >> ${LOGFILE}
     exit 1
 fi
