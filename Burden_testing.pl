@@ -448,6 +448,8 @@ sub BedToolsQuery {
 sub formatLines {
     my %hash = %{$_[0]};
     my $ext = $_[1] // 0;
+    
+    # 0-based
     return sprintf("%s\t%s\t%s\t%s", $hash{"chr"}, $hash{"start"} - $ext, $hash{"end"} + $ext, encode_json(\%hash))
 }
 
