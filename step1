@@ -1,0 +1,62 @@
+#!/bin/bash
+
+cohort_name=$1
+vcf=$2
+
+usage() { 
+	>&2 echo "SCALLOP WGS Rare Variant Meta-analysis using SMMAT"
+	>&2 echo "===================================================" 
+	>&2 echo -e "\nThis is Step 1, which is just a wrapper for bcftools to extract basic information about variants present in your cohort.\n\n Usage :\n -----\n\n step1 [cohort_name] [vcf_file]\n\n\t * [vcf_file] should be gzipped and tabixed, it can be either a chromosome file or a whole-genome file. Please do not use a file with >1 chromosomes that is not a whole genome file (e.g. just chr1 and chr2), as it will violate the script's assumptions." 
+	} 
+
+if [ ! -f "$vcf" ] || [ -z "$(tabix -H $vcf)" ]; then
+	usage
+	>&2 echo -e ERROR : File \"$vcf\" is not tabixed or is malformed.
+	exit 3
+fi
+
+if [ ! -f "$vcf.tbi" ]; then
+	usage
+        >&2 echo -e ERROR : File \"$vcf\" does not exist.
+	exit 2
+fi
+
+if [ -z "$cohort_name" ] || [ -z "vcf" ]; then
+	usage
+	exit 1
+fi
+
+firstchr=$(zgrep -m1 -F '#CHROM' -A1 $vcf| tail -1 | cut -f1)
+
+RENAMECHR=0
+RENAMECMD=cat
+OLDCHR=$firstchr
+if [ -z "echo $firstchr | grep chr" ]; then
+	>&2 echo Warning: Your VCF does not follow the GRCh38 chromosome naming convention. Will be updated by the script.
+	RENAMECHR=1
+	RENAMECMD="awk -F$'\t' '{if($1!~/^chr/){$1=\"chr\"$1}}1'"
+	firstchr=chr$firstchr
+fi
+
+#>&2 echo INFO: Detected first chromosome as $firstchr
+
+ISWG=1
+TESTCHR=${OLDCHR/1/2}
+
+secondchr=$(tabix $vcf ${TESTCHR}:0-1 | cut -f1)
+
+if [ -z "echo $secondchr | grep chr" ]; then
+	secondchr="chr"$secondchr
+fi
+
+if [ "$firstchr" != "chr1" ] || [ "$secondchr" != "chr2" ]; then
+	>&2 echo Warning: single-chromosome file detected for $firstchr
+	ISWG=0
+fi
+
+if [ "$ISWG" == 0 ]; then
+	OUTFILE=$cohort_name.$firstchr.variantlist.gz
+else
+	OUTFILE=$cohort_name.variantlist.gz
+fi
+bcftools norm -m - $vcf | bcftools query -f "%CHROM\t%POS\t%REF\t%ALT\t%AC\t%AN\n" | $RENAMECMD | bgzip > $OUTFILE

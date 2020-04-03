@@ -21,7 +21,7 @@ From: ubuntu:18.04
 	apt-get install -y software-properties-common
 	apt-get install -y build-essential autoconf libtool
 	apt-get install -y bc
-	apt-get install -y emacs
+	#apt-get install -y emacs
 	apt-get install -y man
 	apt-get install -y git
 	apt-get install -y curl
@@ -66,7 +66,7 @@ From: ubuntu:18.04
 	cpan install File::Path
 
 	cd /usr/local/bin
-	git clone -b update.Sep.19 --single-branch https://github.com/hmgu-itg/burden_testing
+	git clone https://github.com/hmgu-itg/burden_testing
 	
 	export PERL5LIB=$PERL5LIB:/usr/local/bin/.vep
 	git clone https://github.com/Ensembl/ensembl-vep.git
