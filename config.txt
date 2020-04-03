@@ -14,19 +14,16 @@
 ##
 
 ## This file contains coordinates of the gene related genomic features and annotation:
-Linked_features=/lustre/scratch113/projects/helic/ds26/project_burden/2016.10.10/Linked_features.bed.gz
+Linked_features=/usr/local/bin/burden_testing/test2/2019.11.15/Linked_features.bed.gz
 
-## To get CADD/Eigen/GERP scores, we have to lift over the coordinates. Path to liftover:
-liftoverPath=/nfs/users/nfs_d/ds26/bin/liftOver
+gencode_file=/usr/local/bin/burden_testing/gencode.v32.basic.annotation.tsv.gz
 
-## Path to Eigen scores (in this release coding and non-coding variants are located in separate files):
-EigenPath=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/eigen.phred_v2.dat
+tempdir=/usr/local/bin/burden_testing/temp
+
+EigenPath=/usr/local/bin/burden_testing/scores/Eigen_hg19_noncoding_annot_chr%.tab.bgz
 
 ## Path to CADD scores:
-caddPath=/lustre/scratch114/resources/cadd_scores/20150729-v1.3/whole_genome_SNVs_inclAnno.tsv.gz
-
-## Path to bigWigTools to extract linsight scores:
-bigWigTools=/nfs/team144/software/bigWigTools
+caddPath=/usr/local/bin/burden_testing/scores/whole_genome_SNVs_inclAnno.tsv.gz
 
 ## Path to linsight file:
-Linsight=/lustre/scratch115/projects/t144_helic_15x/analysis/HA/weights/LINSIGHT/LINSIGHT.bw
+Linsight=/usr/local/bin/burden_testing/scores/LINSIGHT.bw

@@ -22,8 +22,7 @@ sub new {
     
     bless( $self, $class );
     
-    
-    my $GENCODE_filename = sprintf("%s/gencode_genes_V25_GRCh%s.tsv.gz", $parameters->{"scriptDir"}, $parameters->{"build"});
+    my $GENCODE_filename = $parameters->{"gencode_file"};
     $self->_initialize($GENCODE_filename);
     return $self;
 }
@@ -40,6 +39,7 @@ sub _initialize {
     open(my $FILE, "zcat $gencodeFile | ");
     while (my $line = <$FILE>) {
         next if $line =~ /^#/;
+	
         chomp $line;
         my ($chr, $start, $end, $name, $ID) = split("\t", $line);
         $chr =~ s/^chr//i;
@@ -59,7 +59,7 @@ sub _initialize {
 # A method to extract the coordinates of any gene based on the gene name or stable ID.
 sub GetCoordinates {
     my $self = shift;
-    my $ID = shift;
+    my $ID = shift; # stable ID or gene name
     my ($chr, $start, $end, $stable_ID, $name) = ('NA') x 5;
 
     # If Stable ID is given:
@@ -73,7 +73,6 @@ sub GetCoordinates {
     else {
         print  "[Warning] $ID was not found in the GENCODE database. Only HGNC names and stable Ensembl IDs are accepted. 'NA'-s will be returned!\n";
     }
-
 
     return ($chr, $start, $end, $stable_ID, $name);
 }
