@@ -15,10 +15,11 @@
 ## 1. Gencode
 ## 2. Ensembl Regulation
 ## 3. Appris
+## 4. GTEx (v.8)
 
-# The GTEx eQTL data should be specified uing the -G switch.
+# The GTEx eQTL data (v.8) will be downloaded
 
-# For reproductibility, both the GENCODE and the Ensembl versions are hardcoded.
+# For reproductibility, both the GENCODE, Ensembl and GTEx versions are hardcoded.
 
 ##
 ## Warning: this version intentionally use the older (V84) Ensembl release:
@@ -32,8 +33,8 @@
 ## Date: 2019.09.16 by Andrei Barysenka, andrei.barysenka@helmholtz-muenchen.de
 ##
 
-script_version=3.0
-last_modified=2020.Mar.09
+script_version=4.0
+last_modified=2020.Apr.03
 
 ## Built in versions:
 GENCODE_release=32
@@ -46,8 +47,8 @@ scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ## printing out information if no parameter is provided:
 function usage {
     echo ""
-    echo "Usage: $0 -G <path to GTEx file>"
-    echo "          -n : optional, for not downloading Eigen scores"
+    echo "Usage: $0 -o <output directory>"
+    echo "          -n : optional, do not download Eigen scores"
     echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
@@ -59,6 +60,7 @@ function usage {
     echo ""
     echo ""
     echo "Workflow:"
+    echo "  0. Downloads GTEx (v.8) dataset."
     echo "  1: Downloads v32 GENCODE release."
     echo "  2: Downloads V97 Ensembl Regulation release."
     echo "  3: Downloads newest APPRIS release"
@@ -102,17 +104,6 @@ function testFile {
     fi
 }
 
-# Checking if tabix, liftOver and bedtools are installed...
-function checkCommand {
-    isCommand=$( which $1 | wc -l )
-
-    # exit program is not in path:
-    if [[ $isCommand == 0 ]]; then
-        echo "[Error] $1 is not in path. Install program before proceeding. Exiting.";
-        exit 1;
-    fi
-}
-
 # We also run a test to check if the number of lines of a temporary file is zero or not.
 # If it is zero, the script exits, because it indicates there were some problems.
 function testFileLines {
@@ -147,9 +138,9 @@ if [[ $# == 0 ]]; then usage; fi
 getScores="yes"
 ensftp="ftp://ftp.ensembl.org"
 OPTIND=1
-while getopts "G:hne:" optname; do
+while getopts "hne:" optname; do
     case "$optname" in
-        "G" ) GTExFile="${OPTARG}" ;;
+#        "G" ) GTExFile="${OPTARG}" ;;
         "h" ) usage ;;
         "n" ) getScores="no" ;;
         "e" ) ensftp="${OPTARG}" ;;
@@ -176,14 +167,6 @@ if [[ ! -e "${GTExFile}" ]]; then
     echo "[Error] GTEx file does not exist."
     exit 1
 fi
-
-# Checking required commands:
-checkCommand tabix
-checkCommand liftOver
-checkCommand bedtools
-
-# Checking chainfile in the scriptDir:
-testFile ${scriptDir}/hg19ToHg38.over.chain
 
 # Last step in setup:
 today=$(date "+%Y.%m.%d")
