@@ -885,6 +885,8 @@ sub processVar {
 		printf "[Warning] $SNPID will be omitted because its consequence (%s) is not lof\n", $consequence;
 		next;
 	    }
+
+	    # TODO: fix loftee part
 	    # If loftee or lofteeHC are enabled, the script exits if no LoF_conf tag is present in the info field.
 	    if (( $parameters->{"lofteeHC"} or $parameters->{"loftee"}) and $info !~ /LoF_conf/ ){
 		die "[Error] Based on the provided parameters, variant selection based on the loftee prediction was requested.\n\tHowever the provided vcf file does not contain the obligatory LoF_conf tag.Exiting.";
