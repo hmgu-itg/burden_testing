@@ -47,7 +47,7 @@ scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ## printing out information if no parameter is provided:
 function usage {
     echo ""
-    echo "Usage: $0 -o <output directory>"
+    echo "Usage: $0 -o <ftp://ftp.ensembl.org> : required, output directory"
     echo "          -n : optional, do not download Eigen scores"
     echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
     echo ""
@@ -138,30 +138,44 @@ if [[ $# == 0 ]]; then usage; fi
 getScores="yes"
 ensftp="ftp://ftp.ensembl.org"
 OPTIND=1
-while getopts "hne:" optname; do
+outdir=""
+while getopts "hne:o:" optname; do
     case "$optname" in
 #        "G" ) GTExFile="${OPTARG}" ;;
         "h" ) usage ;;
         "n" ) getScores="no" ;;
         "e" ) ensftp="${OPTARG}" ;;
+        "o" ) outdir="${OPTARG}" ;;
         "?" ) usage ;;
         *) usage ;;
     esac;
 done
 
-baseDir=$(dirname $GTExFile)
-targetDir=${baseDir}"/prepare_regions_tempfiles"
+if [[ -z ${outdir} ]];then
+    echo "[Error] no output directory specified"
+    exit1
+fi
+
+mkdir -p ${outdir}
+if [ $? -ne 0 ] ; then
+    echo "[Error] Could not create ${outdir}"
+    exit 1
+fi
+
+outdir=${outdir%/}
+
+targetDir=${outdir}"/prepare_regions_tempfiles"
 mkdir -p ${targetDir}
 if [ $? -ne 0 ] ; then
     echo "[Error] Could not create ${targetDir}"
     exit 1
 fi
 
-# Checking if GTEx file exists:
-if [[ -z "${GTExFile}" ]]; then
-    echo "[Error] The compressed GTEx file is needed! eg. GTEx_Analysis_V8_eQTLs.tar.gz"
-    exit 1
-fi
+cd ${outdir}
+wget https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
+gzip GTEx_Analysis_v8_eQTL.tar
+
+GTExFile=${outdir}"/GTEx_Analysis_v8_eQTL.tar.gz"
 
 if [[ ! -e "${GTExFile}" ]]; then
     echo "[Error] GTEx file does not exist."
@@ -181,7 +195,7 @@ info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
 wget -q ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -O ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 echo -e "done."
 
-# Testing if the file is exists or not:
+# Testing if the file exists:
 testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
 
 # Counting genes in the dataset:
@@ -597,10 +611,10 @@ totalLines=$(zcat ${targetDir}/${today}/Linked_features.bed.gz | wc -l | awk '{p
 info "Total number of lines in the final files: ${totalLines}\n"
 
 # FOR LATER USE
-mv -f ${targetDir}/${today}/Linked_features.bed.gz ${baseDir}
-mv -f ${targetDir}/${today}/Linked_features.bed.gz.tbi ${baseDir}
-zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${baseDir}/gencode.basic.annotation.tsv.gz
-zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];next unless $x=~/gene_type\s+\"protein_coding\"/;$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${baseDir}/gencode.basic.annotation.protein_coding.tsv.gz
+mv -f ${targetDir}/${today}/Linked_features.bed.gz ${outdir}
+mv -f ${targetDir}/${today}/Linked_features.bed.gz.tbi ${outdir}
+zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${outdir}/gencode.basic.annotation.tsv.gz
+zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];next unless $x=~/gene_type\s+\"protein_coding\"/;$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${outdir}/gencode.basic.annotation.protein_coding.tsv.gz
 
 # Report failed associations:
 FailedAssoc=$(wc -l ${targetDir}/${today}/failed | awk '{print $1}')
@@ -616,7 +630,7 @@ info "Intermediate files are backed in in ${today}_annotation.backup.tar.gz\n"
 
 if [[ $getScores == "yes" ]];then
     info "Downloading Eigen Phred scores\n"
-    cd $baseDir
+    cd $outdir
     mkdir -p scores
     cd scores
     wget -c ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
