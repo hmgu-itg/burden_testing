@@ -24,10 +24,7 @@ tabix $lfeatures $chr:$start-$end | grep "\"gene_ID\":\"$gene\""| cut -f 5| perl
 mergeBed -i 01.regions.bed > 02.regions.merged.bed
 
 # selecting variants from ilist
-tabixstr=""
-cat 02.regions.merged.bed| perl -lne '@a=split(/\t/);$s=$a[1]+1;print $a[0].":".$s."-".$a[2];'| while read line;do tabixstr=$tabixstr" $line";done
-
-echo "TABIXSTR: $tabixstr"
+tabixstr=$(cat 02.regions.merged.bed| perl -lne '@a=split(/\t/);$s=$a[1]+1;print $a[0].":".$s."-".$a[2];'| tr '\n' ' ')
 
 tabix $ilist $tabixstr > 03.variants.txt
 
