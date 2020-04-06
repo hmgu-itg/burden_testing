@@ -526,7 +526,7 @@ sub FilterLines {
         if ($source eq "GENCODE" && exists $GENCODE{$class}) {
 
             # If the user has specified, minor transcripts will be excluded:
-            next if exists $GENCODE{"minor"} && $annot_hash{"appris"} == "Minor";
+            next if exists $GENCODE{"minor"} && $annot_hash{"appris"} eq "Minor";
 
             push (@output_lines, formatLines(\%annot_hash, $parameters->{'extend'}));
             $hash{GENCODE}{$class} ++;
