@@ -19,7 +19,7 @@ read -r chr start end <<<$(zcat ${gencode} | while read line;do read -r c s e <<
 
 # select lines from lfeatures that correspond to the gene, select exon records only; then merge the BED records
 export extend=$extend
-tabix $lfeatures $chr:$start-$end | grep "\"gene_ID\":\"$gene\""| cut -f 5| perl -MJSON `BEGIN{$extend=$ENV{extend};}{%h = %{decode_json($_)};if ($h{source} eq "GENCODE" && $h{class} eq "exon"){$,="\t";print $h{"chr"},$h{"start"}-$extend,$h{"end"}+$extend;}}` | sort -k1,1 -k2,2n > 01.regions.bed
+tabix $lfeatures $chr:$start-$end | grep "\"gene_ID\":\"$gene\""| cut -f 5| perl -MJSON -lne 'BEGIN{$extend=$ENV{extend};}{%h = %{decode_json($_)};if ($h{source} eq "GENCODE" && $h{class} eq "exon"){$,="\t";print $h{"chr"},$h{"start"}-$extend,$h{"end"}+$extend;}}' | sort -k1,1 -k2,2n > 01.regions.bed
 
 mergeBed -i 01.regions.bed > 02.regions.merged.bed
 
