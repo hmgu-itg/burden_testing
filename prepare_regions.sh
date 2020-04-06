@@ -47,7 +47,7 @@ scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ## printing out information if no parameter is provided:
 function usage {
     echo ""
-    echo "Usage: $0 -o <ftp://ftp.ensembl.org> : required, output directory"
+    echo "Usage: $0 -o <output directory> : required, output directory"
     echo "          -n : optional, do not download Eigen scores"
     echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
     echo ""
