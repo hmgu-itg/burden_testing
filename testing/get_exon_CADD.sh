@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #gene=$1
-gencode=$2
-lfeatures=$3
-ilist=$4
-caddfile=$5
-extend=$6
+gencode=$1
+lfeatures=$2
+ilist=$3
+caddfile=$4
+extend=$5
 
 if [[ -z ${extend} ]];then
     extend=50
