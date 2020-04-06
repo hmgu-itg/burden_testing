@@ -27,6 +27,8 @@ mergeBed -i 01.regions.bed > 02.regions.merged.bed
 tabixstr=""
 cat 02.regions.merged.bed| perl -lne '@a=split(/\t/);$s=$a[1]+1;print $a[0].":".$s."-".$a[2];'| while read line;do tabixstr=$tabixstr" $line";done
 
+echo "TABIXSTR: $tabixstr"
+
 tabix $ilist $tabixstr > 03.variants.txt
 
 # get CADD scores
