@@ -1,0 +1,147 @@
+#!/usr/bin/env Rscript
+
+check_for_packages=function(){
+  cat(paste("[INFO] Checking for installed R packages.", "\n"))
+  list.of.packages <- c("GMMAT", "reshape2", "parallel", "data.table", "Hmisc", "argparser")
+  list.of.bloated.bioconductor.packages = c("SeqArray")
+  list.of.packages=c(list.of.packages, list.of.bloated.bioconductor.packages)
+  new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+  if(length(new.packages[new.packages %in% list.of.bloated.bioconductor.packages])){
+    if (!requireNamespace("BiocManager", quietly = TRUE))
+        install.packages("BiocManager")
+    BiocManager::install(new.packages[new.packages %in% list.of.bloated.bioconductor.packages])
+  }
+  new.packages=setdiff(new.packages, list.of.bloated.bioconductor.packages)
+  if(length(new.packages)) install.packages(new.packages)
+  for(lib in list.of.packages){
+    suppressWarnings(suppressMessages(library(lib, character.only=T)))
+  }
+}
+
+check_args=function(args, parser){
+  if(any(c(is.na(args$cohort_name), is.na(args$matrix_prefix), is.na(args$GDS), is.na(args$pheno), is.na(args$group_file)))){
+    print(p)
+    stop("\t[ERROR] : cohort name, matrix prefix, GDS file, phenotype and group file must all be defined.")
+  }
+  if(args$matrix_type %nin% c("GCTA", "GEMMA")){
+    stop(paste("\t[ERROR] : Only GEMMA and GCTA are supported matrix types (you supplied",args$matrix_type,")"))
+  }
+  if(is.na(args$fam_file) & args$matrix_type=="GEMMA"){
+    stop("\t[ERROR] : Your matrix type is GEMMA, a fam file is needed.")
+  }
+  cat(paste("[INFO] Argument check ok.\n\t[SUMMARY] Phenotype:",strrep(" ", 10), args$pheno,
+   "\n\t[SUMMARY] Matrix prefix:", strrep(" ", 6),args$matrix_prefix,
+   "\n\t[SUMMARY] Matrix type:",strrep(" ", 8), args$matrix_type,
+   "\n\t[SUMMARY] GDS:",strrep(" ", 16), args$GDS,
+   "\n\t[SUMMARY] Group file:",strrep(" ", 9), args$group_file,
+   "\n\t[SUMMARY] Cohort name:",strrep(" ", 8), args$cohort_name,
+  "\n\t[SUMMARY]", ifelse(is.na(args$fam_file), "Fam file not present", paste("Fam file:",strrep(" ", 11), args$fam_file, ifelse(args$matrix_type=="GEMMA", "", "(but will be ignored since matrix is not GEMMA)"))),
+  "\n\t[SUMMARY] Using", args$threads, "threads",
+  "\n"
+  ))
+  if(is.na(file.info(args$GDS)[1,1]) | file.info(args$GDS)[1,1]==0){
+    stop("\t[ERROR] The supplied GDS file ", args$GDS, " does not exist.")
+  }
+  if(is.na(file.info(args$group_file)[1,1]) | file.info(args$group_file)[1,1]==0){
+    stop("\t[ERROR] The supplied group file ", args$group_file, " does not exist.")
+  }
+  if(is.na(file.info(args$pheno)[1,1]) | file.info(args$pheno)[1,1]==0){
+    stop("\t[ERROR] The supplied phenotype file ", args$pheno, " does not exist.")
+  }
+}
+
+run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_file, matrix_type="GCTA", fam_file=NULL, nthread = 1){
+    grm=NULL
+    grm.mat=NULL
+    if(matrix_type=="GCTA"){
+      if(is.na(file.info(paste0(matrix_prefix, ".grm.gz"))[1,1]) | file.info(paste0(matrix_prefix, ".grm.gz"))[1,1]==0 | is.na(file.info(paste0(matrix_prefix, ".grm.id"))[1,1]) | file.info(paste0(matrix_prefix, ".grm.id"))[1,1]==0){
+        stop(paste("\t[ERROR] : Matrix file not found or is of size 0. Please make sure", paste0(matrix_prefix, ".grm.id"), "and", paste0(matrix_prefix, ".grm.gz"), "exist."))
+      }
+      grm=as.matrix(fread(paste0(matrix_prefix, ".grm.gz"), header=F))
+      grm.names=as.character(fread(paste0(matrix_prefix, ".grm.id"), header=F)$V1)
+      grm=as.data.table(grm)
+      grm[, c("id1", "id2"):=list(grm.names[V1], grm.names[V2])]
+      grm.mat=acast(formula=id1~id2, value.var="V4", data=grm)#xtabs(V4~V1+V2, data=ha.grm)
+      grm.mat[is.na(grm.mat)]=t(grm.mat)[is.na(grm.mat)]
+    }else{
+      if(is.null(fam_file)){stop("\t[ERROR] : GEMMA matrix files don't contain IDs, please supply a FAM file.")}
+      if(is.na(file.info(fam_file)[1,1]) | file.info(fam_file)[1,1]==0 | is.na(file.info(matrix_prefix)[1,1]) | file.info(matrix_prefix)[1,1]==0){
+        stop("\t[ERROR] : Either the matrix file or the FAM file doesn't exist or is of size 0.")
+      }
+      grm.mat=as.matrix(fread(matrix_prefix))
+      dim.mat=ncol(grm.mat)
+      grm.mat=grm.mat[,-dim.mat]
+      grm.names=(fread(fam_file, header=F))$V2
+      colnames(grm.mat)=grm.names
+      rownames(grm.mat)=grm.names
+    }
+    cat(paste("[INFO] Read square matrix of dimension", ncol(grm.mat), "\n"))
+    pheno=fread(phenofile)
+    pheno=unique(pheno)
+    cat(paste("[INFO] Read file", phenofile, "with header", paste(colnames(pheno), collapse = ", "), "\n"))
+    if(ncol(pheno) !=2 | "id" %nin% colnames(pheno)){stop("Wrong colname specification")}
+    pheno=pheno[id %in% grm.names,]
+    cat(paste("[INFO]", nrow(pheno), "individuals from the matrix have phenotypes.\n"))
+    counts=pheno[,.N, by=id]
+    if(nrow(counts[N>1,])){
+        warning("Some individuals have multiple phenotype values. We will average them, but you should interrupt if this is not normal.")
+        phenoname=colnames(pheno)[2]
+        pheno=pheno[,(phenoname) := mean(.SD[[1]]), by=id, .SDcols=phenoname]
+    }
+    cat("[INFO] Fitting Null model.\n")
+    model0=glmmkin(as.formula(paste(colnames(pheno)[2], "~ 1")), data=pheno, id="id",  family= gaussian(link = "identity"), kins=grm.mat)
+    cat("[INFO] Done. Fitting alternative model.\n")
+    if(nthread>1){
+    makeCluster(nthread)
+    SMMAT.out=SMMAT(null.obj = model0,
+        geno.file = GDFList,
+        group.file = group_file,
+        MAF.range=c(1e-10, 0.05),
+        MAF.weights.beta = c(1,1),
+        miss.cutoff=0.01,
+        tests=c("O", "E"),
+        rho=(0:10)/10,
+        use.minor.allele=T,
+        Garbage.Collection = T,
+        ncores=nthread,
+        meta.file.prefix = cohort_prefix)
+      }else{
+        SMMAT.out=SMMAT(null.obj = model0,
+            geno.file = GDFList,
+            group.file = group_file,
+            MAF.range=c(1e-10, 0.05),
+            MAF.weights.beta = c(1,1),
+            miss.cutoff=0.01,
+            tests=c("O", "E"),
+            rho=(0:10)/10,
+            use.minor.allele=T,
+            Garbage.Collection = T,
+            meta.file.prefix = cohort_prefix)
+
+      }
+    return(SMMAT.out)
+
+}
+
+### FUN STUFF STARTS HERE
+
+check_for_packages()
+
+p = arg_parser("Wrapper for single-cohort SMMAT analysis", hide.opts=T)
+p = add_argument(p, "--cohort-name", "Name of the cohort, will be used as output prefix. Assigned at beginning of project, should remain constant throughout.", type="character")
+p = add_argument(p, "--matrix-prefix", "Prefix of matrix files for GCTA matrix ([prefix].grm.gz and [prefix].grm.id are expected to exist), or matrix file for GEMMA.", type="character")
+p = add_argument(p, "--matrix-type", "Format of the matrix. GCTA and GEMMA formats are supported.", short="-t", default="GCTA")
+p = add_argument(p, "--GDS", "GDS (genotype) file.", type="character", short="-y")
+p = add_argument(p, "--pheno", "Phenotype file. Two columns, whitespace or comma-delimited, with header. The first column is the sample \"id\" and is named as such. The second is the phenotype name. Please avoid exotic characters in the phenotype name.", type="character")
+p = add_argument(p, "--group-file", "SMMAT group file as xxprovided by the analysis team.", short="-g", type="character")
+p = add_argument(p, "--fam-file", "[optional] fam file for GEMMA matrices.", type="character")
+p = add_argument(p, "--threads", "[optional] Number of parallel threads.", default=1, type="integer")
+
+args=parse_args(p, argv = commandArgs(trailingOnly = TRUE))
+check_args(args, p)
+
+ret=run_SMMAT(cohort_prefix=args$cohort_name, matrix_prefix=args$matrix_prefix, GDFList=args$GDS, pheno=args$pheno, group_file=args$group_file, matrix_type=args$matrix_type, fam_file=args$fam_file, nthread=args$threads)
+cat("[INFO] Done. Writing output.\n")
+
+fwrite(ret, paste0(args$cohort_name, ".singlecohort.out"), sep="\t", quote=F, na="NA")
+2.txt")
