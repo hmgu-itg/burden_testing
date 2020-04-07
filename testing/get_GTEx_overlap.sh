@@ -21,7 +21,7 @@ zcat $gencode|while read chr start end gname ID;do
     tabix $ilist $tabixstr > 03.variants.GTEx.overlap.txt
 
     # remove indels, output 0-based bed
-    cat 03.variants.GTEx.overlap.txt| perl -lne '@a=split(/\t/);$,="\t";if (length($a[3])==1 && length($a[4])==1){print $a[0],$a[1]-1,$a[1],$a[0]."_".$a[1]."_".$a[3]."_".$a[4];}' > 04.variants.GTEx.overlap.noindels.bed
+    cat 03.variants.GTEx.overlap.txt| perl -lne '@a=split(/\t/);$,="\t";if (length($a[3])==1 && length($a[4])==1){print "chr".$a[0],$a[1]-1,$a[1],$a[0]."_".$a[1]."_".$a[3]."_".$a[4];}' > 04.variants.GTEx.overlap.noindels.bed
     
     # liftOver
     liftOver 04.variants.GTEx.overlap.noindels.bed $chainfile 05.liftover.out.GTEx.overlap.bed 05.unmapped.GTEx.overlap.bed
