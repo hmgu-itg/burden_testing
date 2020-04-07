@@ -1,8 +1,9 @@
-Bootstrap: library
+Bootstrap: docker
 From: ubuntu:18.04
 
 %environment
-	PERL_MM_USE_DEFAULT=1
+	TZ=Europe/Berlin
+        PERL_MM_USE_DEFAULT=1
 	export PERL_MM_USE_DEFAULT
 	
 	PERL_EXTUTILS_AUTOINSTALL="--defaultdeps"
@@ -18,48 +19,21 @@ From: ubuntu:18.04
 	export PERL5LIB
 
 %post
-	apt-get install -y software-properties-common
-	apt-get install -y build-essential autoconf libtool
-	apt-get install -y bc
-	#apt-get install -y emacs
-	apt-get install -y man
-	apt-get install -y git
-	apt-get install -y curl
-	apt-get install -y wget
-	apt-get install -y make
-	add-apt-repository universe
-	apt-get install -y moreutils
-	apt-get install -y tabix
-	apt-get install -y libbz2-dev
-	apt-get install -y zlib1g-dev
-	apt-get install -y libncurses5-dev 
-	apt-get install -y libncursesw5-dev
-	apt-get install -y liblzma-dev
-	apt-get install -y unzip
-	apt-get install -y python
-	apt-get install -y rsync
-	apt-get install -y libgsl-dev
-	apt-get install -y r-base
-	#apt-get install -y libcurl4-openssl-dev
+	apt update
+	ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+	apt install -y software-properties-common build-essential autoconf libtool bc man git curl wget make moreutils libbz2-dev zlib1g-dev libncurses5-dev libncursesw5-dev liblzma-dev unzip python rsync libgsl-dev r-base libcurl4-openssl-dev
+	#wget https://github.com/samtools/bcftools/releases/download/1.10.2/bcftools-1.10.2.tar.bz2
+	wget https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2
+	tar -xvjf htslib-1.10.2.tar.bz2 && cd htslib-1.10.2 && make tabix && make bgzip && cp bgzip tabix /usr/bin
+	#wget https://github.com/samtools/samtools/releases/download/1.10/samtools-1.10.tar.bz2 && cd bcftools && ./configure && make && make install && cd ../htslib && make 
+	#tabix && make bgzip && cp tabix bgzip /usr/bin && cd ../samtools && ./configure && make && make install
 	
-	Rscript --vanilla -e "install.packages(\"data.table\",repos = \"http://cran.us.r-project.org\")"	
-	#Rscript --vanilla -e "install.packages(\"remotes\",repos = \"http://cran.us.r-project.org\")"	
-	#Rscript --vanilla -e "install.packages(\"BiocManager\",repos = \"http://cran.us.r-project.org\")"	
-	#Rscript --vanilla -e "install.packages(\"RCurl\",repos = \"http://cran.us.r-project.org\")"	
-	#Rscript --vanilla -e "BiocManager::install(\"SeqArray\")"	
-	#Rscript --vanilla -e "BiocManager::install(\"SeqVarTools\")"	
-	#Rscript --vanilla -e "remotes::install_github(\"hanchenphd/GMMAT\")"
-	
+	Rscript --vanilla -e "install.packages(c(\"reshape2\", \"parallel\", \"Hmisc\", \"argparser\", \"data.table\", \"BiocManager\"),repos = \"http://cran.us.r-project.org\");BiocManager::install(c(\"SeqArray\", \"SeqVarTools\"));install.packages(\"GMMAT\", repos = \"http://cran.us.r-project.org\")"
 	cpan install Module::Build
 	cpan install DBI
 	cpan install Try::Tiny
 	cpan install JSON
 	cpan install Data::Dumper
-	#cpan install File::Copy::Recursive
-	#cpan install Path::Tiny
-	#cpan install Test::File::ShareDir::Dist
-	#cpan install DateTime::Locale
-	#cpan install DateTime
 	cpan install File::Basename
 	cpan install Getopt::Long
 	cpan install Data::Types
@@ -116,10 +90,10 @@ From: ubuntu:18.04
 	echo "This container was created: $CREATIONDATE"
 
 %labels
-	Author HMGU ITG
+	Author Arthur Gilly, Andrei Barysenka, Daniel Suveges
 	Version v1.4.1
 
 %help
-	This is a container designed to run burden testing pipeline; for more information run this container with the help command line option
+	This container allows you to run rare variant aggregation tests using MONSTER and SMMAT; for more information run this container with the help command line option.
 
 
