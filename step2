@@ -144,4 +144,3 @@ ret=run_SMMAT(cohort_prefix=args$cohort_name, matrix_prefix=args$matrix_prefix, 
 cat("[INFO] Done. Writing output.\n")
 
 fwrite(ret, paste0(args$cohort_name, ".singlecohort.out"), sep="\t", quote=F, na="NA")
-2.txt")
