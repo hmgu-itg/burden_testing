@@ -223,8 +223,8 @@ while ( my $ID = <$INPUT> ){
 
     # Filtering variants based on the provided parameters:
     my ($hash, $genotypes) = &processVar($variants, $parameters,$stable_ID);
-    # Gene will be skipped if there are no suitable variations left:
-    if (scalar keys %{$hash} < 2){
+    # Gene will be skipped if there are no suitable variations left (for MONSTER):
+    if (scalar keys %{$hash} < 2 && !defined($parameters->{"smmat"})){
 	print "[Warning] Gene $ID is skipped as not enough variants left to test [NOT_ENOUGH_VAR].";
 	print "";
 	undef $hash;
@@ -232,8 +232,8 @@ while ( my $ID = <$INPUT> ){
 	next;
     }
 
-    # The gene will be skipped if there are too many variants:
-    if (scalar keys %{$hash} > $parameters->{"maxVars"}){
+    # The gene will be skipped if there are too many variants (for MONSTER):
+    if (scalar keys %{$hash} > $parameters->{"maxVars"} && !defined($parameters->{"smmat"})){
 	print "[Warning] Gene $ID is skipped as more than ".$parameters->{"maxVars"}." variants are in the set [TOO_MANY_VAR].";
 	print "";
 	undef $hash;
@@ -250,11 +250,13 @@ while ( my $ID = <$INPUT> ){
 	print "";
     }
 
-    # We don't save anything unless there at least two variants:
+    # We don't save anything unless there at least two variants (for MONSTER):
     if (!defined($parameters->{"smmat"})){
 	next unless scalar keys %{$hash} > 1;
     }
 
+    next unless scalar keys %{$hash} > 0;
+    
     # Once we have the scores we have to print out the SNP file:
     my $flag=0;
     $flag=1 if $parameters->{"score"} ne "NA";
