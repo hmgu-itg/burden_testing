@@ -20,13 +20,13 @@ zcat $gencode|while read chr start end gname ID;do
     mergeBed -i 01.regions.CADD.bed > 02.regions.merged.CADD.bed
 
     # selecting variants from ilist
-#    echo "Tabix input list"
+    # list is 1-based, BEDs are 0-based
     tabixstr=$(cat 02.regions.merged.CADD.bed| perl -lne '@a=split(/\t/);$s=$a[1]+1;print $a[0].":".$s."-".$a[2];'| tr '\n' ' ')
     tabix $ilist $tabixstr > 03.variants.CADD.txt
 
     # get CADD scores, omitting indels#
 #    echo "CADD scores"
-    cat 03.variants.txt | perl -lne '@a=split(/\t/);$,="\t";if (length($a[3])==1 && length($a[4])==1){print $a[0],$a[1],$a[3],$a[4];}'|while read c p r a;do score=$(tabix $caddfile $c":"$p"-"$p| awk -v a=$a 'BEGIN{FS="\t";}$4==a{print $6;}');echo $ID $c $p "." $r $a $score;done | tr ' ' '\t' >> $outfile
+    cat 03.variants.CADD.txt | perl -lne '@a=split(/\t/);$,="\t";if (length($a[3])==1 && length($a[4])==1){print $a[0],$a[1],$a[3],$a[4];}'|while read c p r a;do score=$(tabix $caddfile $c":"$p"-"$p| awk -v a=$a 'BEGIN{FS="\t";}$4==a{print $6;}');echo $ID $c $p "." $r $a $score;done | tr ' ' '\t' >> $outfile
     echo $ID
 done
 

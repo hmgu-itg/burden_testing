@@ -71,6 +71,7 @@ function usage {
     echo "  8: Combined GENCODE, GTEx and Overlap data together into a single bedfile."
     echo "  9: Tabix output"
     echo "  10: optionally download Egen Phred scores (if \"-n\" is not sepcified)"
+    echo "  11: optionally download CADD scores (if \"-c\" is not sepcified)"
     echo ""
     echo ""
     echo "This script produces two output files, both in the same directory as the input GTEx file."
@@ -139,11 +140,12 @@ getScores="yes"
 ensftp="ftp://ftp.ensembl.org"
 OPTIND=1
 outdir=""
-while getopts "hne:o:" optname; do
+getCadd="yes"
+while getopts "hnce:o:" optname; do
     case "$optname" in
-#        "G" ) GTExFile="${OPTARG}" ;;
         "h" ) usage ;;
         "n" ) getScores="no" ;;
+        "c" ) getCadd="no" ;;
         "e" ) ensftp="${OPTARG}" ;;
         "o" ) outdir="${OPTARG}" ;;
         "?" ) usage ;;
@@ -638,6 +640,20 @@ if [[ $getScores == "yes" ]];then
 
     if [[ $? -ne 0 ]];then
 	echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
+	echo "Try downloading later\n"
+    fi
+fi
+
+if [[ $getCadd == "yes" ]];then
+    info "Downloading CADD scores\n"
+    cd $outdir
+    mkdir -p scores
+    cd scores
+    wget -c https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
+    wget -c https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
+  
+    if [[ $? -ne 0 ]];then
+	echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
 	echo "Try downloading later\n"
     fi
 fi
