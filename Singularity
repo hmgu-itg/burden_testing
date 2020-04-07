@@ -9,7 +9,7 @@ From: ubuntu:18.04
 	PERL_EXTUTILS_AUTOINSTALL="--defaultdeps"
 	export PERL_EXTUTILS_AUTOINSTALL
 	
-	PATH=$PATH:/usr/local/bin:/usr/local/bin/burden_testing:/usr/local/bin/burden_testing/testing:/usr/local/bin/.vep/htslib:/usr/local/bin/ensembl-vep:/usr/local/bin/MONSTER:/usr/local/bin/bedtools2/bin/:/usr/local/bin/BigWig-Tools:/usr/local/bin/UCSC.tools
+	PATH=$PATH:/usr/local/bin:/usr/local/bin/burden_testing:/usr/local/bin/burden_testing/testing:/usr/local/bin/.vep/htslib:/usr/local/bin/ensembl-vep:/usr/local/bin/MONSTER:/usr/local/bin/bedtools2/bin/:/usr/local/bin/UCSC.tools
 	export PATH
 	
 	LC_ALL=C
@@ -21,7 +21,7 @@ From: ubuntu:18.04
 %post
 	apt update
 	ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-	apt install -y software-properties-common build-essential autoconf libtool bc man git curl wget make moreutils libbz2-dev zlib1g-dev libncurses5-dev libncursesw5-dev liblzma-dev unzip python rsync libgsl-dev r-base libcurl4-openssl-dev
+	apt install -y software-properties-common build-essential autoconf libtool bc man git curl wget make moreutils libbz2-dev zlib1g-dev libncurses5-dev libncursesw5-dev liblzma-dev unzip python libgsl-dev r-base libcurl4-openssl-dev emacs
 	#wget https://github.com/samtools/bcftools/releases/download/1.10.2/bcftools-1.10.2.tar.bz2
 	wget https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2
 	tar -xvjf htslib-1.10.2.tar.bz2 && cd htslib-1.10.2 && make tabix && make bgzip && cp bgzip tabix /usr/bin
@@ -49,15 +49,15 @@ From: ubuntu:18.04
 	sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
 	perl INSTALL.pl -a ac -n --ASSEMBLY GRCh38 -s homo_sapiens -c /usr/local/bin/.vep -d /usr/local/bin/.vep
 	
-	cd /usr/local/bin
-	git clone https://github.com/Carldeboer/BigWig-Tools.git
-	cd BigWig-Tools
-	git checkout bb83ba1bc28e11e7949884abc26c3f14523dbd0f
+	#cd /usr/local/bin
+	#git clone https://github.com/Carldeboer/BigWig-Tools.git
+	#cd BigWig-Tools
+	#git checkout bb83ba1bc28e11e7949884abc26c3f14523dbd0f
 	
 	cd /usr/local/bin
 	mkdir UCSC.tools
 	cd UCSC.tools
-	rsync -aP rsync://hgdownload.soe.ucsc.edu/genome/admin/exe/linux.x86_64/ ./
+	wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64.v385/liftOver
 	
 	cd /usr/local/bin
 	wget http://www.stat.uchicago.edu/~mcpeek/software/MONSTER/MONSTER_v1.3.tar.gz
