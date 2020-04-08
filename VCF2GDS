@@ -1,0 +1,23 @@
+#!/usr/bin/env Rscript
+
+library(SeqArray)
+args=commandArgs(T)
+
+## a very simple wrapper for seqVCF2GDS
+# expects 2 arguments: source VCF and output gds
+if(length(args)<2){error("[ERROR] expects 2 arguments: source VCF and output gds, and an optional thread number.")}
+source=args[1]
+dest=args[2]
+ncore=ifelse(length(args)>2, as.integer(args[3]), 0)
+if(is.na(file.info(source)[1,1]) | file.info(source)[1,1]==0){
+  stop("\t[ERROR] The supplied VCF file ", source, " does not exist.")
+}
+
+if(ncore){
+  library(parallel)
+  makeCluster(ncore)
+  SeqArray::seqVCF2GDS(source, dest, parallel=ncore, info.import="", fmt.import="")
+}
+else{
+  SeqArray::seqVCF2GDS(source, dest, info.import="", fmt.import="")
+}
