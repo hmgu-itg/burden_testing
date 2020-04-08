@@ -32,7 +32,8 @@ zcat $gencode|while read chr start end gname ID;do
     n=$(cat 05.liftover.out.GTEx.overlap.bed | wc -l)
 
     if [[ $n -ne 0 ]];then
-	cat 05.liftover.out.GTEx.overlap.bed | while read c s e d;do c=${c/#chr};read -r x z r a <<<$(echo $d| tr '_' ' ');echo "tabix $eigenfile $c":"$e"-"$e"; lines=$(tabix $eigenfile $c":"$e"-"$e);score=$(echo "$lines" | awk -v r=$r -v a=$a 'BEGIN{FS="\t";b="NA";}($3==r && $4==a) || ($3==a && $4==r){b=$7;}END{print b;}');if [[ -z $score ]];then score="NA";fi;echo $ID $x $z "." $r $a $score;done | tr ' ' '\t' >> $outfile
+	echo "tabix $eigenfile $c":"$e"-"$e";
+	cat 05.liftover.out.GTEx.overlap.bed | while read c s e d;do c=${c/#chr};read -r x z r a <<<$(echo $d| tr '_' ' '); lines=$(tabix $eigenfile $c":"$e"-"$e);score=$(echo "$lines" | awk -v r=$r -v a=$a 'BEGIN{FS="\t";b="NA";}($3==r && $4==a) || ($3==a && $4==r){b=$7;}END{print b;}');if [[ -z $score ]];then score="NA";fi;echo $ID $x $z "." $r $a $score;done | tr ' ' '\t' >> $outfile
 
 	echo $ID
     fi
