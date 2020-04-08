@@ -23,8 +23,12 @@ zcat $gencode|while read chr start end gname ID;do
     tabix $ilist $tabixstr > 03.variants.CADD.txt
 
     # get CADD scores, omitting indels
-    cat 03.variants.CADD.txt | perl -lne '@a=split(/\t/);$,="\t";if (length($a[3])==1 && length($a[4])==1){print $a[0],$a[1],$a[3],$a[4];}'|while read c p r a;do lines=$(tabix $caddfile $c":"$p"-"$p);score=$(echo "$lines" | awk -v a=$a 'BEGIN{FS="\t";}$4==a{print $6;}');if [[ -z $score ]];then score="NA";fi;echo $ID $c $p "." $r $a $score;done | tr ' ' '\t' >> $outfile
-    echo $ID
+    n=$(cat 03.variants.CADD.txt | wc -l)
+
+    if [[ $n -ne 0 ]];then
+	cat 03.variants.CADD.txt | perl -lne '@a=split(/\t/);$,="\t";if (length($a[3])==1 && length($a[4])==1){print $a[0],$a[1],$a[3],$a[4];}'|while read c p r a;do lines=$(tabix $caddfile $c":"$p"-"$p);score=$(echo "$lines" | awk -v a=$a 'BEGIN{FS="\t";}$4==a{print $6;}');if [[ -z $score ]];then score="NA";fi;echo $ID $c $p "." $r $a $score;done | tr ' ' '\t' >> $outfile
+	echo $ID
+    fi
 done
 
 
