@@ -10,7 +10,7 @@ use Data::Types;
 use File::Path qw(make_path);
 
 # Version information:
-our $version = "v6.0 Last modified: 31.Mar.2020";
+our $version = "v6.0 Last modified: 07.Apr.2020";
 
 # Get script directory:
 our $scriptDir = dirname(__FILE__);
@@ -397,7 +397,7 @@ sub parseRegulation {
             $hash{'TF_binding_site'}   = 1 if "TF_bind" eq $feature;
             $hash{'CTCF_binding_site'} = 1 if "CTCF" eq $feature;
             $hash{'enhancer'}          = 1 if "enhancer" eq $feature;
-            $hash{'Open chromatin'}    = 1 if "openChrom" eq $feature;
+            $hash{'open_chromatin_region'}    = 1 if "openChrom" eq $feature;
             $hash{'promoter'}          = 1 if "promoter" eq $feature;
             $hash{'allreg'}            = 1 if "allreg" eq $feature;
             $hash{'promoter_flanking_region'} = 1 if "promoterFlank" eq $feature;
@@ -888,10 +888,9 @@ sub processVar {
 		next;
 	    }
 
-	    # TODO: fix loftee part
-	    # If loftee or lofteeHC are enabled, the script exits if no LoF_conf tag is present in the info field.
-	    if (( $parameters->{"lofteeHC"} or $parameters->{"loftee"}) and $info !~ /LoF_conf/ ){
-		die "[Error] Based on the provided parameters, variant selection based on the loftee prediction was requested.\n\tHowever the provided vcf file does not contain the obligatory LoF_conf tag.Exiting.";
+	    # If loftee or lofteeHC are enabled, the script skips the variant if no LoF_conf tag is present in the info field.
+	    if (( $parameters->{"lofteeHC"} || $parameters->{"loftee"}) && $info !~ /LoF_conf/ ){
+		die "[Warning] Based on the provided parameters, variant selection based on the loftee prediction was requested.\nNo\"LoF_conf\" tag.Skipping.";
 	    }
 
 	    # If loftee is enabled, only low and high-confidence loss-of-function variants will be selected:
@@ -1075,8 +1074,8 @@ sub usage {
     print("          --verbose <increase verbosity>");
     print("          --score <which score to use to weight variants; one of: CADD, EigenPhred >");
     print("          --lof <only select high impact variants: transcript_ablation, splice_acceptor_variant, splice_donor_variant, stop_gained, frameshift_variant, stop_lost, start_lost, transcript_amplification, inframe_insertion, inframe_deletion>");
-#    print("          --loftee <only select high and low confident loss of function variants>");
-#    print("          --lofteeHC <only select high confident loss of function variants>");
+    print("          --loftee <only select high and low confident loss of function variants>");
+    print("          --lofteeHC <only select high confident loss of function variants>");
     print("          --missingness <missingness upper threshold; default: 0.01>");
     print("          --shift <shift scores by this value; default: 0>");
     print("          --cutoff <score threshold below which the variants will be removed; default: 0>");
