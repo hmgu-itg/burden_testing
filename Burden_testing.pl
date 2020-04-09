@@ -583,7 +583,7 @@ sub FilterLines {
     }
     close $tempbed;
     
-    `sort -k1,1n -k2,2n $tmpName | sponge $tmpName`;
+    `sort -k1,1 -k2,2n $tmpName | sponge $tmpName`;
 
     # Collapsing overlapping features:
     my $queryString = "mergeBed -i $tmpName";
