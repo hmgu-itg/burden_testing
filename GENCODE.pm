@@ -31,12 +31,10 @@ sub new {
 sub _initialize {
     my $self = shift;
     my $gencodeFile = shift;
-
-    # Reading the file and create and return two hashes. Each contain the chromosome and
-    # coordinate of the genes. Keys:
+    my $FILE;
     
     die "[Error] GENCODE file with gene coordinates could not be opened. Exiting.\n" unless -e $gencodeFile;
-    open(my $FILE, "zcat $gencodeFile | ");
+    open($FILE, "zcat $gencodeFile | ");
     while (my $line = <$FILE>) {
         next if $line =~ /^#/;
 	
@@ -50,10 +48,18 @@ sub _initialize {
                    "end" => $end,
                    "name" => $name,
                    "ID" => $ID};
-        # adding to hash:
-        $self->{"gene_names"}->{$name} = $ref;
-        $self->{"gene_names"}->{$ID} = $ref;
+	
+        # adding to hash, unless already exists:
+	if (exists($self->{"gene_names"}->{$name}) || exists($self->{"gene_names"}->{$ID}) ){
+	    print "[Warning] GENCODE::_initialize : either $name or $ID is already in the hash; skipping $name/$ID";
+	    next;
+	}
+	else{
+	    $self->{"gene_names"}->{$name} = $ref;
+	    $self->{"gene_names"}->{$ID} = $ref;
+	}
     }
+    close($FILE);
 }
 
 # A method to extract the coordinates of any gene based on the gene name or stable ID.
@@ -62,7 +68,6 @@ sub GetCoordinates {
     my $ID = shift; # stable ID or gene name
     my ($chr, $start, $end, $stable_ID, $name) = ('NA') x 5;
 
-    # If Stable ID is given:
     if ( exists $self->{"gene_names"}->{$ID} ) {
         $chr        = $self->{"gene_names"}->{$ID}->{chr};
         $start      = $self->{"gene_names"}->{$ID}->{start};
