@@ -20,8 +20,15 @@ MAFfromAF=function(x){
 
 merged=NULL
 for(f in argv){
+    cat(paste("\t[INFO] Reading", f, "\n"))
+    flush.console()
     cohort=fread(f)
     setnames(cohort, c("chr", "pos", "ref", "alt", "ac", "an"))
+    oldrec=nrow(cohort)
+    cohort=cohort[an>0,]
+    newrec=nrow(cohort)
+    if(newrec!=oldrec){cat(paste("\t[INFO] Discarded", oldrec-newrec, "records with AN=0\n"))}
+    flush.console()
     cohort[,c("id", "af") := list(paste(chr, pos, ref, alt), ac/an)]
     cohort[,maf := MAFfromAF(af)]
     cohort_name=sub("\\..*", "", f)

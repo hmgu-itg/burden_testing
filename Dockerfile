@@ -1,7 +1,7 @@
 FROM ubuntu:18.04
 # This container allows you to run rare variant aggregation tests using MONSTER and SMMAT; for more information run this container with the help command line option.
 LABEL Author Arthur Gilly, Andrei Barysenka, Daniel Suveges
-LABEL Version v1.5
+LABEL Version v1.6
 ENV TZ=Europe/Berlin
 ENV PERL_MM_USE_DEFAULT=1
 ENV PERL_EXTUTILS_AUTOINSTALL="--defaultdeps"
@@ -11,7 +11,7 @@ ENV PERL5LIB=$PERL5LIB:/usr/local/bin/.vep
 RUN apt update
 RUN DEBIAN_FRONTEND="noninteractive" apt install -y software-properties-common build-essential autoconf libtool bc man git curl wget make moreutils libbz2-dev zlib1g-dev libncurses5-dev libncursesw5-dev liblzma-dev unzip python libgsl-dev r-base libcurl4-openssl-dev emacs axel
 RUN wget https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2 && tar -xvjf htslib-1.10.2.tar.bz2 && cd htslib-1.10.2 && make tabix && make bgzip && cp bgzip tabix /usr/bin
-RUN Rscript --vanilla -e "install.packages(c(\"reshape2\", \"parallel\", \"Hmisc\", \"argparser\", \"data.table\", \"BiocManager\"),repos = \"http://cran.us.r-project.org\");BiocManager::install(c(\"SeqArray\", \"SeqVarTools\"));install.packages(\"GMMAT\", repos = \"http://cran.us.r-project.org\")"
+RUN Rscript --vanilla -e "install.packages(c(\"R.utils\", \"reshape2\", \"parallel\", \"Hmisc\", \"argparser\", \"data.table\", \"BiocManager\"),repos = \"http://cran.us.r-project.org\");BiocManager::install(c(\"SeqArray\", \"SeqVarTools\"));install.packages(\"GMMAT\", repos = \"http://cran.us.r-project.org\")"
 RUN perl -MCPAN -e 'foreach (@ARGV) { CPAN::Shell->rematein("notest", "install", $_) }' Module::Build DBI Try::Tiny JSON Data::Dumper File::Basename Getopt::Long Data::Types File::Path
 WORKDIR /usr/local/bin
 RUN git clone https://github.com/hmgu-itg/burden_testing
@@ -36,5 +36,4 @@ WORKDIR /usr/local/bin/bedtools2
 RUN make
 WORKDIR /usr/local/bin
 RUN wget https://sourceforge.net/projects/transpose/files/transpose/transpose-2.0/2.0/transpose-2.0.zip && unzip transpose-2.0.zip && rm transpose-2.0.zip && cd transpose-2.0/src && gcc transpose.c -o transpose2 && mv transpose2 /usr/local/bin && cd /usr/local/bin && rm -rf transpose-2.0/
-RUN CREATIONDATE=`date`
-CMD echo "This container was created: $CREATIONDATE"
+RUN wget https://github.com/samtools/bcftools/releases/download/1.10.2/bcftools-1.10.2.tar.bz2 && tar -xvjf bcftools-1.10.2.tar.bz2 && cd bcftools-1.10.2 && ./configure && make && make install
