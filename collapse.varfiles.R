@@ -72,7 +72,7 @@ setcolorder(merged, c("chr", "pos", "id", "ref", "alt"))
 merged[, c("chr", "pos") := lapply(.SD, as.numeric), .SDcols=c("chr", "pos")]
 setorder(merged, chr, pos)
 #head(merged)
-fwrite(merged, OUTFILE, quote=F, col.names=F, sep="\t")
+fwrite(merged, OUTFILE, quote=F, col.names=F, sep="\t",scipen=999)
 cat(paste("\t[INFO] File",OUTFILE,"has been written. Bgzipping and tabixing.\n"))
 system(paste("bgzip", OUTFILE))
 system(paste0("tabix -s 1 -b 2 -e 2 ", OUTFILE, ".gz"))
