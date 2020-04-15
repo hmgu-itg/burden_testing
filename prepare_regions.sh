@@ -183,7 +183,7 @@ info "Working directory: ${targetDir}/${today}\n\n"
 # Get the most recent version of the data:
 mkdir -p ${targetDir}/${today}/GENCODE
 info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
-axel -a ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -O ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+axel -a ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -o ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 echo -e "done."
 
 # Testing if the file exists:
@@ -213,11 +213,11 @@ fi
 #Download all cell types:
 #GFF is 1-based
 for cell in ${cells}; do
-    echo -n "."
-    axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -O ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+    echo -n "Downloading cell type : $cell                              "
+    axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
 done
-echo "Done."
+echo -e"\nDone."
 
 # Printing out report of the downloaded cell types:
 cellTypeCount=$(ls -la ${targetDir}/${today}/EnsemblRegulation/*gff.gz | wc -l)
@@ -230,7 +230,7 @@ mkdir -p ${targetDir}/${today}/APPRIS
 info "Downloading APPRIS isoform data.\n"
 info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
 axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
-    -O ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+    -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
 
 # Testing if the file exists or not:
 testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
@@ -296,7 +296,8 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
                 }' | gzip > ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz
 
 # Test if output is empty or not:
-testFileLines  ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz # 0-based
+testFile ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz
+testFileLines ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz # 0-based
 
 # OUTPUT:
 # start/end are 0-based coordinates of "class"
