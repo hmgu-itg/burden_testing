@@ -38,7 +38,7 @@ last_modified=2020.Apr.03
 
 ## Built in versions:
 GENCODE_release=32
-Ensembl_release=98 
+Ensembl_release=98
 GTExRelease=8
 
 # Get script dir:
@@ -174,7 +174,7 @@ if [ $? -ne 0 ] ; then
 fi
 
 cd ${outdir}
-wget -r https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
+wget -r -nd https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
 gzip -f GTEx_Analysis_v8_eQTL.tar
 
 GTExFile=${outdir}"/GTEx_Analysis_v8_eQTL.tar.gz"
@@ -628,7 +628,7 @@ info "Backing up intermediate files ...\n"
 tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${targetDir}/${today}/APPRIS  \
     ${targetDir}/${today}/EnsemblRegulation ${targetDir}/${today}/failed ${targetDir}/${today}/GENCODE  \
     ${targetDir}/${today}/processed
-info "Intermediate files are backed in in ${today}_annotation.backup.tar.gz\n" 
+info "Intermediate files are backed in in ${today}_annotation.backup.tar.gz\n"
 
 if [[ $getScores == "yes" ]];then
     info "Downloading Eigen Phred scores\n"
@@ -651,7 +651,7 @@ if [[ $getCadd == "yes" ]];then
     cd scores
     wget -c https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
     wget -c https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
-  
+
     if [[ $? -ne 0 ]];then
 	echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
 	echo "Try downloading later\n"
