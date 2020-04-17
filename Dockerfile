@@ -1,5 +1,4 @@
 FROM ubuntu:18.04
-ARG CACHEBUST=0
 
 # This container allows you to run rare variant aggregation tests using MONSTER and SMMAT; for more information run this container with the help command line option.
 LABEL Author Arthur Gilly, Andrei Barysenka, Daniel Suveges
@@ -45,6 +44,6 @@ RUN wget https://sourceforge.net/projects/transpose/files/transpose/transpose-2.
 RUN wget https://github.com/samtools/bcftools/releases/download/1.10.2/bcftools-1.10.2.tar.bz2 && tar -xvjf bcftools-1.10.2.tar.bz2 && cd bcftools-1.10.2 && ./configure && make && make install
 
 WORKDIR /usr/local/bin
-ARG CACHEBUST
+ARG CACHEBUST=0
 RUN git clone https://github.com/hmgu-itg/burden_testing
 

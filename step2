@@ -119,7 +119,7 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
             meta.file.prefix = cohort_prefix)
 
       }
-    return(SMMAT.out)
+    return(list(pheno=phenoname, out=SMMAT.out))
 
 }
 
@@ -136,6 +136,7 @@ p = add_argument(p, "--pheno", "Phenotype file. Two columns, whitespace or comma
 p = add_argument(p, "--group-file", "SMMAT group file as xxprovided by the analysis team.", short="-g", type="character")
 p = add_argument(p, "--fam-file", "[optional] fam file for GEMMA matrices.", type="character")
 p = add_argument(p, "--threads", "[optional] Number of parallel threads.", default=1, type="integer")
+p = add_argument(p, "--out", "[optional] Output file. If not set, [cohort].[trait].out will be used.", type="character")
 
 args=parse_args(p, argv = commandArgs(trailingOnly = TRUE))
 check_args(args, p)
@@ -143,4 +144,10 @@ check_args(args, p)
 ret=run_SMMAT(cohort_prefix=args$cohort_name, matrix_prefix=args$matrix_prefix, GDFList=args$GDS, pheno=args$pheno, group_file=args$group_file, matrix_type=args$matrix_type, fam_file=args$fam_file, nthread=args$threads)
 cat("[INFO] Done. Writing output.\n")
 
-fwrite(ret, paste0(args$cohort_name, ".singlecohort.out"), sep="\t", quote=F, na="NA")
+if(is.na(args$out)){
+  outfn=paste(args$cohort_name, ret$pheno "out")
+}else{
+  outfn=args$out
+}
+
+fwrite(ret$out, outfn, sep="\t", quote=F, na="NA")
