@@ -37,6 +37,7 @@ check_args=function(args, parser){
    "\n\t[SUMMARY] Cohort name:",strrep(" ", 8), args$cohort_name,
   "\n\t[SUMMARY]", ifelse(is.na(args$fam_file), "Fam file not present", paste("Fam file:",strrep(" ", 11), args$fam_file, ifelse(args$matrix_type=="GEMMA", "", "(but will be ignored since matrix is not GEMMA)"))),
   "\n\t[SUMMARY] Using", args$threads, "threads",
+  "\n\t[SUMMARY]", ifelse(is.na(args$out) , "Using default output filename", paste("Using output prefix:", args$out)),
   "\n"
   ))
   if(is.na(file.info(args$GDS)[1,1]) | file.info(args$GDS)[1,1]==0){
