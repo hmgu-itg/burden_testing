@@ -17,7 +17,6 @@ if(ncore){
   library(parallel)
   makeCluster(ncore)
   SeqArray::seqVCF2GDS(source, dest, parallel=ncore, info.import="", fmt.import="")
-}
-else{
+}else{
   SeqArray::seqVCF2GDS(source, dest, info.import="", fmt.import="")
 }
