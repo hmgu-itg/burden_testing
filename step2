@@ -119,7 +119,7 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
             meta.file.prefix = cohort_prefix)
 
       }
-    return(list(pheno=phenoname, out=SMMAT.out))
+    return(list(pheno=colnames(pheno)[2], out=SMMAT.out))
 
 }
 
