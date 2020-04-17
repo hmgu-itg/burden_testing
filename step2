@@ -50,7 +50,7 @@ check_args=function(args, parser){
   }
 }
 
-run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_file, matrix_type="GCTA", fam_file=NULL, nthread = 1){
+run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_file, matrix_type="GCTA", fam_file=NULL, nthread = 1, outfile=NA){
     grm=NULL
     grm.mat=NULL
     if(matrix_type=="GCTA"){
@@ -91,6 +91,7 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
     cat("[INFO] Fitting Null model.\n")
     model0=glmmkin(as.formula(paste(colnames(pheno)[2], "~ 1")), data=pheno, id="id",  family= gaussian(link = "identity"), kins=grm.mat)
     cat("[INFO] Done. Fitting alternative model.\n")
+
     if(nthread>1){
     makeCluster(nthread)
     SMMAT.out=SMMAT(null.obj = model0,
@@ -104,7 +105,7 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
         use.minor.allele=T,
         Garbage.Collection = T,
         ncores=nthread,
-        meta.file.prefix = cohort_prefix)
+        meta.file.prefix = outfile)
       }else{
         SMMAT.out=SMMAT(null.obj = model0,
             geno.file = GDFList,
@@ -116,7 +117,7 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
             rho=(0:10)/10,
             use.minor.allele=T,
             Garbage.Collection = T,
-            meta.file.prefix = cohort_prefix)
+            meta.file.prefix = outfile)
 
       }
     return(list(pheno=colnames(pheno)[2], out=SMMAT.out))
@@ -141,13 +142,14 @@ p = add_argument(p, "--out", "[optional] Output file. If not set, [cohort].[trai
 args=parse_args(p, argv = commandArgs(trailingOnly = TRUE))
 check_args(args, p)
 
-ret=run_SMMAT(cohort_prefix=args$cohort_name, matrix_prefix=args$matrix_prefix, GDFList=args$GDS, pheno=args$pheno, group_file=args$group_file, matrix_type=args$matrix_type, fam_file=args$fam_file, nthread=args$threads)
-cat("[INFO] Done. Writing output.\n")
-
 if(is.na(args$out)){
-  outfn=paste(args$cohort_name, ret$pheno "out")
+  outfn=paste(args$cohort_name, ret$pheno, "out", sep=".")
 }else{
   outfn=args$out
 }
+
+ret=run_SMMAT(cohort_prefix=args$cohort_name, matrix_prefix=args$matrix_prefix, GDFList=args$GDS, pheno=args$pheno, group_file=args$group_file, matrix_type=args$matrix_type, fam_file=args$fam_file, nthread=args$threads, outfile=outfn)
+cat("[INFO] Done. Writing output.\n")
+
 
 fwrite(ret$out, outfn, sep="\t", quote=F, na="NA")
