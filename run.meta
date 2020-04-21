@@ -6,32 +6,42 @@ argv = commandArgs(trailingOnly = TRUE)
 group_file=argv[1]
 argv=argv[-1]
 
+cohorts=NULL
 files=NULL
 for(d in argv){
-  flist=list.files(d, pattern="*.out")
-  cohort=strsplit(flist[1], ".", fixed=T)[[1]][1]
-  print(paste(length(flist), "files detected for cohort", cohort))
+  flist=list.files(d, pattern="*.out$")
+  cohort=strsplit(flist[1], ".", fixed=T)[[1]]
+  filepat=paste(cohort[-1], collapse=".")
+  cohort=cohort[1]
+  cat(paste("[INFO]", length(flist), "files detected for cohort", cohort, "\n"))
+  if(is.null(files)){
+    files=filepat
+  }else{
+    oldfiles=files
+    files=intersect(filepat, files)
+    if(oldfiles!=files){
+      print(paste("[Warning]: Dropped", length(oldfiles)-length(files), "files not found in this cohort"))
+    }
+  }
 }
-stop()
-singlecohort_files=list.files(dir, pattern="*.singlecohort.out")
-cohorts=gsub(".singlecohort.out", "", singlecohort_files, fixed=T)
-cat(paste("[INFO] detected", length(cohorts), "cohorts :", paste(cohorts, collapse=" "), "\n"))
-nfiles=sapply(cohorts, function(x){
-    scorefiles=list.files(dir, pattern=paste0(unlist(x),".score.*"))
-    return(length(scorefiles))
-})
 
-cat("[INFO] Meta-analysing...\n")
+#we now meta-analyse every file separately
+cat(paste("[INFO] Meta-analysing",length(files), "for",length(cohorts),"cohorts.\n"))
 flush.console()
-meta=SMMAT.meta(meta.files.prefix=paste0(dir, "/", cohorts), n.files=nfiles,
-           group.file=group_file,
-        MAF.range=c(1e-10, 0.05),
-        MAF.weights.beta = c(1,1),
-        miss.cutoff=0.01,
-        tests=c("O", "E"),
-        rho=(0:10)/10,
-        use.minor.allele=T
-          )
-
-cat("[INFO] Done. Writing results.\n")
-fwrite(meta, paste(c(cohorts, "meta", "txt"), collapse="."), sep="\t", na=NA, quote=F)
+for(f in files){
+  print(paste(cohorts, paste(cohorts,f,sep="."), sep="/"))
+# meta=SMMAT.meta(meta.files.prefix=paste(cohorts, paste(cohorts,f,sep="."), sep="/"), n.files=nfiles,
+#            group.file=group_file,
+#         MAF.range=c(1e-10, 0.05),
+#         MAF.weights.beta = c(1,1),
+#         miss.cutoff=0.01,
+#         tests=c("O", "E"),
+#         rho=(0:10)/10,
+#         use.minor.allele=T
+#           )
+#
+# cat("[INFO] Done. Writing results.\n")
+# fwrite(meta, paste(c(cohorts, "meta", "txt"), collapse="."), sep="\t", na=NA, quote=F)
+#
+stop()
+}
