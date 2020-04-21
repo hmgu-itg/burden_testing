@@ -46,4 +46,7 @@ RUN wget https://github.com/samtools/bcftools/releases/download/1.10.2/bcftools-
 WORKDIR /usr/local/bin
 ARG CACHEBUST=0
 RUN git clone https://github.com/hmgu-itg/burden_testing
-
+RUN Rscript --vanilla -e "install.packages(c(\"doMC\"), repos = \"http://cran.us.r-project.org\")"
+RUN apt install locales
+RUN echo 'en_US.UTF-8 UTF-8' >> /etc/locale.gen
+RUN locale-gen && update-locale LANG=en_US.UTF-8
