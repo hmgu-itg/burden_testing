@@ -10,38 +10,42 @@ cohorts=NULL
 files=NULL
 for(d in argv){
   flist=list.files(d, pattern="*.out$")
-  cohort=strsplit(flist[1], ".", fixed=T)[[1]]
-  filepat=paste(cohort[-1], collapse=".")
-  cohort=cohort[1]
+  cohort=strsplit(flist[1], ".", fixed=T)[[1]][1]
+  cohorts=c(cohorts,cohort)
+  filepat=sub(paste0(cohort,"."), "", flist)
   cat(paste("[INFO]", length(flist), "files detected for cohort", cohort, "\n"))
   if(is.null(files)){
     files=filepat
+    cat(paste("[INFO] init with",length(files), "\n"))
   }else{
     oldfiles=files
     files=intersect(filepat, files)
-    if(oldfiles!=files){
+    if(length(oldfiles)!=length(files)){
       print(paste("[Warning]: Dropped", length(oldfiles)-length(files), "files not found in this cohort"))
     }
   }
 }
 
+
 #we now meta-analyse every file separately
-cat(paste("[INFO] Meta-analysing",length(files), "for",length(cohorts),"cohorts.\n"))
+cat(paste("[INFO] Meta-analysing",length(files), "files for",length(cohorts),"cohorts.\n"))
 flush.console()
 for(f in files){
-  print(paste(cohorts, paste(cohorts,f,sep="."), sep="/"))
-# meta=SMMAT.meta(meta.files.prefix=paste(cohorts, paste(cohorts,f,sep="."), sep="/"), n.files=nfiles,
-#            group.file=group_file,
-#         MAF.range=c(1e-10, 0.05),
-#         MAF.weights.beta = c(1,1),
-#         miss.cutoff=0.01,
-#         tests=c("O", "E"),
-#         rho=(0:10)/10,
-#         use.minor.allele=T
-#           )
-#
-# cat("[INFO] Done. Writing results.\n")
-# fwrite(meta, paste(c(cohorts, "meta", "txt"), collapse="."), sep="\t", na=NA, quote=F)
-#
-stop()
+  toanalyse=paste(argv, paste(cohorts,f,sep="."), sep="/")
+  nfiles=sapply(toanalyse, function(x){
+      scorefiles=Sys.glob(paste0(x, ".score.*"))
+      return(length(scorefiles))
+  })
+meta=SMMAT.meta(meta.files.prefix=toanalyse, n.files=nfiles,
+        group.file=group_file,
+        MAF.range=c(1e-10, 0.05),
+        MAF.weights.beta = c(1,1),
+        miss.cutoff=0.01,
+        tests=c("O", "E"),
+        rho=(0:10)/10,
+        use.minor.allele=T
+          )
+print(paste(paste(cohorts, collapse="."), f, sep="."))
+fwrite(meta, paste(paste(cohorts, collapse="."), f, sep="."), sep="\t", na=NA, quote=F)
+
 }
