@@ -1,0 +1,39 @@
+#!/usr/bin/env Rscript
+library(GMMAT)
+library(data.table)
+## Expects : a variant set file and a set of directories
+argv = commandArgs(trailingOnly = TRUE)
+outdir=argv[1]
+argv=argv[-1]
+group_file=argv[1]
+argv=argv[-1]
+
+cohorts=basename(argv)
+if(length(cohorts)<2){stop("ERROR : only one cohort.")}
+cohorts=tstrsplit(cohorts, ".", fixed=T)[[1]]
+
+trait=basename(argv[1])
+trait=sub(paste0(cohorts[1], "."), "", trait)
+trait=sub(".out", "",trait)
+cat(paste("INFO: Detected trait", trait, "\n"))
+
+nfiles=length(list.files(dirname(argv[1]), pattern=paste0(basename(argv[1]), ".score.*")))
+for(i in 2:length(argv)){
+  if(nfiles != length(list.files(dirname(argv[i]), pattern=paste0(basename(argv[i]), ".score.*")))){
+    stop(paste("ERROR : Cohort", cohorts[i], "has",  length(list.files(dirname(argv[i]), pattern=paste0(basename(argv[i]), ".score.*"))),
+  "files, expected", nfiles))}
+}
+
+cat(paste("INFO: Meta-analysing", nfiles, "files\n"))
+
+meta=SMMAT.meta(meta.files.prefix=argv, n.files=rep(nfiles, length(cohorts)),
+        group.file=group_file,
+        MAF.range=c(1e-10, 0.05),
+        MAF.weights.beta = c(1,1),
+        miss.cutoff=0.01,
+        tests=c("O", "E"),
+        rho=(0:10)/10,
+        use.minor.allele=T
+          )
+ofn=paste(outdir, paste(paste(cohorts, collapse="."), trait, "out", sep="."), sep="/")
+fwrite(meta, ofn, sep="\t", na=NA, quote=F)
