@@ -245,10 +245,25 @@ sub _get_Eigen_Score {
             if (($array[2] eq $hash{$var}{alleles}[0] and $array[3] eq $hash{$var}{alleles}[1]) or
                 ($array[2] eq $hash{$var}{alleles}[1] and $array[3] eq $hash{$var}{alleles}[0])) {
 
-                $hash{$var}{"score"} = $array[4] || "NA" if $self->{"score"} eq "Eigen"; # Un-scaled raw Eigen score.
-                $hash{$var}{"score"} = $array[6] || "NA" if $self->{"score"} eq "EigenPhred"; # Phred scaled Eigen score.
-                $hash{$var}{"score"} = $array[5] || "NA" if $self->{"score"} eq "EigenPC"; # Un-scaled Eigen PC score. 
-                $hash{$var}{"score"} = $array[7] || "NA" if $self->{"score"} eq "EigenPCPhred"; # Phred scaled Eigen PC score.
+
+		my $sc="NA";
+		
+		if ($self->{"score"} eq "Eigen"){
+		    $sc=$array[4];
+		}
+		elsif(if $self->{"score"} eq "EigenPhred"){
+		    $sc=$array[6];
+		}
+		elsif(if $self->{"score"} eq "EigenPC"){
+		    $sc=$array[5];
+		}
+		elsif($self->{"score"} eq "EigenPCPhred"){
+		    $sc=$array[7];
+		}
+
+		$sc="NA" if ($sc eq "Inf");
+		
+                $hash{$var}{"score"} = $sc;		
             }
         }
 
