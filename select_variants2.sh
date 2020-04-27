@@ -165,13 +165,13 @@ fi
 #--- checking input files - if any of the tests fails, the script exits.---------
 
 if [[ -z "${configFile}" ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Config file was not specified";
-    exit;
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Config file was not specified"
+    exit 1
 fi
 
 if [[ ! -e "${configFile}" ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Config file does not exist: $configFile";
-    exit;
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Config file does not exist: $configFile"
+    exit 1
 fi
 
 commandOptions=" --config ${configFile} "
@@ -350,6 +350,7 @@ else
     n=$( cat ${outputDir}/input_gene.list | wc -l)
     if [[ $n -eq 0 ]];then
 	echo "Chunk ${chunkNo} is empty; EXIT" >> ${LOGFILE}
+	echo `date "+%Y.%b.%d_%H:%M"` "[Info] VARIANT SELECTION DONE" >> ${LOGFILE}
 	exit 0
     fi
 fi
@@ -407,8 +408,8 @@ gene_noremain=$(cat ${selectorLog} | grep -c NO_VAR_REMAIN)
 gene_absent=$(cat ${selectorLog} | grep -c NO_GENE)
 region_absent=$(cat ${selectorLog} | grep -c NO_REGION)
 
-echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] ERROR REPORTING FROM VARIANT SELECTOR" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] =====================================" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "[Info] WARNINGS/ERRORS FROM VARIANT SELECTOR" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "[Info] =====================================" >> ${LOGFILE}
 
 if [[ "$gene_notenough" -ne 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Not enough variants [NOT_ENOUGH_VAR]: $(cat ${selectorLog} | grep NOT_ENOUGH_VAR | sed 's/.*Gene.//;s/ .*//' | tr '\n' ' ')" >> ${LOGFILE}
@@ -417,7 +418,7 @@ if [[ "$gene_toomany" -ne 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Too many variants [TOO_MANY_VAR]: $(cat ${selectorLog} | grep TOO_MANY_VAR | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 if [[ "$gene_noremain" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] All scoring failed [NO_VAR_REMAIN]: $(cat ${selectorLog} | grep NO_VAR_REMAIN | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] [Warning] No variants after scoring [NO_VAR_REMAIN] for genes:: $(cat ${selectorLog} | grep NO_VAR_REMAIN | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 if [[ "$gene_absent" -ne 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Gene name unknown [NO_GENE]: $(cat ${selectorLog} | grep NO_GENE | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
@@ -427,15 +428,17 @@ if [[ "$region_absent" -ne 0 ]]; then
 fi
 
 if [[ ! -e gene_set_output_genotype_file.txt ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed. No genotype file has been generated. Exiting." >> ${LOGFILE}
-    exit 1
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed. No genotype file has been generated." >> ${LOGFILE}
+#    exit 1
 elif [[ $(cat gene_set_output_genotype_file.txt | wc -l ) -lt 2 ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, genotype file is empty. Exiting." >> ${LOGFILE}
-    exit 1
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, genotype file is empty." >> ${LOGFILE}
+#    exit 1
 elif [[ ! -e gene_set_output_variant_file.txt ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, SNP file was not generated. Exiting." >> ${LOGFILE}
-    exit 1
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, SNP file was not generated." >> ${LOGFILE}
+#    exit 1
 elif [[ $( cat gene_set_output_variant_file.txt | wc -l ) -lt 1 ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, SNP file is empty. Exiting." >> ${LOGFILE}
-    exit 1
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, SNP file is empty." >> ${LOGFILE}
+#    exit 1
 fi
+
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] VARIANT SELECTION DONE" >> ${LOGFILE}

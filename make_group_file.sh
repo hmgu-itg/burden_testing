@@ -104,7 +104,7 @@ if [[ -z "${inputFile}" ]]; then
 fi
 
 if [[ -z "${outputDir}" ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Output directory not specified";
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Output directory not specified"
     exit 1
 fi
 
@@ -112,13 +112,13 @@ fi
 outputDir=${outputDir%/}
 
 if [[ -z "${configFile}" ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Config file was not specified";
-    exit;
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Config file was not specified"
+    exit 1
 fi
 
 if [[ ! -e "${configFile}" ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Config file does not exist: $configFile";
-    exit;
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Config file does not exist: $configFile"
+    exit 1
 fi
 
 no_list_warning=""
@@ -275,6 +275,7 @@ fi
 
 if [[ ! -e "${geneListFile}" ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene list file could not be opened: $geneListFile"
+    echo `date "+%Y.%b.%d_%H:%M"` "[Info] MAKE GROUP FILE DONE" >> ${LOGFILE}
     exit 1
 fi
 
@@ -294,8 +295,9 @@ fi
 
 n=$( cat ${inputGeneList} | wc -l)
 if [[ $n -eq 0 ]];then
-    echo "Chunk ${chunkNo} is empty; EXIT" >> ${LOGFILE}
-    exit 0
+    echo "[Error]: Chunk ${chunkNo} is empty" >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` "[Info] MAKE GROUP FILE DONE" >> ${LOGFILE}
+    exit 1
 fi
 
 # -----------------------------------------------------------------------------------------------------------------------------
@@ -368,8 +370,8 @@ gene_noremain=$(cat ${selectorLog} | grep -c NO_VAR_REMAIN)
 gene_absent=$(cat ${selectorLog} | grep -c NO_GENE)
 region_absent=$(cat ${selectorLog} | grep -c NO_REGION)
 
-echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] ERROR REPORTING FROM VARIANT SELECTOR" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] =====================================" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "[Info] WARNING/ERROR REPORTING FROM VARIANT SELECTOR" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` -e "[Info] =====================================" >> ${LOGFILE}
 
 if [[ "$gene_notenough" -ne 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Not enough variants [NOT_ENOUGH_VAR]: $(cat ${selectorLog} | grep NOT_ENOUGH_VAR | sed 's/.*Gene.//;s/ .*//' | tr '\n' ' ')" >> ${LOGFILE}
@@ -378,7 +380,7 @@ if [[ "$gene_toomany" -ne 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Too many variants [TOO_MANY_VAR]: $(cat ${selectorLog} | grep TOO_MANY_VAR | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 if [[ "$gene_noremain" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] All scoring failed [NO_VAR_REMAIN]: $(cat ${selectorLog} | grep NO_VAR_REMAIN | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
+        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] No variants after scoring [NO_VAR_REMAIN] for genes: $(cat ${selectorLog} | grep NO_VAR_REMAIN | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 if [[ "$gene_absent" -ne 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Gene name unknown [NO_GENE]: $(cat ${selectorLog} | grep NO_GENE | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
@@ -387,10 +389,15 @@ if [[ "$region_absent" -ne 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] No region in gene [NO_REGION]: $(cat ${selectorLog} | grep NO_REGION | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
 fi
 
+# true output group file name, as the --output to the Burden_testing.pl specifies output prefix only
+outFile=${outFile}".txt"
+
 if [[ ! -e ${outFile} ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed. No group file has been generated. Exiting." >> ${LOGFILE}
-    exit 1
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed. No group file has been generated" >> ${LOGFILE}
+#    exit 1
 elif [[ $(cat ${outFile} | wc -l ) -lt 1 ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, group file is empty. Exiting." >> ${LOGFILE}
-    exit 1
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, group file is empty" >> ${LOGFILE}
+#    exit 1
 fi
+
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] MAKE GROUP FILE DONE" >> ${LOGFILE}
