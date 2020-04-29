@@ -369,9 +369,7 @@ done | perl -F"\t" -lane '
     END {
         foreach $ID (keys %h){
             $cells = join "|", @{$h{$ID}{cells}};
-            printf "%s\t%s\t%s\t%s\tchr=%s;start=%s;end=%s;class=%s;regulatory_ID=%s;Tissues=%s\n",
-                $h{$ID}{line}[0], $h{$ID}{line}[1], $h{$ID}{line}[2], $ID, $h{$ID}{line}[0],
-                $h{$ID}{line}[1], $h{$ID}{line}[2], $h{$ID}{line}[4], $ID, $cells
+            printf "%s\t%s\t%s\t%s\tchr=%s;start=%s;end=%s;class=%s;regulatory_ID=%s;Tissues=%s\n",$h{$ID}{line}[0], $h{$ID}{line}[1], $h{$ID}{line}[2], $ID, $h{$ID}{line}[0],$h{$ID}{line}[1], $h{$ID}{line}[2], $h{$ID}{line}[4], $ID, $cells;
         }
     }
 ' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz # 0-based coordinates here
@@ -413,7 +411,7 @@ for f in ${listOfGTExFiles};do
     tar -zxf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENSG\d+)\./;$tissue=$ENV{tissue};$,="\t";$chr=~s/^chr//;$start=$pos-1;$end=$pos;if (length($ref)>length($alt)){$end=$start+length($ref)-1;}  print $tissue,$chr,$start,$end,$F[0],$gene;'
 done > ${tmpGTEx}
 
-cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$start=$F[2];$end=$F[3];$ID=$F[4];$gene=$F[5];$H{$ID}{chr}=$chr;$H{$ID}{start}=$start;$H{$ID}{end}=$end;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$start=$H{$id}{start};$end=$H{$id}{end};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};print "$chr\t$start\t$end\tgene=$gene;rsID=$id;tissue=$tissues\n";}}}' | sort -k1,1 -k2,2n > ${targetDir}/${today}/processed/GTEx.bed # 0-based
+cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$start=$F[2];$end=$F[3];$ID=$F[4];$gene=$F[5];$H{$ID}{chr}=$chr;$H{$ID}{start}=$start;$H{$ID}{end}=$end;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$start=$H{$id}{start};$end=$H{$id}{end};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};print "$chr\t$start\t$end\tgene=$gene;rsID=$id;tissue=$tissues";}}}' | sort -k1,1 -k2,2n > ${targetDir}/${today}/processed/GTEx.bed # 0-based
 
 echo "Done."
 #rm -f ${tmpGTEx}
@@ -527,7 +525,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 
         $F[0]=~s/^chr//;
         $start=$F[3]-1;
-        printf "$F[0]\t$start\t$F[4]\tID:$g_ID;Name:$g_name\n";
+        print "$F[0]\t$start\t$F[4]\tID:$g_ID;Name:$g_name";
     ' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/genes.bed.gz # 0-based
 
 # OUTPUT:
