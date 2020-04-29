@@ -499,7 +499,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
         ($g_ID) = $_ =~ /gene_id "(.+?)\.*";/;
         $F[0]=~s/^chr//;
         $start=$F[3]-1;
-        printf "$F[0]\t$F[3]\t$F[4]\tID:$g_ID;Name:$g_name\n";
+        printf "$F[0]\t$start\t$F[4]\tID:$g_ID;Name:$g_name\n";
     ' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/genes.bed.gz # 0-based
 
 # OUTPUT:
