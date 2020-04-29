@@ -329,18 +329,6 @@ testFileLines ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz # 0
 #{"source":"GENCODE","gene_ID":"ENSG00000186092","appris":"NA","start":"65419","chr":"1","strand":"+","class":"gene","end":"71585"}
 #{"transcript_ID":"ENST00000641515","end":"71585","class":"transcript","strand":"+","appris":"Minor","start":"65419","chr":"1","source":"GENCODE","gene_ID":"ENSG00000186092"}
 #{"strand":"+","start":"65419","chr":"1","appris":"Minor","gene_ID":"ENSG00000186092","exon_ID":"ENSE00003812156","source":"GENCODE","transcript_ID":"ENST00000641515","end":"65433","class":"exon"}
-#{"appris":"Minor","chr":"1","start":"65520","strand":"+","source":"GENCODE","exon_ID":"ENSE00003813641","gene_ID":"ENSG00000186092","transcript_ID":"ENST00000641515","end":"65573","class":"exon"}
-#{"class":"CDS","transcript_ID":"ENST00000641515","end":"65573","gene_ID":"ENSG00000186092","exon_ID":"ENSE00003813641","source":"GENCODE","strand":"+","start":"65565","chr":"1","appris":"Minor"}
-#{"gene_ID":"ENSG00000186092","source":"GENCODE","exon_ID":"ENSE00003813949","chr":"1","start":"69037","appris":"Minor","strand":"+","class":"exon","transcript_ID":"ENST00000641515","end":"71585"}
-#{"end":"70005","transcript_ID":"ENST00000641515","class":"CDS","strand":"+","appris":"Minor","start":"69037","chr":"1","exon_ID":"ENSE00003813949","source":"GENCODE","gene_ID":"ENSG00000186092"}
-#{"gene_ID":"ENSG00000186092","exon_ID":"ENSE00003812156","source":"GENCODE","strand":"+","start":"65419","chr":"1","appris":"Minor","class":"UTR","end":"65433","transcript_ID":"ENST00000641515"}
-#{"gene_ID":"ENSG00000186092","exon_ID":"ENSE00003813641","source":"GENCODE","strand":"+","start":"65520","chr":"1","appris":"Minor","class":"UTR","end":"65564","transcript_ID":"ENST00000641515"}
-#{"end":"71585","transcript_ID":"ENST00000641515","class":"UTR","strand":"+","chr":"1","start":"70006","appris":"Minor","gene_ID":"ENSG00000186092","exon_ID":"ENSE00003813949","source":"GENCODE"}
-#{"source":"GENCODE","gene_ID":"ENSG00000186092","strand":"+","appris":"PRINCIPAL","chr":"1","start":"69055","class":"transcript","transcript_ID":"ENST00000335137","end":"70108"}
-#{"appris":"PRINCIPAL","chr":"1","start":"69055","strand":"+","source":"GENCODE","exon_ID":"ENSE00002319515","gene_ID":"ENSG00000186092","transcript_ID":"ENST00000335137","end":"70108","class":"exon"}
-#{"appris":"PRINCIPAL","chr":"1","start":"69091","strand":"+","source":"GENCODE","exon_ID":"ENSE00002319515","gene_ID":"ENSG00000186092","transcript_ID":"ENST00000335137","end":"70005","class":"CDS"}
-#{"class":"UTR","end":"69090","transcript_ID":"ENST00000335137","gene_ID":"ENSG00000186092","source":"GENCODE","exon_ID":"ENSE00002319515","chr":"1","start":"69055","appris":"PRINCIPAL","strand":"+"}
-#{"source":"GENCODE","exon_ID":"ENSE00002319515","gene_ID":"ENSG00000186092","appris":"PRINCIPAL","chr":"1","start":"70006","strand":"+","class":"UTR","transcript_ID":"ENST00000335137","end":"70108"}
 
 echo "Done."
 
@@ -410,6 +398,8 @@ info "Number of cell specific regulatory features: $cellSpecFeatLines\n\n"
 ## Step 8. Combine individual files from GTEx tar.gz file into one BED file
 ##
 
+# no PAR_Y IDs in GTEx (v.8) files, so we don't check
+
 tmpGTEx=${targetDir}/${today}/processed/GTEx_tmp.bed
 info "Creating GTEx bed file ... "
 listOfGTExFiles=$(tar -ztf ${GTExFile} | grep "signif_variant")
@@ -417,13 +407,15 @@ for f in ${listOfGTExFiles};do
     g=$(basename ${f})
     tissue=$(echo ${g}|perl -lne '$x="NA";if (/^([^.]+)\./){$x=$1;} print $x;')
     export tissue
-    tar -zxf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENS.+)\./;$tissue=$ENV{tissue};$,="\t";$chr=~s/^chr//;$start=$pos-1;$end=$pos;if (length($ref)>length($alt)){$end=$start+length($ref)-1;}  print $tissue,$chr,$start,$end,$F[0],$gene;'
+
+    # taking care of deletions as well
+    tar -zxf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENSG\d+)\./;$tissue=$ENV{tissue};$,="\t";$chr=~s/^chr//;$start=$pos-1;$end=$pos;if (length($ref)>length($alt)){$end=$start+length($ref)-1;}  print $tissue,$chr,$start,$end,$F[0],$gene;'
 done > ${tmpGTEx}
 
-cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$start=$F[2];$end=$F[3];$ID=$F[4];$gene=$F[5];$H{$ID}{chr}=$chr;$H{$ID}{start}=$start;$H{$ID}{end}=$end;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$start=$H{$id}{start};$end=$H{$id}{end};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};print "$chr\t$start\t$end\tgene=$gene;rsID=$id;tissue=$tissues\n";}}}' | sort -k1,1 -k2,2 > ${targetDir}/${today}/processed/GTEx.bed # 0-based
+cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$start=$F[2];$end=$F[3];$ID=$F[4];$gene=$F[5];$H{$ID}{chr}=$chr;$H{$ID}{start}=$start;$H{$ID}{end}=$end;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$start=$H{$id}{start};$end=$H{$id}{end};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};print "$chr\t$start\t$end\tgene=$gene;rsID=$id;tissue=$tissues\n";}}}' | sort -k1,1 -k2,2n > ${targetDir}/${today}/processed/GTEx.bed # 0-based
 
 echo "Done."
-rm -f ${tmpGTEx}
+#rm -f ${tmpGTEx}
 
 # OUTPUT:
 #
@@ -438,7 +430,7 @@ rm -f ${tmpGTEx}
 #=============================================================================================
 
 ##
-## Step 9. Using intersectbed. Find overlap between GTEx variations and regulatory regions
+## Step 9. Using intersectbed. Find overlap between GTEx variants and regulatory regions
 ##
 info "Linking genes to regulatory features using GTEx data... "
 
@@ -454,7 +446,7 @@ info "Linking genes to regulatory features using GTEx data... "
 intersectBed -wb -a ${targetDir}/${today}/processed/GTEx.bed -b ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz 2>/dev/null | perl -MData::Dumper -MJSON -F"\t" -lane '
         $source= "GTEx";
 
-        ($gene) = $F[3] =~ /gene=(ENSG.+?);/;
+        ($gene) = $F[3] =~ /gene=(ENSG\d+)/;
         ($G_rsID) = $F[3] =~ /rsID=(.+?);/;
         ($G_tissues) = $F[3] =~ /tissue=(\S+)/;
         $E_chr = $F[4];
@@ -500,11 +492,9 @@ intersectBed -wb -a ${targetDir}/${today}/processed/GTEx.bed -b ${targetDir}/${t
 testFileLines ${targetDir}/${today}/processed/GTEx_Regulation_linked.txt.gz # start/end are 0-based
 echo "Done."
 
-
 # Generate report:
 GTExLinkedFeatures=$( zcat ${targetDir}/${today}/processed/GTEx_Regulation_linked.txt.gz | wc -l | awk '{print $1}')
 info "Number of GTEx linked regulatory features: ${GTExLinkedFeatures}\n\n"
-
 
 #=============================================================================================
 
@@ -516,8 +506,24 @@ info "Linking genes to regulatory features based on overlap... "
 # generating a file.
 # 0-based
 zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | awk '$3 == "gene"' | perl -lane '
-        ($g_name) = $_ =~ /gene_name "(.+?)";/;
-        ($g_ID) = $_ =~ /gene_id "(.+?)\.*";/;
+     $g_name="NA";
+        if ($_ =~ /gene_name\s+\"(.+?)\";/){
+	$g_name=$1;
+	}
+
+	$g_ID="NA";
+        if ($_ =~ /gene_id\s+\"(.+?)\";/){
+	$g_ID=$1;
+	}
+
+	# if gene ID contains PAR_Y then keep it
+	# otherwise remove the suffix
+
+	if ($g_ID !~ /_PAR_Y/){
+	 $g_ID =~ /(ENSG\d+)\./;
+	 $g_ID=$1;
+	}
+
         $F[0]=~s/^chr//;
         $start=$F[3]-1;
         printf "$F[0]\t$start\t$F[4]\tID:$g_ID;Name:$g_name\n";
