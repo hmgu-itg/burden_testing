@@ -358,18 +358,20 @@ info "Aggregate cell specific information of regulatory features... "
 CellTypes=$( ls -la ${targetDir}/${today}/EnsemblRegulation/ | perl -lane 'print $1 if  $F[-1] =~ /(.+).gff.gz/ ' )
 for cell in ${CellTypes}; do
     export cell
-    # parsing cell specific files (At this point we only consider active features. Although repressed regions might also be informative.):
+    # parsing cell specific files (At this point we only consider active features. Although repressed regions might also be informative):
     zcat ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | grep -i "activity=active" \
         | perl -F"\t" -lane 'next unless length($F[0]) < 3 || $F[0]=~/^chr/; # We skip irregular chromosome names.
                 $F[0]=~s/^chr//;
                 $cell_type = $ENV{cell};
                 $start = $F[3];
+
+		# $start - 1 as bed is 0-based
+		$start=$start-1;
+
                 $type = $F[2];
                 $end = $F[4];
                 ($ID) = $_ =~ /regulatory_feature_stable_id=(ENSR\d+)/;
-                ($bstart) = $F[8] =~ /bound_start=(.+?);/;
-                ($bend) = $F[8] =~ /bound_end=(.+?);/;
-                print join "\t", $cell_type, $F[0], $start-1, $end, $ID, $type, $bstart, $bend;' # $start - 1 as bed is 0-based
+                print join "\t", $cell_type, $F[0], $start, $end, $ID, $type;' 
 # Now combining these lines in a fashion that each line will contain all active tissues:
 done | perl -F"\t" -lane '
     $x =shift @F;
@@ -379,8 +381,8 @@ done | perl -F"\t" -lane '
         foreach $ID (keys %h){
             $cells = join "|", @{$h{$ID}{cells}};
             printf "%s\t%s\t%s\t%s\tchr=%s;start=%s;end=%s;class=%s;regulatory_ID=%s;Tissues=%s\n",
-                $h{$ID}{line}[0], $h{$ID}{line}[1], $h{$ID}{line}[2], $h{$ID}{line}[3], $h{$ID}{line}[0],
-                $h{$ID}{line}[1], $h{$ID}{line}[2], $h{$ID}{line}[4], $h{$ID}{line}[3], $cells
+                $h{$ID}{line}[0], $h{$ID}{line}[1], $h{$ID}{line}[2], $ID, $h{$ID}{line}[0],
+                $h{$ID}{line}[1], $h{$ID}{line}[2], $h{$ID}{line}[4], $ID, $cells
         }
     }
 ' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz # 0-based coordinates here
@@ -390,11 +392,6 @@ done | perl -F"\t" -lane '
 #
 #1    9800    10400   ENSR00000344264 chr=1;start=9800;end=10400;class=CTCF_binding_site;regulatory_ID=ENSR00000344264;Tissues=HUVEC|HeLa_S3|mammary_epithelial_1
 #1    13400   13600   ENSR00000344265 chr=1;start=13400;end=13600;class=CTCF_binding_site;regulatory_ID=ENSR00000344265;Tissues=HUVEC|NHLF|keratinocyte
-#1    15400   16600   ENSR00000344266 chr=1;start=15400;end=16600;class=CTCF_binding_site;regulatory_ID=ENSR00000344266;Tissues=A549|B|H1_hESC_3|HCT116|HSMM|HeLa_S3|HepG2|K562|MCF_7|MM_1S|PC_3|PC_9|SK_N_|astrocyte|bipolar_neuron|cardiac_muscle|dermal_fibroblast|mammary_epithelial_1|osteoblast
-#1    16102   16451   ENSR00000918273 chr=1;start=16102;end=16451;class=TF_binding_site;regulatory_ID=ENSR00000918273;Tissues=DND_41|K562|PC_3|bipolar_neuron
-#1    24600   25000   ENSR00000344268 chr=1;start=24600;end=25000;class=CTCF_binding_site;regulatory_ID=ENSR00000344268;Tissues=A549|H1_hESC_3|HepG2|MCF_7
-#1    25600   26400   ENSR00000344269 chr=1;start=25600;end=26400;class=CTCF_binding_site;regulatory_ID=ENSR00000344269;Tissues=A549|A673|B|GM12878|H1_hESC_3|HCT116|HSMM|HUVEC|HeLa_S3|HepG2|K562|MCF_7|MM_1S|NHLF|PC_3|astrocyte|cardiac_muscle|dermal_fibroblast|mammary_epithelial_1|osteoblast
-
 
 # Test if output is empty or not:
 testFileLines ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz
