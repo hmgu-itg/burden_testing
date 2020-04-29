@@ -38,6 +38,7 @@ function usage {
     echo ""
     echo "Usage: $0 -o <output directory> : required, output directory"
     echo "          -n : optional, do not download Eigen scores"
+    echo "          -c : optional, do not download CADD scores"
     echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
