@@ -251,20 +251,44 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
                     while ($line = <$APP>){
                         chomp $line;
                         $line =~ /(ENSG\S+)\s+(ENST\S+)\s+\S+\s+(\S+):/;
-                        $h{$1}{$2} = $3;
+                        $geneID=$1;
+                        $transcriptID=$2;
+                        $status=$3;
+                        $h{$geneID}{$transcriptID} = $status;
                     }
                 }{
-                    if ( $_ =~ /(ENSG.+?)\./){ # Gene related annotation
+                    if ( $_ =~ /gene_id\s+\"(ENSG.+?)\"/){ # Gene related annotation
                         $geneID = $1;
+                        # if the gene is from PAR region on Y then we keep the full gene ID and transcript ID 
+                        # otherwise, we remove the suffix
+                        if ($geneID !~ /_PAR_Y/){
+                        $geneID =~ /(ENSG\d+)\./;
+                        $geneID=$1;
+                        }
+
+			$transcriptID="NA";
+			if ($F[8] =~ /transcript_id\s+\"(ENST.+?)\"/){
+			$tmp=$1;
+			if ($tmp !~ /_PAR_Y/){
+			$tmp =~ /(ENST\d+)\./;
+			$transcriptID=$1;
+			}
+			else{
+			$transcriptID=$tmp;
+			}
+			}
+
+			$exonID="NA";
+			if ($F[8] =~ /exon_id\s+\"(ENSE.+?)\./){
+			$exonID=$1;
+			}
+
 
                         $F[0] =~ s/chr//;
                         $start = $F[3];
                         $end = $F[4];
                         $strand = $F[6];
                         $class = $F[2];
-
-                        ($transcriptID) = $F[8] =~ /(ENST.+?)\./ ? $F[8] =~ /(ENST.+?)\./ : "NA";
-                        ($exonID) = $F[8] =~ /(ENSE.+?)\./ ? $F[8] =~ /(ENSE.+?)\./ : "NA";
 
                         $appris = "NA";
                         # Check if current feature belongs to an APPRIS annotated feature:
