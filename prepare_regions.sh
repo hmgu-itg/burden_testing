@@ -538,7 +538,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 # 1	16048	29570	ID:ENSG00000227232;Name:WASH7P	1	16048	30847	ENSR00000528774	chr=1;start=16048;end=30847;class=CTCF_binding_site;regulatory_ID=ENSR00000528774;Tissues=DND-41|HMEC|HSMMtube|IMR90|K562|MultiCell|NHDF-AD
 intersectBed -wb -a ${targetDir}/${today}/processed/genes.bed.gz -b ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz -sorted 2>/dev/null | perl -MData::Dumper -MJSON -F"\t" -lane '
         # Parsing gene info:
-        ($g_ID) = $F[3] =~ /ID:(ENSG\d+)/;
+        ($g_ID) = $F[3] =~ /ID:(ENSG[^;]+);/;
         ($g_name) = $F[3] =~ /Name:(\S+)/;
 
         # Parsing regulatory feature info:
@@ -574,9 +574,9 @@ info "Number of regulatory features linked by overlap: ${OverlapLinkedFeatures}\
 #=============================================================================================
 
 ##
-## Step 11. Merging all the components together create compressed, sorted bedfile.
+## Step 11. Merging all the components together create sorted, compressed bedfile.
 ##
-info "Merging GENCODE, GTEx and overlap data together into an indexed bedfile. "
+info "Merging GENCODE, GTEx and overlap data "
 export gene_file=${targetDir}/${today}/processed/genes.bed.gz
 
 #GENES
@@ -598,11 +598,11 @@ zcat ${targetDir}/${today}/processed/overlapping_features.txt.gz \
             while ($line = <$GF>){
                 chop $line;
                 @a = split "\t", $line;
-                ($ID) = $a[3] =~ /ID:(ENSG\d+)/;
+                ($ID) = $a[3] =~ /ID:(ENSG[^;]+);/;
                 $h{$ID} = [$a[0], $a[1], $a[2], $ID];
             }
         }{
-            ($ID) = $_ =~ /"gene_ID":"(ENSG\d+)"/;
+            ($ID) = $_ =~ /\"gene_ID\":\"(ENSG[^"]+)\"/;
             exists $h{$ID} ? print join "\t", @{$h{$ID}}, $_ : print STDERR "$ID : gene was not found in gencode! line: $_"
         }'  2> ${targetDir}/${today}/failed | sort -k1,1 -k2,2n > ${targetDir}/${today}/Linked_features.bed # 0-based
 
