@@ -27,7 +27,7 @@ sub new {
     return $self;
 }
 
-# Simply reading the data stored in the gzipped gencode file:
+# reading the data stored in the gzipped gencode file:
 sub _initialize {
     my $self = shift;
     my $gencodeFile = shift;
@@ -50,15 +50,11 @@ sub _initialize {
                    "name" => $name,
                    "ID" => $ID};
 
-        # adding to hash, unless already exists:
-	if (exists($self->{"gene_names"}->{$name})){
-	    print "[Warning] GENCODE::_initialize : $name is already in the hash; skipping $name";
-	}
-	else{
-	    $self->{"gene_names"}->{$name} = $ref;
-	}
+	# by name
+	push @{$self->{"gene_names"}->{$name}}, $ref;
 
-        # adding to hash, unless already exists:
+	# by ID
+        # shouldn't happen as IDs are supposed to be unique
 	if (exists($self->{"gene_names"}->{$ID})){
 	    print "[Warning] GENCODE::_initialize : $ID is already in the hash; skipping $ID";
 	}
