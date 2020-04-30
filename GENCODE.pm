@@ -66,11 +66,23 @@ sub _initialize {
 	    $self->{"gene_names"}->{$ID} = $ref;
 	}
 
+	# also use ID prefix as key
+	if ($ID=~/(ENSG\d+)\./){
+	    my $x=$1;
+	    if (exists($self->{"gene_names"}->{$x})){
+		print "[Warning] GENCODE::_initialize : prefix of $ID ($x) is already in the hash";
+	    }
+	    else{
+		$self->{"gene_names"}->{$x} = $ref;
+	    }	    
+	}
+	
     }
     close($FILE);
 }
 
 # A method to extract gene coordinates based on the gene name or stable ID.
+# input stable ID can be a prefix of gene ID
 sub GetCoordinates {
     my $self = shift;
     my $ID = shift; # stable ID or gene name
@@ -82,6 +94,16 @@ sub GetCoordinates {
         $end        = $self->{"gene_names"}->{$ID}->{end};
         $stable_ID  = $self->{"gene_names"}->{$ID}->{ID};
         $name       = $self->{"gene_names"}->{$ID}->{name};
+    }
+    elsif ($ID=~/(ENSG\d+)\./){
+	my $x=$1;
+	if ( exists $self->{"gene_names"}->{$x} ) {
+	    $chr        = $self->{"gene_names"}->{$x}->{chr};
+	    $start      = $self->{"gene_names"}->{$x}->{start};
+	    $end        = $self->{"gene_names"}->{$x}->{end};
+	    $stable_ID  = $self->{"gene_names"}->{$x}->{ID};
+	    $name       = $self->{"gene_names"}->{$x}->{name};
+	}
     }
     else {
         print  "[Warning] GENCODE::GetCoordinates: $ID was not found\n";
