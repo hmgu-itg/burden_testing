@@ -39,30 +39,38 @@ sub _initialize {
         next if $line =~ /^#/;
 	
         chomp $line;
+	
+	#1-based coordinates
         my ($chr, $start, $end, $name, $ID) = split("\t", $line);
         $chr =~ s/^chr//i;
 
-        # generate hash ref for each gene:
         my $ref = {"chr" => $chr,
                    "start" => $start,
                    "end" => $end,
                    "name" => $name,
                    "ID" => $ID};
-	
+
         # adding to hash, unless already exists:
-	if (exists($self->{"gene_names"}->{$name}) || exists($self->{"gene_names"}->{$ID}) ){
-	    print "[Warning] GENCODE::_initialize : either $name or $ID is already in the hash; skipping $name/$ID";
-	    next;
+	if (exists($self->{"gene_names"}->{$name})){
+	    print "[Warning] GENCODE::_initialize : $name is already in the hash; skipping $name";
 	}
 	else{
 	    $self->{"gene_names"}->{$name} = $ref;
+	}
+
+        # adding to hash, unless already exists:
+	if (exists($self->{"gene_names"}->{$ID})){
+	    print "[Warning] GENCODE::_initialize : $ID is already in the hash; skipping $ID";
+	}
+	else{
 	    $self->{"gene_names"}->{$ID} = $ref;
 	}
+
     }
     close($FILE);
 }
 
-# A method to extract the coordinates of any gene based on the gene name or stable ID.
+# A method to extract gene coordinates based on the gene name or stable ID.
 sub GetCoordinates {
     my $self = shift;
     my $ID = shift; # stable ID or gene name
@@ -76,7 +84,7 @@ sub GetCoordinates {
         $name       = $self->{"gene_names"}->{$ID}->{name};
     }
     else {
-        print  "[Warning] $ID was not found in the GENCODE database. Only HGNC names and stable Ensembl IDs are accepted. 'NA'-s will be returned!\n";
+        print  "[Warning] GENCODE::GetCoordinates: $ID was not found\n";
     }
 
     return ($chr, $start, $end, $stable_ID, $name);
