@@ -69,12 +69,7 @@ sub _initialize {
 	# also use ID prefix as key
 	if ($ID=~/(ENSG\d+)\./){
 	    my $x=$1;
-	    if (exists($self->{"gene_names"}->{$x})){
-		print "[Warning] GENCODE::_initialize : prefix of $ID ($x) is already in the hash";
-	    }
-	    else{
-		$self->{"gene_names"}->{$x} = $ref;
-	    }	    
+	    push @{$self->{"gene_names"}->{$x}}, $ref;
 	}
 	
     }
@@ -86,29 +81,39 @@ sub _initialize {
 sub GetCoordinates {
     my $self = shift;
     my $ID = shift; # stable ID or gene name
+    my $ret;
+
+    $ret->{chr}="NA";
+    $ret->{start}="NA";
+    $ret->{end}="NA";
+    $ret->{stable_ID}="NA";
+    $ret->{name}="NA";
+    
     my ($chr, $start, $end, $stable_ID, $name) = ('NA') x 5;
 
     if ( exists $self->{"gene_names"}->{$ID} ) {
-        $chr        = $self->{"gene_names"}->{$ID}->{chr};
-        $start      = $self->{"gene_names"}->{$ID}->{start};
-        $end        = $self->{"gene_names"}->{$ID}->{end};
-        $stable_ID  = $self->{"gene_names"}->{$ID}->{ID};
-        $name       = $self->{"gene_names"}->{$ID}->{name};
+	my $stID=$self->{"gene_names"}->{$ID}->{ID};
+        $ret->{$stID}->{chr}        = $self->{"gene_names"}->{$ID}->{chr};
+        $ret->{$stID}->{start}      = $self->{"gene_names"}->{$ID}->{start};
+        $ret->{$stID}->{end}        = $self->{"gene_names"}->{$ID}->{end};
+        $ret->{$stID}->{name}       = $self->{"gene_names"}->{$ID}->{name};
     }
     elsif ($ID=~/(ENSG\d+)\./){
 	my $x=$1;
 	if ( exists $self->{"gene_names"}->{$x} ) {
-	    $chr        = $self->{"gene_names"}->{$x}->{chr};
-	    $start      = $self->{"gene_names"}->{$x}->{start};
-	    $end        = $self->{"gene_names"}->{$x}->{end};
-	    $stable_ID  = $self->{"gene_names"}->{$x}->{ID};
-	    $name       = $self->{"gene_names"}->{$x}->{name};
+	    foreach my $rec (@{$self->{"gene_names"}->{$x}}){
+		my $stID=$rec->{ID};
+		$ret->{$stID}->{chr}        = $rec->{chr};
+		$ret->{$stID}->{start}      = $rec->{start};
+		$ret->{$stID}->{end}        = $rec->{end};
+		$ret->{$stID}->{name}       = $rec->{name};
+	    }
 	}
     }
     else {
         print  "[Warning] GENCODE::GetCoordinates: $ID was not found\n";
     }
 
-    return ($chr, $start, $end, $stable_ID, $name);
+    return $ret;
 }
 1;
