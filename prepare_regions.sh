@@ -631,8 +631,16 @@ info "Total number of lines in the final files: ${totalLines}\n"
 # FOR LATER USE
 mv -f ${targetDir}/${today}/Linked_features.bed.gz ${outdir}
 mv -f ${targetDir}/${today}/Linked_features.bed.gz.tbi ${outdir}
-zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${outdir}/gencode.basic.annotation.tsv.gz
-zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];next unless $x=~/gene_type\s+\"protein_coding\"/;$id="NA";$id=$1 if ($x=~/(ENSG\d+)/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${outdir}/gencode.basic.annotation.protein_coding.tsv.gz
+
+#=============================================================================================
+
+# GENCODE basic annotation, IDs are not modified
+# coordinates are 1-based
+
+zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];$id="NA";$id=$1 if ($x=~/gene_id\s+\"(ENSG[^"]+)\"/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${outdir}/gencode.basic.annotation.tsv.gz
+zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];next unless $x=~/gene_type\s+\"protein_coding\"/;$id="NA";$id=$1 if ($x=~/gene_id\s+\"(ENSG[^"]+)\"/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${outdir}/gencode.basic.annotation.protein_coding.tsv.gz
+
+#=============================================================================================
 
 # Report failed associations:
 FailedAssoc=$(wc -l ${targetDir}/${today}/failed | awk '{print $1}')
