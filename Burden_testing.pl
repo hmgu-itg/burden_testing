@@ -165,6 +165,8 @@ our $verbose = $parameters->{"verbose"};
 # Initializing helper objects:
 print "[Info] Initializing GENCODE data" if ($verbose);
 my $GENCODE_data = GENCODE->new($parameters);
+die "[Error] Could not initialize GENCODE" unless $GENCODE_data->{"failed"};
+
 print "[Info] Initializing score data data" if ($verbose);
 my $AddScore = Scoring->new($parameters);
 

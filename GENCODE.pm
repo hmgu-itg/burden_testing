@@ -33,7 +33,9 @@ sub _initialize {
     my $gencodeFile = shift;
     my $FILE;
     
-    die "[Error] GENCODE file with gene coordinates could not be opened. Exiting.\n" unless -e $gencodeFile;
+    die "[Error] GENCODE file with gene coordinates could not be opened\n" unless -e $gencodeFile;
+    $self->{"failed"}=0;
+
     open($FILE, "zcat $gencodeFile | ");
     while (my $line = <$FILE>) {
         next if $line =~ /^#/;
@@ -56,8 +58,9 @@ sub _initialize {
 	# by ID
         # shouldn't happen as IDs are supposed to be unique
 	if (exists($self->{"gene_names"}->{$ID})){
-	    print "[Error] GENCODE::_initialize : $ID is already in the hash";
-	    return undef;
+b	    print "[Error] GENCODE::_initialize : $ID is already in the hash";
+	    $self->{"failed"}=1;
+	    return;
 	}
 	else{
 	    $self->{"gene_names"}->{$ID} = $ref;
