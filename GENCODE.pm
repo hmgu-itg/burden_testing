@@ -56,7 +56,8 @@ sub _initialize {
 	# by ID
         # shouldn't happen as IDs are supposed to be unique
 	if (exists($self->{"gene_names"}->{$ID})){
-	    print "[Warning] GENCODE::_initialize : $ID is already in the hash; skipping $ID";
+	    print "[Error] GENCODE::_initialize : $ID is already in the hash";
+	    return undef;
 	}
 	else{
 	    $self->{"gene_names"}->{$ID} = $ref;
