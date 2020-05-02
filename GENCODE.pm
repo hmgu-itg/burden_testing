@@ -58,7 +58,7 @@ sub _initialize {
 	# by ID
         # shouldn't happen as IDs are supposed to be unique
 	if (exists($self->{"gene_names"}->{$ID})){
-b	    print "[Error] GENCODE::_initialize : $ID is already in the hash";
+	    print "[Error] GENCODE::_initialize : $ID is already in the hash";
 	    $self->{"failed"}=1;
 	    return;
 	}
@@ -71,25 +71,16 @@ b	    print "[Error] GENCODE::_initialize : $ID is already in the hash";
 	    my $x=$1;
 	    push @{$self->{"gene_names"}->{$x}}, $ref;
 	}
-	
     }
+    
     close($FILE);
 }
 
-# A method to extract gene coordinates based on the gene name or stable ID.
-# input stable ID can be a prefix of gene ID
+# get gene coordinates based on the gene name, stable ID or stable ID prefix.
 sub GetCoordinates {
     my $self = shift;
-    my $ID = shift; # stable ID or gene name
-    my $ret;
-
-    $ret->{chr}="NA";
-    $ret->{start}="NA";
-    $ret->{end}="NA";
-    $ret->{stable_ID}="NA";
-    $ret->{name}="NA";
-    
-    my ($chr, $start, $end, $stable_ID, $name) = ('NA') x 5;
+    my $ID = shift;
+    my $ret=undef;
 
     if ( exists $self->{"gene_names"}->{$ID} ) {
 	my $stID=$self->{"gene_names"}->{$ID}->{ID};

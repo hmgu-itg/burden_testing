@@ -191,88 +191,88 @@ else{
 my $gene_count = 0;
 while ( my $ID = <$INPUT> ){
     next if $ID=~/^\s*$/;
-    
     chomp $ID;
 
-    # genomic coordinates of the current gene
-    my ($chr, $start, $end, $stable_ID, $name, $CollapsedBed);
-
-    ($chr, $start, $end, $stable_ID, $name) = $GENCODE_data->GetCoordinates($ID);
-    if ($start eq "NA") {
-	print "[Warning] Gene $ID was not found in the GENCODE data; skipping [NO_GENE]";
-	print "";
-	next;
-    }
-
-    print "[Info] Queried gene: $name (Ensembl ID: $stable_ID), Genomic location: $chr:$start-$end (Input: $ID)";
-
-    # all lines from the Linked_features file that are associated with the current gene
-    my $bedlines = &BedToolsQuery($chr, $start, $end, $stable_ID, $parameters->{"Linked_features"});
-    # remove some lines we're not interested in
-    $CollapsedBed = &FilterLines($bedlines, $stable_ID, $parameters);
-
-    # This should never be a problem, but still be tested:
-    unless ( $CollapsedBed ){
-	print "[WARNING] Gene $name did not yield any regions. Skipped. [NO_REGION].";
-	print "";
-	next;
-    }
-
-    # CollapsedBed is 0-based
+    my $gene_coords = $GENCODE_data->GetCoordinates($ID);
     
-    # Once we have the genomic regions, the overlapping variants have to be extracted:
-    my $variants = &getVariants($CollapsedBed, $parameters);
-
-    # Filtering variants based on the provided parameters:
-    my ($hash, $genotypes) = &processVar($variants, $parameters,$stable_ID);
-    # Gene will be skipped if there are no suitable variations left (for MONSTER):
-    if (scalar keys %{$hash} < 2 && !defined($parameters->{"smmat"})){
-	print "[Warning] Gene $ID is skipped as not enough variants left to test [NOT_ENOUGH_VAR].";
-	print "";
-	undef $hash;
-	undef $genotypes;
+    if (! defined($gene_coords)) {
+	print "[Warning] Gene $ID was not found in the GENCODE data; skipping [NO_GENE]\n";
 	next;
     }
 
-    # The gene will be skipped if there are too many variants (for MONSTER):
-    if (scalar keys %{$hash} > $parameters->{"maxVars"} && !defined($parameters->{"smmat"})){
-	print "[Warning] Gene $ID is skipped as more than ".$parameters->{"maxVars"}." variants are in the set [TOO_MANY_VAR].";
-	print "";
-	undef $hash;
-	undef $genotypes;
-	next;
-    }
+    foreach my $stableID (keys %$gene_coords){
+	my $rec=$gene_coords->{$stableID};
 
-    # If we want we can add scores:
-    $hash = $AddScore->AddScore($hash) if $parameters->{"score"} ne "NA";
-    checkScores($hash) if $parameters->{"score"} ne "NA";
+	my $chr=$rec->{chr};
+	my $start=$rec->{start};
+	my $end=$rec->{end};
+	my $name=$rec->{name};
 
-    if ($parameters->{"score"} ne "NA" && scalar keys %{$hash} < 1){
-	print "[Warning] Gene $ID is skipped as no variants remaining post-scoring [NO_VAR_REMAIN].";
-	print "";
-    }
+	print "[Info] Queried gene: $name (Ensembl ID: $ID ($stableID)), Genomic location: $chr:$start-$end (Input: $ID ($stableID))";
 
-    # We don't save anything unless there at least two variants (for MONSTER):
-    if (!defined($parameters->{"smmat"})){
-	next unless scalar keys %{$hash} > 1;
-    }
+	# all lines from the Linked_features file that are associated with the current gene
+	my $bedlines = &BedToolsQuery($chr, $start, $end, $stableID, $parameters->{"Linked_features"});
+	# remove some lines we're not interested in
+	my $CollapsedBed = &FilterLines($bedlines, $stableID, $parameters);
 
-    next unless scalar keys %{$hash} > 0;
-    
-    # Once we have the scores we have to print out the SNP file:
-    my $flag=0;
-    $flag=1 if $parameters->{"score"} ne "NA";
+	unless ( $CollapsedBed ){
+	    print "[WARNING] Gene $name ($stableID) did not yield any regions. Skipped. [NO_REGION]\n";
+	    next;
+	}
 
-    if (defined($parameters->{"smmat"})){
-	&print_group_file($hash, $ID, $SNPinfo, $parameters->{"build"},$flag);
-    }
-    else{# outut for MONSTER from VCFs
-	&print_SNPlist($hash, $ID, $SNPfile,$flag);
-	&print_SNP_info($hash, $ID, $SNPinfo, $gene_count, $parameters->{"build"},$flag);
-	&print_genotypes($genotypes, $genotypeFile, $parameters, $gene_count);
-    }
-    
-    $gene_count ++; # So the header will only be printed once.
+	# CollapsedBed is 0-based
+	
+	# Once we have the genomic regions, the overlapping variants have to be extracted:
+	my $variants = &getVariants($CollapsedBed, $parameters);
+
+	# Filtering variants based on the provided parameters:
+	my ($hash, $genotypes) = &processVar($variants, $parameters,$stableID);
+	# Gene will be skipped if there are no suitable variations left (for MONSTER):
+	if (scalar keys %{$hash} < 2 && !defined($parameters->{"smmat"})){
+	    print "[Warning] Gene $stableID is skipped as not enough variants left to test [NOT_ENOUGH_VAR]\n";
+	    undef $hash;
+	    undef $genotypes;
+	    next;
+	}
+
+	# The gene will be skipped if there are too many variants (for MONSTER):
+	if (scalar keys %{$hash} > $parameters->{"maxVars"} && !defined($parameters->{"smmat"})){
+	    print "[Warning] Gene $stableID is skipped as more than ".$parameters->{"maxVars"}." variants are in the set [TOO_MANY_VAR]\n";
+	    undef $hash;
+	    undef $genotypes;
+	    next;
+	}
+
+	# If we want we can add scores:
+	$hash = $AddScore->AddScore($hash) if $parameters->{"score"} ne "NA";
+	checkScores($hash) if $parameters->{"score"} ne "NA";
+
+	if ($parameters->{"score"} ne "NA" && scalar keys %{$hash} < 1){
+	    print "[Warning] Gene $stableID is skipped as no variants remaining post-scoring [NO_VAR_REMAIN]\n";
+	}
+
+	# We don't save anything unless there at least two variants (for MONSTER):
+	if (!defined($parameters->{"smmat"})){
+	    next unless scalar keys %{$hash} > 1;
+	}
+
+	next unless scalar keys %{$hash} > 0;
+	
+	# Once we have the scores we have to print out the SNP file:
+	my $flag=0;
+	$flag=1 if $parameters->{"score"} ne "NA";
+
+	if (defined($parameters->{"smmat"})){
+	    &print_group_file($hash, $stableID, $SNPinfo, $parameters->{"build"},$flag);
+	}
+	else{# outut for MONSTER from VCFs
+	    &print_SNPlist($hash, $stableID, $SNPfile,$flag);
+	    &print_SNP_info($hash, $stableID, $SNPinfo, $gene_count, $parameters->{"build"},$flag);
+	    &print_genotypes($genotypes, $genotypeFile, $parameters, $gene_count);
+	}
+	
+	$gene_count ++; # So the header will only be printed once.	
+    }    
 }
 
 close $INPUT;
@@ -615,6 +615,11 @@ sub getConsequences{
     my $variants   = $_[0];
     my $parameters   = $_[1];
     my $stable_ID=$_[2];
+
+    # stable ID is the raw ID, potentially with suffix
+    if ($stable_ID=~/(ENSG\d+)\./){
+	$stable_ID=$1;
+    }
 
     my $vepin;
     my $vepout;
