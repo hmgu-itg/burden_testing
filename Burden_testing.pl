@@ -200,6 +200,7 @@ while ( my $ID = <$INPUT> ){
 	next;
     }
 
+    # stableID is the full ID
     foreach my $stableID (keys %$gene_coords){
 	my $rec=$gene_coords->{$stableID};
 
@@ -507,6 +508,11 @@ sub getVariants {
 sub FilterLines {
     my ($lines, $stable_ID, $parameters) = @_;
 
+    my $stable_IDprefix=$stableID;
+    if ($stable_ID=~/(ENSG\d+)\./){
+	$stable_IDprefix=$1;
+    }
+    
     my @output_lines = ();
     my %hash = ();
 
@@ -520,8 +526,14 @@ sub FilterLines {
         # Decoding json line:
         my %annot_hash = %{decode_json($line)};
 
-        # Filtering for lines which belong to our target gene:
-        next unless $annot_hash{"gene_ID"} eq $stable_ID;
+        # Filtering for lines which correspond to our target gene:
+	my $gID=$annot_hash{"gene_ID"};
+	if ($gID=~/ENSG\d+\./){ # full ID in the record
+	    next unless $gID eq $stable_ID;
+	}
+	else{ # ID prefix in the record, so we compare it against the stable_ID prefix
+	    next unless $gID eq $stable_IDprefix;
+	}
 
         my $source = $annot_hash{"source"};
         my $class =  exists $annot_hash{"class"} ? $annot_hash{"class"} :  "?";
