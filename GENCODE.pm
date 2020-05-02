@@ -58,16 +58,16 @@ sub _initialize {
 	# by ID
         # shouldn't happen as IDs are supposed to be unique
 	if (exists($self->{"gene_names"}->{$ID})){
-	    print "[Error] GENCODE::_initialize : $ID is already in the hash";
+	    print "[Error] GENCODE::_initialize : duplicate ID $ID";
 	    $self->{"failed"}=1;
 	    return;
 	}
 	else{
-	    $self->{"gene_names"}->{$ID} = $ref;
+	    push @{$self->{"gene_names"}->{$ID}}, $ref;
 	}
 
 	# also use ID prefix as key
-	if ($ID=~/(ENSG\d+)\./){
+	if ($ID=~/(ENSG\d+)\./){ # should always be the case
 	    my $x=$1;
 	    push @{$self->{"gene_names"}->{$x}}, $ref;
 	}
@@ -79,15 +79,17 @@ sub _initialize {
 # get gene coordinates based on the gene name, stable ID or stable ID prefix.
 sub GetCoordinates {
     my $self = shift;
-    my $ID = shift;
+    my $ID = shift; # nam , full ID or ID prefix
     my $ret=undef;
 
     if ( exists $self->{"gene_names"}->{$ID} ) {
-	my $stID=$self->{"gene_names"}->{$ID}->{ID};
-        $ret->{$stID}->{chr}        = $self->{"gene_names"}->{$ID}->{chr};
-        $ret->{$stID}->{start}      = $self->{"gene_names"}->{$ID}->{start};
-        $ret->{$stID}->{end}        = $self->{"gene_names"}->{$ID}->{end};
-        $ret->{$stID}->{name}       = $self->{"gene_names"}->{$ID}->{name};
+	foreach my $rec (@{$self->{"gene_names"}->{$ID}}){
+	    my $stID=$rec->{ID};
+	    $ret->{$stID}->{chr}        = $rec->{chr};
+	    $ret->{$stID}->{start}      = $rec->{start};
+	    $ret->{$stID}->{end}        = $rec->{end};
+	    $ret->{$stID}->{name}       = $rec->{name};
+	}
     }
     elsif ($ID=~/(ENSG\d+)\./){
 	my $x=$1;
