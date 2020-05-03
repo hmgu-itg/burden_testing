@@ -10,7 +10,7 @@ use Data::Types;
 use File::Path qw(make_path);
 
 # Version information:
-our $version = "v6.0 Last modified: 07.Apr.2020";
+our $version = "v7.0 Last modified: 03.May.2020";
 
 # Get script directory:
 our $scriptDir = dirname(__FILE__);
