@@ -39,9 +39,6 @@ function testVCFs {
 version="v12 Last modified: 2020.Feb.14"
 today=$(date "+%Y.%b.%d")
 
-# The variant selector script, that generates snp and genotype input for MONSTER:
-regionSelector="Burden_testing.pl"
-
 # Folder with the variant selector script:
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 regionSelector=${scriptDir}/"Burden_testing.pl"
