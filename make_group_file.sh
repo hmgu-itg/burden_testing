@@ -4,9 +4,6 @@
 version="v12 Last modified: 2020.Mar.30"
 today=$(date "+%Y.%b.%d")
 
-# The variant selector script:
-regionSelector="Burden_testing.pl"
-
 # Folder with the variant selector script:
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 regionSelector=${scriptDir}/"Burden_testing.pl"

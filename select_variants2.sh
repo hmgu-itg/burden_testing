@@ -44,6 +44,8 @@ regionSelector="Burden_testing.pl"
 
 # Folder with the variant selector script:
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+regionSelector=${scriptDir}/"Burden_testing.pl"
+
 missing_cutoff=1 # Missingness threshold, individuals having missingness higher than this threshold will be excluded.
 imputation_method='-A' # The default imputation method is BLUP, slowest, but the most accurate. For other options, see MONSTER documentation.
 configFile=""
