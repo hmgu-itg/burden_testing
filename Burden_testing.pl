@@ -508,7 +508,7 @@ sub getVariants {
 sub FilterLines {
     my ($lines, $stable_ID, $parameters) = @_;
 
-    my $stable_IDprefix=$stableID;
+    my $stable_IDprefix=$stable_ID;
     if ($stable_ID=~/(ENSG\d+)\./){
 	$stable_IDprefix=$1;
     }
