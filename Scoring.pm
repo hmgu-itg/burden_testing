@@ -251,10 +251,10 @@ sub _get_Eigen_Score {
 		if ($self->{"score"} eq "Eigen"){
 		    $sc=$array[4];
 		}
-		elsif(if $self->{"score"} eq "EigenPhred"){
+		elsif($self->{"score"} eq "EigenPhred"){
 		    $sc=$array[6];
 		}
-		elsif(if $self->{"score"} eq "EigenPC"){
+		elsif($self->{"score"} eq "EigenPC"){
 		    $sc=$array[5];
 		}
 		elsif($self->{"score"} eq "EigenPCPhred"){
