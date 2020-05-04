@@ -32,10 +32,15 @@ sub _initialize {
     my $self = shift;
     my $gencodeFile = shift;
     my $FILE;
-    
-    die "[Error] GENCODE file with gene coordinates could not be opened\n" unless -e $gencodeFile;
+
     $self->{"failed"}=0;
 
+    if (! -e $gencodeFile){
+        print "[Error] GENCODE file with gene coordinates could not be opened\n";
+        $self->{"failed"}=1;
+        return;
+    }
+    
     open($FILE, "zcat $gencodeFile | ");
     while (my $line = <$FILE>) {
         next if $line =~ /^#/;
