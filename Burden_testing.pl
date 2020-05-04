@@ -14,14 +14,16 @@ use Cwd qw(abs_path);
 our $version = "v7.0 Last modified: 03.May.2020";
 
 # Get script directory:
-our $scriptDir = dirname(abs_path(__FILE__));
+my $scriptDir;
+BEGIN{
+    $scriptDir = dirname(abs_path(__FILE__));
+}
+
+$\="\n";
+print "ScriptDir : ".$scriptDir;
 
 use lib $scriptDir;
 
-$\="\n";
-
-#print __FILE__;
-#print $scriptDir;
 ##-----------------------------------------------------------------------------------------------------------
 #                                   ASSUMING EIGEN SCORES ARE b37 BASED, CADD SCORES ARE b38 BASED (v. 1.5,  https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)
 #
@@ -170,7 +172,7 @@ our $verbose = $parameters->{"verbose"};
 # Initializing helper objects:
 print "[Info] Initializing GENCODE data" if ($verbose);
 my $GENCODE_data = GENCODE->new($parameters);
-die "[Error] Could not initialize GENCODE" unless $GENCODE_data->{"failed"};
+die "[Error] Could not initialize GENCODE" if $GENCODE_data->{"failed"};
 
 print "[Info] Initializing score data data" if ($verbose);
 my $AddScore = Scoring->new($parameters);
