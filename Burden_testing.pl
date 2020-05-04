@@ -8,17 +8,20 @@ use File::Basename;
 use Getopt::Long qw(GetOptions);
 use Data::Types;
 use File::Path qw(make_path);
+use Cwd qw(abs_path);
 
 # Version information:
 our $version = "v7.0 Last modified: 03.May.2020";
 
 # Get script directory:
-our $scriptDir = dirname(__FILE__);
+our $scriptDir = dirname(abs_path(__FILE__));
 
-use lib dirname(__FILE__);
+use lib $scriptDir;
 
 $\="\n";
 
+#print __FILE__;
+#print $scriptDir;
 ##-----------------------------------------------------------------------------------------------------------
 #                                   ASSUMING EIGEN SCORES ARE b37 BASED, CADD SCORES ARE b38 BASED (v. 1.5,  https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)
 #
@@ -30,6 +33,8 @@ use Scoring;
 
 # Status report:
 print "[Info] Script version: $version";
+#exit(0);
+
 #printf "[Info] Run date: %s", DateTime->now->strftime("%Y. %b %d %H:%M");
 printf "[Info] The script was called with the following parameters:\n%s\n", join(" ", $0, @ARGV);
 
