@@ -8,8 +8,10 @@ today=$(date "+%Y.%b.%d")
 regionSelector="Burden_testing.pl"
 
 # Folder with the variant selector script:
-#scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-#missing_cutoff=1 # Missingness threshold, individuals having missingness higher than this threshold will be excluded.
+scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+regionSelector=${scriptDir}/"Burden_testing.pl"
+
+#missing_cutoff=1 : Missingness threshold, individuals having missingness higher than this threshold will be excluded.
 configFile=""
 
 chunksTotal=1
