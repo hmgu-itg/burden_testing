@@ -141,12 +141,14 @@ for targetDir in ${targetDirs[@]}; do
     if [[ ! -e ${targetDir} ]];then
 	echo "[Warning]: ${targetDir} does not exist; skipping"
 	continue
+    else
+	echo "[Info]: current directory: ${targetDir}"
     fi
     
-    LOGFILE=${targetDir}/"MONSTER.log"
-
     dname=$(basename ${targetDir})
     cn=$(echo ${dname} | sed 's/gene_set\.\([0-9][0-9]*\)$/\1/')
+    LOGFILE=${targetDir}/"MONSTER.chunk_${cn}.log"
+
     selectorLog=${targetDir}"/chunk_${cn}.output.log"
     if [[ ! -e ${selectorLog} ]];then
 	echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Selector log (${selectorLog}) does not exist; skipping" >> ${LOGFILE}
@@ -174,15 +176,14 @@ for targetDir in ${targetDirs[@]}; do
     cd ${targetDir}
     todelete=()
     
-    # We have to check if both files are generated AND they have enough lines.
     gene_notenough=$(cat ${selectorLog} | grep -c NOT_ENOUGH_VAR)
     gene_toomany=$(cat ${selectorLog} | grep -c TOO_MANY_VAR)
     gene_noremain=$(cat ${selectorLog} | grep -c NO_VAR_REMAIN)
     gene_absent=$(cat ${selectorLog} | grep -c NO_GENE)
     region_absent=$(cat ${selectorLog} | grep -c NO_REGION)
 
-    echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] ERROR REPORTING FROM VARIANT SELECTOR" >> ${LOGFILE}
-    echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] =====================================" >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` -e "[Info] ERROR/WARNING REPORTING FROM VARIANT SELECTOR" >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` -e "[Info] =====================================" >> ${LOGFILE}
 
     if [[ "$gene_notenough" -ne 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Not enough variants [NOT_ENOUGH_VAR]: $(cat ${selectorLog} | grep NOT_ENOUGH_VAR | sed 's/.*Gene.//;s/ .*//' | tr '\n' ' ')" >> ${LOGFILE}
@@ -199,25 +200,32 @@ for targetDir in ${targetDirs[@]}; do
     if [[ "$region_absent" -ne 0 ]]; then
         echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] No region in gene [NO_REGION]: $(cat ${selectorLog} | grep NO_REGION | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
     fi
+    # ------------------------------------------------------------------------------------
 
+    # We have to check if genotype and variant file are generated AND they have enough lines.
     if [[ ! -e gene_set_output_genotype_file.txt ]]; then
 	echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${targetDir} has failed. No genotype file has been generated; skipping" >> ${LOGFILE}
+	mv $LOGFILE $destDir
 	continue
     elif [[ $(cat gene_set_output_genotype_file.txt | wc -l ) -lt 2 ]]; then
 	echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set in ${targetDir} has failed, genotype file is empty; skipping" >> ${LOGFILE}
+	mv $LOGFILE $destDir
 	continue
     elif [[ ! -e gene_set_output_variant_file.txt ]]; then
 	echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set in ${targetDir} has failed, SNP file was not generated; skipping" >> ${LOGFILE}
+	mv $LOGFILE $destDir
 	continue
     elif [[ $( cat gene_set_output_variant_file.txt | wc -l ) -lt 1 ]]; then
 	echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set in ${targetDir} has failed, SNP file is empty; skipping" >> ${LOGFILE}
+	mv $LOGFILE $destDir
 	continue
     fi
 
     # ASSUMING PHENOTYPE FILE HAS 2 COLUMNS: ID PHENOTYPE, TAB DELIMITED, NO HEADER
     checkPhenoFile ${phenotypeFile}
     if [[ $? -eq 1 ]];then
-	echo `date "+%Y.%b.%d_%H:%M"` "[Error] wrong format of the phenotype file ($phenotypeFile); skipping"
+	echo `date "+%Y.%b.%d_%H:%M"` "[Error] wrong format of the phenotype file ($phenotypeFile); skipping" >> ${LOGFILE}
+	mv $LOGFILE $destDir
 	continue
     fi
 
