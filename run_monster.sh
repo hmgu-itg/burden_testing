@@ -152,6 +152,7 @@ for targetDir in ${targetDirs[@]}; do
     selectorLog=${targetDir}"/chunk_${cn}.output.log"
     if [[ ! -e ${selectorLog} ]];then
 	echo `date "+%Y.%b.%d_%H:%M"` "[Warning] Selector log (${selectorLog}) does not exist; skipping" >> ${LOGFILE}
+	mv $LOGFILE $destDir
 	continue
     fi
 
