@@ -143,8 +143,10 @@ p = add_argument(p, "--out", "[optional] Output file. If not set, [cohort].[trai
 args=parse_args(p, argv = commandArgs(trailingOnly = TRUE))
 check_args(args, p)
 
+phenoname=colnames(fread(args$pheno))[2]
+cat(paste("[INFO] Detected phenotype name: ",phenoname, "."))
 if(is.na(args$out)){
-  outfn=paste(args$cohort_name, ret$pheno, "out", sep=".")
+  outfn=paste(args$cohort_name, phenoname, "out", sep=".")
 }else{
   outfn=args$out
 }
