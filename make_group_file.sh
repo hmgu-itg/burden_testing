@@ -389,7 +389,7 @@ if [[ "$region_absent" -ne 0 ]]; then
 fi
 
 # true output group file name, as the --output to the Burden_testing.pl specifies output prefix only
-outFile=${outFile}".txt"
+outFile=${outputDir3}/${outFile}".txt"
 
 if [[ ! -e ${outFile} ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed. No group file has been generated" >> ${LOGFILE}
