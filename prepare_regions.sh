@@ -145,7 +145,7 @@ done
 
 if [[ -z ${outdir} ]];then
     echo "[Error] no output directory specified"
-    exit1
+    exit 1
 fi
 
 mkdir -p ${outdir}
