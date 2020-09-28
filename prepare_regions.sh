@@ -167,7 +167,7 @@ cd ${outdir}
 axel -a https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
 gzip -f GTEx_Analysis_v8_eQTL.tar
 
-GTExFile=${outdir}"/GTEx_Analysis_v8_eQTL.tar.gz"
+GTExFile="GTEx_Analysis_v8_eQTL.tar.gz"
 
 if [[ ! -e "${GTExFile}" ]]; then
     echo "[Error] GTEx file (${GTExFile}) does not exist."
