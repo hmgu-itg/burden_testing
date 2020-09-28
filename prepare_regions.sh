@@ -164,7 +164,7 @@ if [ $? -ne 0 ] ; then
 fi
 
 cd ${outdir}
-axel -a https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
+axel https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
 gzip -f GTEx_Analysis_v8_eQTL.tar
 
 GTExFile="GTEx_Analysis_v8_eQTL.tar.gz"
