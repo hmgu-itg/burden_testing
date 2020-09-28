@@ -655,11 +655,8 @@ tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${
 info "Intermediate files are backed in in ${today}_annotation.backup.tar.gz\n"
 
 # Downloading scores
-cd ${scriptDir}
- 
 if [[ $getScores == "yes" ]];then
     info "Downloading Eigen Phred scores\n"
-    cd $outdir
     mkdir -p scores
     cd scores
     axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
@@ -669,11 +666,11 @@ if [[ $getScores == "yes" ]];then
 	echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
 	echo "Try downloading later\n"
     fi
+    cd ..
 fi
 
 if [[ $getCadd == "yes" ]];then
     info "Downloading CADD scores\n"
-    cd $outdir
     mkdir -p scores
     cd scores
     axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
@@ -683,6 +680,7 @@ if [[ $getCadd == "yes" ]];then
 	echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
 	echo "Try downloading later\n"
     fi
+    cd ..
 fi
 
 info "Program finished.\n"
