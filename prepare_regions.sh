@@ -170,7 +170,7 @@ gzip -f GTEx_Analysis_v8_eQTL.tar
 GTExFile=${outdir}"/GTEx_Analysis_v8_eQTL.tar.gz"
 
 if [[ ! -e "${GTExFile}" ]]; then
-    echo "[Error] GTEx file does not exist."
+    echo "[Error] GTEx file (${GTExFile}) does not exist."
     exit 1
 fi
 
@@ -654,6 +654,9 @@ tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${
     ${targetDir}/${today}/processed
 info "Intermediate files are backed in in ${today}_annotation.backup.tar.gz\n"
 
+# Downloading scores
+cd ${scriptDir}
+ 
 if [[ $getScores == "yes" ]];then
     info "Downloading Eigen Phred scores\n"
     cd $outdir
