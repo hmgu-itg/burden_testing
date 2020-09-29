@@ -245,11 +245,11 @@ fi
 #Download all cell types:
 #GFF is 1-based
 for cell in ${cells}; do
-    echo -n "Downloading cell type : $cell                              "
-    axel -a ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+    echo "Downloading cell type : $cell"
+    axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
 done
-echo -e"\nDone."
+echo "Done"
 
 # Printing out report of the downloaded cell types:
 cellTypeCount=$(ls -la ${targetDir}/${today}/EnsemblRegulation/*gff.gz | wc -l)
