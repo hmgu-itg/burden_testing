@@ -635,7 +635,7 @@ zcat ${targetDir}/${today}/processed/overlapping_features.txt.gz \
             exists $h{$ID} ? print join "\t", @{$h{$ID}}, $_ : print STDERR "$ID : gene was not found in gencode! line: $_"
         }'  2> ${targetDir}/${today}/failed | sort -k1,1 -k2,2n > ${targetDir}/${today}/Linked_features.bed # 0-based
 
-echo -e "Done.\n"
+echo -e " Done.\n"
 
 # source == GENCODE => chr,start,end in the 5th field are those of transcript,gene,exon,UTR,CDS
 # source == GTEx => chr,start,end in the 5th field are those of regulatory element
