@@ -155,6 +155,13 @@ if (! defined($parameters->{"smmat"})){
 
 $parameters = &readConfigFile($parameters);
 
+# check if necessary parameters are set
+foreach my $k ("Linked_features","gencode_file","VEPdir","EigenPath","caddPath"){
+    if (!exists($parameters->{$k})){
+	die "[Error] Key ".$k." is not defined in the config file. Exiting."
+    }
+}
+
 # If the score option is not empty, we have to check if it's a valid score, and the
 # required files are exists. If any problem found, the score parameter will be set to its
 # default value -> no score.
@@ -358,7 +365,7 @@ sub check_scores {
 
 sub readConfigFile {
     my $params = $_[0];
-    open(my $CONF, "<", $params->{"configName"}) or die "[Error] In readConfigFile: config file could not be oppended. Exiting.";
+    open(my $CONF, "<", $params->{"configName"}) or die "[Error] In readConfigFile: config file (".$params->{"configName"}.") could not be opened. Exiting.";
 
     while ( my $line = <$CONF>) {
         chomp $line;
@@ -368,6 +375,7 @@ sub readConfigFile {
         my ($key, $value) = $line =~ /^(\S+)=(\S+)/;
         $params->{$key} = $value if $key && $value;
     }
+
     return $params;
 }
 
