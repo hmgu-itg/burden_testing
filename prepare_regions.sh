@@ -640,6 +640,11 @@ mv -f ${targetDir}/${today}/Linked_features.bed.gz.tbi ${outdir}
 zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];$id="NA";$id=$1 if ($x=~/gene_id\s+\"(ENSG[^"]+)\"/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${outdir}/gencode.basic.annotation.tsv.gz
 zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "^#"| perl -F"\t" -lane 'next if $F[2] ne "gene";$x=$F[8];next unless $x=~/gene_type\s+\"protein_coding\"/;$id="NA";$id=$1 if ($x=~/gene_id\s+\"(ENSG[^"]+)\"/); $gn="NA"; $gn=$1 if $x=~/gene_name\s+\"([^"]+)\"/;$,="\t";$F[0]=~s/^chr//;print $F[0],$F[3],$F[4],$gn,$id;' | gzip > ${outdir}/gencode.basic.annotation.protein_coding.tsv.gz
 
+#==================================== OUTPUT config.txt ======================================
+
+echo "Linked_features=${outdir}/Linked_features.bed.gz" > ${outdir}/config.txt
+echo "gencode_file=${outdir}/gencode.basic.annotation.tsv.gz" >> ${outdir}/config.txt
+
 #=============================================================================================
 
 # Report failed associations:
@@ -667,6 +672,7 @@ if [[ $getScores == "yes" ]];then
 	echo "Try downloading later\n"
     fi
     cd ..
+    echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat" >> ${outdir}/config.txt
 fi
 
 if [[ $getCadd == "yes" ]];then
@@ -681,6 +687,7 @@ if [[ $getCadd == "yes" ]];then
 	echo "Try downloading later\n"
     fi
     cd ..
+    echo "caddPath=${outdir}/scores/whole_genome_SNVs_1.5.tsv.gz" >> ${outdir}/config.txt
 fi
 
 info "Program finished.\n"
