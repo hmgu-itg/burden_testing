@@ -164,7 +164,7 @@ if [ $? -ne 0 ] ; then
 fi
 
 cd ${outdir}
-axel -q https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
+axel -a https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
 gzip -f GTEx_Analysis_v8_eQTL.tar
 
 GTExFile="GTEx_Analysis_v8_eQTL.tar.gz"
@@ -184,7 +184,7 @@ info "Working directory: ${targetDir}/${today}\n\n"
 # Get the most recent version of the data:
 mkdir -p ${targetDir}/${today}/GENCODE
 info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
-axel -q ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -o ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+axel -a ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -o ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 echo -e "done."
 
 # Testing if the file exists:
@@ -215,7 +215,7 @@ fi
 #GFF is 1-based
 for cell in ${cells}; do
     echo -n "Downloading cell type : $cell                              "
-    axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+    axel -a ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
 done
 echo -e"\nDone."
@@ -230,7 +230,7 @@ info "Number of cell types downloaded: ${cellTypeCount}.\n\n"
 mkdir -p ${targetDir}/${today}/APPRIS
 info "Downloading APPRIS isoform data.\n"
 info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
-axel -q http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
+axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
     -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
 
 # Testing if the file exists or not:
@@ -664,8 +664,8 @@ if [[ $getScores == "yes" ]];then
     info "Downloading Eigen Phred scores\n"
     mkdir -p scores
     cd scores
-    axel -q ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
-    axel -q ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
+    axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
+    axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
 
     if [[ $? -ne 0 ]];then
 	echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
@@ -679,8 +679,8 @@ if [[ $getCadd == "yes" ]];then
     info "Downloading CADD scores\n"
     mkdir -p scores
     cd scores
-    axel -q https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
-    axel -q https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
+    axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
+    axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
 
     if [[ $? -ne 0 ]];then
 	echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
