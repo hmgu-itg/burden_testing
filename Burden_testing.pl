@@ -657,6 +657,7 @@ sub getConsequences{
     local $,="\t";
     
     my $fname1=$parameters->{"tempdir"}."/vep_input.txt";
+    my $vepdir=$parameters->{"VEPdir"};
 
     open ($vepin, ">", $fname1) or die "[Error] Input file for VEP could not be opened.";
     
@@ -717,7 +718,7 @@ sub getConsequences{
 
     return undef unless($count>0);
     
-    my $queryString="vep -i ".$fname1." --dir /usr/local/bin/.vep --dir_cache /usr/local/bin/.vep -o STDOUT --offline --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
+    my $queryString="vep -i ".$fname1." --dir ".$vepdir." --dir_cache ".$vepdir." -o STDOUT --offline --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
     print $queryString if $verbose;
     
     my $query =Scoring::backticks_bash($queryString);
