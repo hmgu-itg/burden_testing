@@ -39,13 +39,13 @@ From: ubuntu:18.04
 	cd /usr/local/bin
 	git clone https://github.com/hmgu-itg/burden_testing
 	
-	export PERL5LIB=$PERL5LIB:/usr/local/bin/.vep
-	git clone https://github.com/Ensembl/ensembl-vep.git
-	cd ensembl-vep
-	git checkout release/98
-	mkdir -p /usr/local/bin/.vep && cd /usr/local/bin/.vep && axel -q ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_98_GRCh38.tar.gz && echo Untarring... && tar -xzf homo_sapiens_vep_98_GRCh38.tar.gz && rm homo_sapiens_vep_98_GRCh38.tar.gz && cd -
-	sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
-	perl INSTALL.pl -a ac -n --ASSEMBLY GRCh38 -s homo_sapiens -c /usr/local/bin/.vep -d /usr/local/bin/.vep
+	# export PERL5LIB=$PERL5LIB:/usr/local/bin/.vep
+	# git clone https://github.com/Ensembl/ensembl-vep.git
+	# cd ensembl-vep
+	# git checkout release/98
+	# mkdir -p /usr/local/bin/.vep && cd /usr/local/bin/.vep && axel -q ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_98_GRCh38.tar.gz && echo Untarring... && tar -xzf homo_sapiens_vep_98_GRCh38.tar.gz && rm homo_sapiens_vep_98_GRCh38.tar.gz && cd -
+	# sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
+	# perl INSTALL.pl -a ac -n --ASSEMBLY GRCh38 -s homo_sapiens -c /usr/local/bin/.vep -d /usr/local/bin/.vep
 	
 	#cd /usr/local/bin
 	#git clone https://github.com/Carldeboer/BigWig-Tools.git
