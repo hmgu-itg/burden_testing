@@ -23,7 +23,7 @@
 
 
 script_version=4.0
-last_modified=2020.Apr.15
+last_modified=2020.Sep.29
 
 ## Built in versions:
 GENCODE_release=32
@@ -253,13 +253,13 @@ echo "Done"
 
 # Printing out report of the downloaded cell types:
 cellTypeCount=$(ls -la ${targetDir}/${today}/EnsemblRegulation/*gff.gz | wc -l)
-info "Number of cell types downloaded: ${cellTypeCount}.\n\n"
+info "Number of downloaded cell types: ${cellTypeCount}\n\n"
 
 #=================================== APPRIS ==================================================
 
 #Downloading APPRIS data:
 mkdir -p ${targetDir}/${today}/APPRIS
-info "Downloading APPRIS isoform data.\n"
+info "Downloading APPRIS isoform data\n"
 info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
 axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
     -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
@@ -267,7 +267,7 @@ axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapie
 # Testing if the file exists or not:
 testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
 
-info "Download complete.\n\n"
+info "Download complete\n\n"
 
 #=============================================================================================
 #Combining APPRIS and GENCODE data
@@ -315,7 +315,6 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 			$exonID=$1;
 			}
 
-
                         $F[0] =~ s/chr//;
                         $start = $F[3];
                         $end = $F[4];
@@ -351,7 +350,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
                     }
                 }' | gzip > ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz
 
-# Test if output is empty or not:
+# Test if output is empty:
 testFile ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz
 testFileLines ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz # 0-based
 
@@ -362,7 +361,7 @@ testFileLines ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz # 0
 #{"transcript_ID":"ENST00000641515","end":"71585","class":"transcript","strand":"+","appris":"Minor","start":"65419","chr":"1","source":"GENCODE","gene_ID":"ENSG00000186092"}
 #{"strand":"+","start":"65419","chr":"1","appris":"Minor","gene_ID":"ENSG00000186092","exon_ID":"ENSE00003812156","source":"GENCODE","transcript_ID":"ENST00000641515","end":"65433","class":"exon"}
 
-echo "Done."
+echo "Done"
 
 # Print out report:
 appris_lines=$(zcat ${targetDir}/${today}/processed/Appris_annotation_added.txt.gz | wc -l | awk '{print $1}')
@@ -444,7 +443,7 @@ done > ${tmpGTEx}
 
 cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$start=$F[2];$end=$F[3];$ID=$F[4];$gene=$F[5];$H{$ID}{chr}=$chr;$H{$ID}{start}=$start;$H{$ID}{end}=$end;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$start=$H{$id}{start};$end=$H{$id}{end};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};print "$chr\t$start\t$end\tgene=$gene;rsID=$id;tissue=$tissues";}}}' | sort -k1,1 -k2,2n > ${targetDir}/${today}/processed/GTEx.bed # 0-based
 
-echo "Done."
+echo "Done"
 #rm -f ${tmpGTEx}
 
 # OUTPUT:
@@ -462,7 +461,7 @@ echo "Done."
 ##
 ## Step 9. Using intersectbed. Find overlap between GTEx variants and regulatory regions
 ##
-info "Linking genes to regulatory features using GTEx data... "
+info "Linking genes to regulatory features using GTEx data ... "
 
 # OUTPUT OF INTERSECTBED BELOW
 #
@@ -520,7 +519,7 @@ intersectBed -wb -a ${targetDir}/${today}/processed/GTEx.bed -b ${targetDir}/${t
 
 # Testing if output file has lines:
 testFileLines ${targetDir}/${today}/processed/GTEx_Regulation_linked.txt.gz # start/end are 0-based
-echo "Done."
+echo "Done"
 
 # Generate report:
 GTExLinkedFeatures=$( zcat ${targetDir}/${today}/processed/GTEx_Regulation_linked.txt.gz | wc -l | awk '{print $1}')
@@ -532,7 +531,7 @@ info "Number of GTEx linked regulatory features: ${GTExLinkedFeatures}\n\n"
 ##
 ## Step 10. Using intersectbed. Find overlap between genes and regulatory regions
 ##
-info "Linking genes to regulatory features based on overlap... "
+info "Linking genes to regulatory features based on overlap ... "
 # generating a file.
 # 0-based
 zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | awk '$3 == "gene"' | perl -lane '
@@ -590,7 +589,7 @@ intersectBed -wb -a ${targetDir}/${today}/processed/genes.bed.gz -b ${targetDir}
             "source"    => "overlap",
         })
     ' | bgzip -f > ${targetDir}/${today}/processed/overlapping_features.txt.gz # 0-based coordinates
-echo "Done."
+echo "Done"
 
 # OUTPUT:
 #
@@ -606,7 +605,7 @@ info "Number of regulatory features linked by overlap: ${OverlapLinkedFeatures}\
 ##
 ## Step 11. Merging all the components together create sorted, compressed bedfile.
 ##
-info "Merging GENCODE, GTEx and overlap data "
+info "Merging GENCODE, GTEx and overlap data"
 export gene_file=${targetDir}/${today}/processed/genes.bed.gz
 
 #GENES
@@ -722,5 +721,5 @@ if [[ $getCadd == "yes" ]];then
     echo "caddPath=${outdir}/scores/whole_genome_SNVs_1.5.tsv.gz" >> ${outdir}/config.txt
 fi
 
-info "Program finished.\n"
+info "The End\n"
 exit 0
