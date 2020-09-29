@@ -179,8 +179,8 @@ echo Untarring... && tar -xzf homo_sapiens_vep_98_GRCh38.tar.gz && cd -
 
 # USE sponge
 #sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
-#sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl > tmp.txt 
-#mv -f tmp.txt INSTALL.pl
+sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl > tmp.txt 
+mv -f tmp.txt INSTALL.pl
 
 PATH=$PATH:${outdir}/.vep/htslib PERL5LIB=$PERL5LIB:${outdir}/.vep perl INSTALL.pl -a ac -n --ASSEMBLY GRCh38 -s homo_sapiens -c ${outdir}/.vep -d ${outdir}/.vep
 
