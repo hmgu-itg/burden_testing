@@ -162,16 +162,27 @@ outdir=${outdir%/}
 
 cd ${outdir}
 
-export PERL5LIB=$PERL5LIB:${outdir}/.vep
+#export PERL5LIB=$PERL5LIB:${outdir}/.vep
+#export PATH=$PATH:${outdir}/.vep/htslib
 git clone https://github.com/Ensembl/ensembl-vep.git
 cd ensembl-vep
 git checkout release/98
-mkdir -p ${outdir}/.vep && cd ${outdir}/.vep && axel -a ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_98_GRCh38.tar.gz && echo Untarring... && tar -xzf homo_sapiens_vep_98_GRCh38.tar.gz && rm homo_sapiens_vep_98_GRCh38.tar.gz && cd -
+
+mkdir -p ${outdir}/.vep && cd ${outdir}/.vep 
+if [[ ! -f homo_sapiens_vep_98_GRCh38.tar.gz ]];then
+    axel -a ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_98_GRCh38.tar.gz
+fi
+
+echo Untarring... && tar -xzf homo_sapiens_vep_98_GRCh38.tar.gz && cd -
+
+#mkdir -p ${outdir}/.vep && cd ${outdir}/.vep && axel -a ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_98_GRCh38.tar.gz && echo Untarring... && tar -xzf homo_sapiens_vep_98_GRCh38.tar.gz && rm homo_sapiens_vep_98_GRCh38.tar.gz && cd -
+
 # USE sponge
 #sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
-sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl > tmp.txt 
-mv tmp.txt INSTALL.pl
-perl INSTALL.pl -a ac -n --ASSEMBLY GRCh38 -s homo_sapiens -c ${outdir}/.vep -d ${outdir}/.vep
+#sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl > tmp.txt 
+#mv -f tmp.txt INSTALL.pl
+
+PATH=$PATH:${outdir}/.vep/htslib PERL5LIB=$PERL5LIB:${outdir}/.vep perl INSTALL.pl -a ac -n --ASSEMBLY GRCh38 -s homo_sapiens -c ${outdir}/.vep -d ${outdir}/.vep
 
 cd ${outdir}
 
