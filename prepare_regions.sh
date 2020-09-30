@@ -387,7 +387,7 @@ for cell in ${CellTypes}; do
 	continue
     fi
     
-    zcat ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | grep -i "activity=active" \
+    zcat ${fn} | grep -i "activity=active" \
         | perl -F"\t" -lane 'next unless length($F[0]) < 3 || $F[0]=~/^chr/; # We skip irregular chromosome names.
                 $F[0]=~s/^chr//;
                 $cell_type = $ENV{cell};
