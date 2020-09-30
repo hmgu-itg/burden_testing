@@ -11,7 +11,7 @@ use File::Path qw(make_path);
 use Cwd qw(abs_path);
 
 # Version information:
-our $version = "v7.0 Last modified: 03.May.2020";
+our $version = "v7.1 Last modified: 2020.Sep.30";
 
 # Get script directory:
 my $scriptDir;
@@ -24,12 +24,13 @@ print "ScriptDir : ".$scriptDir;
 
 use lib $scriptDir;
 
-##-----------------------------------------------------------------------------------------------------------
+##----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#
 #                                   ASSUMING EIGEN SCORES ARE b37 BASED, CADD SCORES ARE b38 BASED (v. 1.5,  https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)
 #
-##-----------------------------------------------------------------------------------------------------------
+##----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# Loading custom modules:
+# Custom modules:
 use GENCODE;
 use Scoring;
 
@@ -156,15 +157,14 @@ if (! defined($parameters->{"smmat"})){
 $parameters = &readConfigFile($parameters);
 
 # check if necessary parameters are set
-foreach my $k ("Linked_features","gencode_file","VEPdir","EigenPath","caddPath"){
+foreach my $k ("Linked_features","gencode_file","VEPdir"){
     if (!exists($parameters->{$k})){
 	die "[Error] Key ".$k." is not defined in the config file. Exiting."
     }
 }
 
 # If the score option is not empty, we have to check if it's a valid score, and the
-# required files are exists. If any problem found, the score parameter will be set to its
-# default value -> no score.
+# required files are specified in the config file.
 $parameters = &check_scores($parameters) if $parameters->{"score"} ne "NA";
 
 # Processing the requested features:
@@ -328,7 +328,7 @@ sub check_scores {
 #                      "Linsight" => 1,
 #                      "Mixed" => 1);
 
-    # Let's report if the specified score is not supported:
+    # report if the specified score is not supported:
     unless (exists $acceptedScores{$params->{"score"}}){
         print "[Info] Supported weighting options: ", join(", ", keys %acceptedScores), "";
         printf "[Warning] The specified score (%s) is currently not supported.", $params->{"score"};
