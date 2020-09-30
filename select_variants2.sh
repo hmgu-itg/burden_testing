@@ -57,8 +57,6 @@ function display_help() {
     echo "Variant selector"
     echo "version: ${version}"
     echo ""
-    echo "Usage: $0 <parameters>"
-    echo ""
     echo "Variant filter options:"
     echo "     -C  - config file (reguired, no default)"
     echo "     -V  - VCF file(s) (required, no default; use % character for chromosome name eg 'chr%.vcf.gz')"

@@ -377,7 +377,16 @@ info "Aggregate cell specific information of regulatory features... "
 CellTypes=$( ls -la ${targetDir}/${today}/EnsemblRegulation/ | perl -lane 'print $1 if  $F[-1] =~ /(.+).gff.gz/ ' )
 for cell in ${CellTypes}; do
     export cell
+    fn=${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+    
     # parsing cell specific files (At this point we only consider active features. Although repressed regions might also be informative):
+
+    # Check integrity 
+    if ! gzip -t ${fn};then
+	echo "WARNING: integrity check failed for $fn; skipping"
+	continue
+    fi
+    
     zcat ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | grep -i "activity=active" \
         | perl -F"\t" -lane 'next unless length($F[0]) < 3 || $F[0]=~/^chr/; # We skip irregular chromosome names.
                 $F[0]=~s/^chr//;
