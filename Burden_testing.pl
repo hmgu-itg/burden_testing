@@ -1089,8 +1089,7 @@ sub print_genotypes {
 sub usage {
     print "Usage::";
     print("      Required:");
-    print("          --input <input file>");
-#    print("          --working-dir <working directory containing Linked_features.bed.gz and gencode.basic.annotation.tsv.gz>");
+    print("          --input <input gene list>");
     print("          --output-dir <output directory where output and temporary files will be created>");
     print("          --output <output filename prefix>");
     print("          --vcf <input VCF(s); either --vcf or --smmat is required>");

@@ -19,25 +19,22 @@ chunkNo=""
 function display_help() {
     echo "$1"
     echo ""
-    echo "Variant selector"
+    echo "Create group file"
     echo "version: ${version}"
     echo ""
     echo "Usage: $0 <parameters>"
     echo ""
     echo "Variant filter options:"
-    echo "     -g  - list of gencode features."
-    echo "     -e  - list of linked GTEx featuress"
-    echo "     -l  - list of linked overlapping features."
-#    echo "     -m  - upper maf thresholds"
-    echo "     -x  - extend genomic regions (bp)."
-    echo "     -o  - include variants with severe consequences only (more severe than missense)."
-#    echo "     -f  - include only HC and LC loftee variants."
-#    echo "     -j  - include only HC loftee variants."
-    echo "     -C  - config file"
-    echo "     -i  - input variant list, tab-separated, bgzipped and indexed (required, no default, each line has to have 5 fields: chr,pos,ID,ref,alt)"
+    echo "     -C  - config file (reguired, no default)"
+    echo "     -i  - input variant list, tab-separated, bgzipped and TABIX indexed (required, no default, each line has to have 5 fields: chr,pos,ID,ref,alt)"
+    echo "     -g  - comma separated list of GENCODE features (gene, exon, transcript, CDS or UTR)"
+    echo "     -e  - comma separated list of GTEx features (promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind or allreg)"
+    echo "     -l  - comma separated list of overlap features (promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind or allreg)"
+    echo "     -x  - extend genomic regions by this amount (bp) (default: 0)"
+    echo "     -o  - include variants with severe consequences only (more severe than missense)"
     echo ""
     echo "Parameters to set up scores for variants:"
-    echo "     -s  - turn weights on. Arguments: CADD, EigenPhred"
+    echo "     -s  - apply weighting; accepted values: CADD, EigenPhred"
     echo "     -t  - the value with which the scores will be shifted (default value: if Eigen score weighting specified: 1, otherwise: 0)"
     echo "     -k  - below the specified cutoff value, the variants will be excluded (default: 0)"
     echo ""
@@ -75,7 +72,6 @@ while getopts ":hL:c:d:bg:s:l:e:x:k:t:ow:C:i:" optname; do
 
       # variant filter parameters:
         "g") gencode=${OPTARG} ;;
-#        "m") MAF=${OPTARG} ;;
         "s") score=${OPTARG} ;;
         "l") overlap=${OPTARG} ;;
         "e") gtex=${OPTARG} ;;
@@ -83,8 +79,6 @@ while getopts ":hL:c:d:bg:s:l:e:x:k:t:ow:C:i:" optname; do
         "k") cutoff=${OPTARG} ;;
         "t") scoreshift=${OPTARG} ;;
         "o") lof=1 ;;
-#        "f") loftee=1 ;;
-#        "j") lofteeHC=1 ;;
         "C") configFile=${OPTARG} ;;
         "i") inputFile=${OPTARG} ;;
 
@@ -140,6 +134,7 @@ if [ $totalGenes -lt $chunksTotal ];then
 fi
 
 commandOptions=" --config ${configFile} --smmat ${inputFile} "
+
 # -----------------------------------------------------------------------------------------------------------------------------
 
 # setting chunkNo
@@ -171,7 +166,7 @@ fi
 # -----------------------------------------------------------------------------------------------------------------------------
 
 outprefix="group_file"
-# GENCODE -expecting a list of feature names separated by a comma.
+# GENCODE features
 if [[ ! -z "${gencode}" ]]; then
     commandOptions="${commandOptions} --GENCODE ${gencode}"
     str=$( echo "${gencode}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
@@ -227,7 +222,7 @@ fi
 outprefix=${outprefix}"_score_"${score}
 
 # If Eigen score is applied, we shift the scores by 1, if no other value is specified:
-#if [[ ("${score}" == "Eigen") && (-z "${scoreshift}" ) ]]; then scoreshift=1; fi
+if [[ ("${score}" == "Eigen") && (-z "${scoreshift}" ) ]]; then scoreshift=1; fi
 
 if [[ ! -z "${xtend}" ]]; then
     commandOptions="${commandOptions} --extend ${xtend}"
@@ -239,7 +234,7 @@ if [[ ! -z "${cutoff}" ]]; then
     commandOptions="${commandOptions} --cutoff ${cutoff}"
 fi
 
-# Setting score shift, a number that will be added to every scores (MONSTER does not accept scores <= 0!!):
+# Setting score shift
 if [[ ! -z "${scoreshift}" ]]; then
     commandOptions="${commandOptions} --shift ${scoreshift}"
 fi
