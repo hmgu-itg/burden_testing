@@ -39,6 +39,7 @@ function usage {
     echo "Usage: $0 -o <output directory> : required, output directory"
     echo "          -n : optional, do not download Eigen scores"
     echo "          -c : optional, do not download CADD scores"
+    echo "          -x : optional, create backup of the downloaded data"
     echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
@@ -131,11 +132,13 @@ ensftp="ftp://ftp.ensembl.org"
 OPTIND=1
 outdir=""
 getCadd="yes"
+backup="no"
 while getopts "hnce:o:" optname; do
     case "$optname" in
         "h" ) usage ;;
         "n" ) getScores="no" ;;
         "c" ) getCadd="no" ;;
+        "x" ) backup="yes" ;;
         "e" ) ensftp="${OPTARG}" ;;
         "o" ) outdir="${OPTARG}" ;;
         "?" ) usage ;;
@@ -682,11 +685,15 @@ FailedGenes=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /(ENSG\d+)/;
 FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":"(.+?)"/; print $1' | sort | uniq | tr "\n" ", " )
 info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sournces: ${FailedSources}\n\n"
 
-info "Backing up intermediate files ...\n"
-tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${targetDir}/${today}/APPRIS  \
-    ${targetDir}/${today}/EnsemblRegulation ${targetDir}/${today}/failed ${targetDir}/${today}/GENCODE  \
-    ${targetDir}/${today}/processed
-info "Intermediate files are backed in in ${today}_annotation.backup.tar.gz\n"
+if [[ $backup == "yes" ]];then
+    info "Backing up intermediate files ...\n"
+    tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${targetDir}/${today}/APPRIS  \
+	${targetDir}/${today}/EnsemblRegulation ${targetDir}/${today}/failed ${targetDir}/${today}/GENCODE  \
+	${targetDir}/${today}/processed
+    info "Intermediate files are saved in ${today}_annotation.backup.tar.gz\n"
+else
+    rm -rf ${targetDir}
+fi
 
 # Downloading scores
 if [[ $getScores == "yes" ]];then
