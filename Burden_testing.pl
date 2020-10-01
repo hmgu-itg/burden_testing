@@ -295,12 +295,13 @@ while ( my $ID = <$INPUT> ){
 	my $flag=0;
 	$flag=1 if $parameters->{"score"} ne "NA";
 
+	# output original ID
 	if (defined($parameters->{"smmat"})){
-	    &print_group_file($hash, $stableID, $SNPinfo, $parameters->{"build"},$flag);
+	    &print_group_file($hash, $ID, $SNPinfo, $parameters->{"build"},$flag);
 	}
 	else{# output for MONSTER from VCFs
-	    &print_SNPlist($hash, $stableID, $SNPfile,$flag);
-	    &print_SNP_info($hash, $stableID, $SNPinfo, $gene_count, $parameters->{"build"},$flag);
+	    &print_SNPlist($hash, $ID, $SNPfile,$flag);
+	    &print_SNP_info($hash, $ID, $SNPinfo, $gene_count, $parameters->{"build"},$flag);
 	    &print_genotypes($genotypes, $genotypeFile, $parameters, $gene_count);
 	}
 	
