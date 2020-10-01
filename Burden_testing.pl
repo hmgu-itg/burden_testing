@@ -157,7 +157,7 @@ if (! defined($parameters->{"smmat"})){
 $parameters = &readConfigFile($parameters);
 
 # check if necessary parameters are set
-foreach my $k ("Linked_features","gencode_file","VEPdir"){
+foreach my $k ("Linked_features","gencode_file","VEPdir","VEPexec"){
     if (!exists($parameters->{$k})){
 	die "[Error] Key ".$k." is not defined in the config file. Exiting."
     }
@@ -658,6 +658,7 @@ sub getConsequences{
     
     my $fname1=$parameters->{"tempdir"}."/vep_input.txt";
     my $vepdir=$parameters->{"VEPdir"};
+    my $vepexec=$parameters->{"VEPexec"};
 
     open ($vepin, ">", $fname1) or die "[Error] Input file for VEP could not be opened.";
     
@@ -718,7 +719,7 @@ sub getConsequences{
 
     return undef unless($count>0);
     
-    my $queryString="vep -i ".$fname1." --dir ".$vepdir." --dir_cache ".$vepdir." -o STDOUT --offline --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
+    my $queryString=$vepexec." -i ".$fname1." --dir ".$vepdir." --dir_cache ".$vepdir." -o STDOUT --offline --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
     print $queryString if $verbose;
     
     my $query =Scoring::backticks_bash($queryString);
