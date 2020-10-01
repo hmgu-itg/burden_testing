@@ -87,7 +87,7 @@ sub _initialize {
 	}
     }
 
-    for my $k in (keys %{$self->{"gene_names"}}){
+    for my $k (keys %{$self->{"gene_names"}}){
 	if ($k =~ /^ENSG\d+/){
 	    print "ERROR: $k" if scalar(@{$self->{"gene_names"}->{$k}})>1;
 	}
