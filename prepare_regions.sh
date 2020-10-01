@@ -161,6 +161,10 @@ fi
 outdir=`readlink -f $outdir`
 outdir=${outdir%/}
 
+# output config file
+configfile=${outdir}/config.txt
+rm -f ${configfile}
+
 #===================================== VEP ===================================================
 
 cd ${outdir}
@@ -175,7 +179,12 @@ sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
 
 PATH=$PATH:${outdir}/vep/htslib PERL5LIB=$PERL5LIB:${outdir}/vep perl INSTALL.pl -a ac -n --ASSEMBLY GRCh38 -s homo_sapiens -c ${outdir}/vep -d ${outdir}/vep
 
+echo "VEPdir=${outdir}/vep" >>  ${configfile}
+echo "VEPexec=${outdir}/ensembl-vep/vep" >>  ${configfile}
+
 cd ${outdir}
+
+#exit 0
 
 #=============================================================================================
 
@@ -673,9 +682,8 @@ zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.g
 
 #==================================== OUTPUT config.txt ======================================
 
-echo "Linked_features=${outdir}/Linked_features.bed.gz" > ${outdir}/config.txt
-echo "gencode_file=${outdir}/gencode.basic.annotation.tsv.gz" >> ${outdir}/config.txt
-echo "VEPdir=${outdir}/vep" >>  ${outdir}/config.txt
+echo "Linked_features=${outdir}/Linked_features.bed.gz" > ${configfile}
+echo "gencode_file=${outdir}/gencode.basic.annotation.tsv.gz" >> ${configfile}
 
 #=============================================================================================
 
@@ -708,7 +716,7 @@ if [[ $getScores == "yes" ]];then
 	echo "Try downloading later\n"
     fi
     cd ..
-    echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat" >> ${outdir}/config.txt
+    echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat" >> ${configfile}
 fi
 
 if [[ $getCadd == "yes" ]];then
@@ -723,7 +731,7 @@ if [[ $getCadd == "yes" ]];then
 	echo "Try downloading later\n"
     fi
     cd ..
-    echo "caddPath=${outdir}/scores/whole_genome_SNVs_1.5.tsv.gz" >> ${outdir}/config.txt
+    echo "caddPath=${outdir}/scores/whole_genome_SNVs_1.5.tsv.gz" >> ${configfile}
 fi
 
 info "The End\n"
