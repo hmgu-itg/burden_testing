@@ -101,7 +101,8 @@ if [[ -z "${outputDir}" ]]; then
     exit 1
 fi
 
-# remove trailing slash
+# full path
+outputDir=`readlink -f $outputDir`
 outputDir=${outputDir%/}
 
 if [[ -z "${configFile}" ]]; then
