@@ -309,8 +309,11 @@ fi
 
 # Updating working dir, and creating folder:
 folder=$( echo $folder | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-outputDir="${outputDir}/${folder}"
-outputDir=${outputDir}/gene_set.${chunkNo}
+
+# full path
+outputDir=`readlink -f $outputDir`
+outputDir=${outputDir%/}
+outputDir="${outputDir}/${folder}/gene_set.${chunkNo}"
 mkdir -p ${outputDir}
 if [[ ! -d ${outputDir} ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Chunk directory (${outputDir}) could not be created. Exiting."
