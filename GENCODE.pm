@@ -51,7 +51,7 @@ sub _initialize {
 	#1-based coordinates
         my ($chr, $start, $end, $name, $ID) = split("\t", $line);
         $chr =~ s/^chr//i;
-        if ( $chr eq "Y" && (($end > 10001 && $start < 2781479) || ($end > 56887903 && $start < 57217415))){
+        if ( $chr eq "Y" && (($start > 10001 && $end < 2781479) || ($start > 56887903 && $end < 57217415))){
 		# we are in PAR Y. The genes are also on PAR X so we skip
 		next;
         } 
@@ -65,6 +65,7 @@ sub _initialize {
 	$counts{$name}++;
 	
 	# by name
+	# array can contain more than one ref (in case o duplicate names)
 	push @{$self->{"gene_names"}->{$name}}, $ref;
 
 	# by ID
