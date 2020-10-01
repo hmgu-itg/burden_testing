@@ -8,14 +8,15 @@ From: ubuntu:18.04
 	PERL_EXTUTILS_AUTOINSTALL="--defaultdeps"
 	export PERL_EXTUTILS_AUTOINSTALL
 	
-	PATH=$PATH:/usr/local/bin:/usr/local/bin/burden_testing:/usr/local/bin/burden_testing/testing:/usr/local/bin/.vep/htslib:/usr/local/bin/ensembl-vep:/usr/local/bin/MONSTER:/usr/local/bin/bedtools2/bin/:/usr/local/bin/UCSC.tools
+	#PATH=$PATH:/usr/local/bin:/usr/local/bin/burden_testing:/usr/local/bin/burden_testing/testing:/usr/local/bin/.vep/htslib:/usr/local/bin/ensembl-vep:/usr/local/bin/MONSTER:/usr/local/bin/bedtools2/bin/:/usr/local/bin/UCSC.tools
+	PATH=$PATH:/usr/local/bin:/usr/local/bin/burden_testing:/usr/local/bin/burden_testing/testing:/usr/local/bin/MONSTER:/usr/local/bin/bedtools2/bin/:/usr/local/bin/UCSC.tools
 	export PATH
 	
 	LC_ALL=C
 	export LC_ALL
 	
-	PERL5LIB=$PERL5LIB:/usr/local/bin/.vep
-	export PERL5LIB
+	#PERL5LIB=$PERL5LIB:/usr/local/bin/.vep
+	#export PERL5LIB
 
 %post
 	apt update
