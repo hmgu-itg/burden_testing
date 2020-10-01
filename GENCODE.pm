@@ -83,13 +83,20 @@ sub _initialize {
 	# potentially there could be duplicates, but we excluded PAR_Y genes above, so shouldn't happen
 	if ($ID=~/(ENSG\d+)\./){ # should always be the case
 	    my $x=$1;
-	    push @{$self->{"gene_names"}->{$x}}, $ref;
+	    if (exists($self->{"gene_names"}->{$x})){
+		print "[Error] GENCODE::_initialize : duplicate ID $x";
+		$self->{"failed"}=1;
+		return;
+	    }
+	    else{	
+		push @{$self->{"gene_names"}->{$x}}, $ref;
+	    }
 	}
     }
 
-    for my $k (keys %{$self->{"gene_names"}}){
-	print "ERROR: $k" if scalar(@{$self->{"gene_names"}->{$k}})>1;
-    }
+    # for my $k (keys %{$self->{"gene_names"}}){
+    # 	print "ERROR: $k" if scalar(@{$self->{"gene_names"}->{$k}})>1;
+    # }
     
     foreach my $n (keys %counts){
 	if ($counts{$n}>1){
