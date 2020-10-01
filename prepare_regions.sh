@@ -675,7 +675,7 @@ zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.g
 
 echo "Linked_features=${outdir}/Linked_features.bed.gz" > ${outdir}/config.txt
 echo "gencode_file=${outdir}/gencode.basic.annotation.tsv.gz" >> ${outdir}/config.txt
-echo "VEPdir=${outdir}/.vep" >>  ${outdir}/config.txt
+echo "VEPdir=${outdir}/vep" >>  ${outdir}/config.txt
 
 #=============================================================================================
 
