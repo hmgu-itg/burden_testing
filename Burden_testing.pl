@@ -719,7 +719,7 @@ sub getConsequences{
 
     return undef unless($count>0);
     
-    my $queryString=$vepexec." -i ".$fname1." --dir ".$vepdir." --dir_cache ".$vepdir." -o STDOUT --offline --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
+    my $queryString="PERL5LIB=\$PERL5LIB:$VEPdir".$vepexec." -i ".$fname1." --dir ".$vepdir." --dir_cache ".$vepdir." -o STDOUT --offline --no_stats | grep -v \"^#\" | awk -v g=".$stable_ID." 'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7";
     print $queryString if $verbose;
     
     my $query =Scoring::backticks_bash($queryString);
