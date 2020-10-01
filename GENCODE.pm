@@ -65,7 +65,7 @@ sub _initialize {
 	$counts{$name}++;
 	
 	# by name
-	# array can contain more than one ref (in case o duplicate names)
+	# array can contain more than one ref (in case of duplicate names)
 	push @{$self->{"gene_names"}->{$name}}, $ref;
 
 	# by ID
@@ -80,12 +80,19 @@ sub _initialize {
 	}
 
 	# also use ID prefix as key
+	# potentially there could be duplicates, but we excluded PAR_Y genes above, so shouldn't happen
 	if ($ID=~/(ENSG\d+)\./){ # should always be the case
 	    my $x=$1;
 	    push @{$self->{"gene_names"}->{$x}}, $ref;
 	}
     }
 
+    for my $k in (keys %{$self->{"gene_names"}}){
+	if ($k =~ /^ENSG\d+/){
+	    print "ERROR: $k" if scalar(@{$self->{"gene_names"}->{$k}})>1;
+	}
+    }
+    
     foreach my $n (keys %counts){
 	if ($counts{$n}>1){
 	    $self->{"duplicate_names"}->{$n}=1;

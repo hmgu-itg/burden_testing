@@ -203,10 +203,33 @@ else{
 
 # Processing the input file gene by gene:
 my $gene_count = 0;
+# to detect ID/name duplicates in the input list
+my %counts;
+
 while ( my $ID = <$INPUT> ){
     next if $ID=~/^\s*$/;
     chomp $ID;
 
+    if (exists($counts{$ID})){
+	print "[Warning]: gene $ID occurs more than once in the input list";
+	next;
+    }
+    else{
+	$counts{$ID}=1;
+    }
+
+    # skip GENCODE duplicates
+    if ($GENCODE_data->isDuplicateName($ID)){
+	print "[Warning]: gene $ID occurs more than once in GENCODE data; skipping";
+	next;
+    }
+
+    # ID or name ?
+    $isID=0;
+    if ($ID=~/^ENSG\d+/){
+	$isID=1;
+    }
+    
     my $gene_coords = $GENCODE_data->GetCoordinates($ID);
     
     if (! defined($gene_coords)) {
@@ -227,6 +250,7 @@ while ( my $ID = <$INPUT> ){
 
 	# all lines from the Linked_features file that are associated with the current gene
 	my $bedlines = &BedToolsQuery($chr, $start, $end, $stableID, $parameters->{"Linked_features"});
+
 	# remove some lines we're not interested in
 	my $CollapsedBed = &FilterLines($bedlines, $stableID, $parameters);
 
@@ -237,7 +261,7 @@ while ( my $ID = <$INPUT> ){
 
 	# CollapsedBed is 0-based
 	
-	# Once we have the genomic regions, the overlapping variants have to be extracted:
+	# Once we have the genomic regions, the overlapping variants are extracted
 	my $variants = &getVariants($CollapsedBed, $parameters);
 
 	# Filtering variants based on the provided parameters:
@@ -280,7 +304,7 @@ while ( my $ID = <$INPUT> ){
 	if (defined($parameters->{"smmat"})){
 	    &print_group_file($hash, $stableID, $SNPinfo, $parameters->{"build"},$flag);
 	}
-	else{# outut for MONSTER from VCFs
+	else{# output for MONSTER from VCFs
 	    &print_SNPlist($hash, $stableID, $SNPfile,$flag);
 	    &print_SNP_info($hash, $stableID, $SNPinfo, $gene_count, $parameters->{"build"},$flag);
 	    &print_genotypes($genotypes, $genotypeFile, $parameters, $gene_count);
