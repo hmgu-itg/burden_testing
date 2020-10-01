@@ -223,12 +223,6 @@ while ( my $ID = <$INPUT> ){
 	print "[Warning]: gene $ID occurs more than once in GENCODE data; skipping";
 	next;
     }
-
-    # ID or name ?
-    $isID=0;
-    if ($ID=~/^ENSG\d+/){
-	$isID=1;
-    }
     
     my $gene_coords = $GENCODE_data->GetCoordinates($ID);
     
