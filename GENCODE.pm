@@ -101,6 +101,24 @@ sub _initialize {
     close($FILE);
 }
 
+# checks if provided gene name occurs more than once in GENCODE data
+sub isDuplicateName {
+    my $self = shift;
+    my $name = shift;
+
+    if (exists($self->{"duplicate_names"})){
+	if (exists($self->{"duplicate_names"}->{$name})){
+	    return 1;
+	}
+	else{
+	    return 0;
+	}
+    }
+    else{
+	return 0;
+    }
+}
+
 # get gene coordinates based on the gene name, stable ID or stable ID prefix.
 sub GetCoordinates {
     my $self = shift;
