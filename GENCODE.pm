@@ -138,6 +138,8 @@ sub GetCoordinates {
     my $ID = shift; # name , full ID or ID prefix
     my $ret=undef;
 
+    # seems redundant
+    
     if ( exists $self->{"gene_names"}->{$ID} ) {
 	foreach my $rec (@{$self->{"gene_names"}->{$ID}}){
 	    my $stID=$rec->{ID};
