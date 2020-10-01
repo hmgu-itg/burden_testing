@@ -27,7 +27,7 @@ sub new {
     return $self;
 }
 
-# reading the data stored in the gzipped gencode file:
+# reading gzipped gencode file
 sub _initialize {
     my $self = shift;
     my $gencodeFile = shift;
@@ -36,11 +36,12 @@ sub _initialize {
     $self->{"failed"}=0;
 
     if (! -e $gencodeFile){
-        print "[Error] GENCODE file with gene coordinates could not be opened\n";
+        print "[Error] GENCODE file ($gencodeFile) could not be opened\n";
         $self->{"failed"}=1;
         return;
     }
     
+    my %counts;
     open($FILE, "zcat $gencodeFile | ");
     while (my $line = <$FILE>) {
         next if $line =~ /^#/;
@@ -60,6 +61,9 @@ sub _initialize {
                    "name" => $name,
                    "ID" => $ID};
 
+	# to detect (name) duplicates
+	$counts{$name}++;
+	
 	# by name
 	push @{$self->{"gene_names"}->{$name}}, $ref;
 
@@ -80,6 +84,19 @@ sub _initialize {
 	    push @{$self->{"gene_names"}->{$x}}, $ref;
 	}
     }
+
+    foreach my $n (keys %counts){
+	if ($counts{$n}>1){
+	    $self->{"duplicate_names"}->{$n}=1;
+	}
+    }
+
+    if (exists($self->{"duplicate_names"})){
+	print "[Warning]: duplicate gene names detected in $gencodeFile:";
+	foreach my $n (keys %{$self->{"duplicate_names"}}){
+	    print $n;
+	}
+    }
     
     close($FILE);
 }
@@ -87,7 +104,7 @@ sub _initialize {
 # get gene coordinates based on the gene name, stable ID or stable ID prefix.
 sub GetCoordinates {
     my $self = shift;
-    my $ID = shift; # nam , full ID or ID prefix
+    my $ID = shift; # name , full ID or ID prefix
     my $ret=undef;
 
     if ( exists $self->{"gene_names"}->{$ID} ) {
