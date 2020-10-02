@@ -373,7 +373,7 @@ info "Number of Appris annotated GENCODE annotations: ${appris_lines}\n\n"
 ##
 ## Step 7. Pre-processing cell specific regulatory data
 ##
-info "Aggregate cell specific information of regulatory features... "
+info "Aggregating cell specific information of regulatory features... "
 #CellTypes=$( ls -la ${targetDir}/${today}/EnsemblRegulation/ | perl -lane 'print $1 if  $F[-1] =~ /RegulatoryFeatures_(.+).gff.gz/ ' )
 CellTypes=$( ls -la ${targetDir}/${today}/EnsemblRegulation/ | perl -lane 'print $1 if  $F[-1] =~ /(.+).gff.gz/ ' )
 for cell in ${CellTypes}; do
@@ -682,7 +682,7 @@ zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.g
 
 #==================================== OUTPUT config.txt ======================================
 
-echo "Linked_features=${outdir}/Linked_features.bed.gz" > ${configfile}
+echo "Linked_features=${outdir}/Linked_features.bed.gz" >> ${configfile}
 echo "gencode_file=${outdir}/gencode.basic.annotation.tsv.gz" >> ${configfile}
 
 #=============================================================================================
