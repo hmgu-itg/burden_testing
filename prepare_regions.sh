@@ -383,7 +383,7 @@ for cell in ${CellTypes}; do
     # parsing cell specific files (At this point we only consider active features. Although repressed regions might also be informative):
 
     # Check integrity 
-    if ! gzip -t ${fn};then
+    if ! gzip -q -t ${fn};then
 	echo "\nWARNING: integrity check failed for $fn; skipping\n"
 	continue
     fi
