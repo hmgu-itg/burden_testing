@@ -57,6 +57,7 @@ From: ubuntu:18.04
 	mkdir UCSC.tools
 	cd UCSC.tools
 	wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64.v385/liftOver
+	chmod +x liftOver
 	
 	cd /usr/local/bin
 	wget http://www.stat.uchicago.edu/~mcpeek/software/MONSTER/MONSTER_v1.3.tar.gz
