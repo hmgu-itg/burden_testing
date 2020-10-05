@@ -295,7 +295,7 @@ sub _liftover {
     my $prefix="";
     $prefix="chr" if (defined$self->{"smmat"});
     
-    # Checking if the file exists, in which case we delete it:
+    # Delete if already exist:
     `rm $tempFileName` if -e $tempFileName; 
     `rm $tempFileName37` if -e $tempFileName37; 
     `rm $tempFileNameU` if -e $tempFileNameU; 
@@ -307,7 +307,7 @@ sub _liftover {
     }
 
     # Liftover query:
-    my $liftover_query = sprintf("liftOver %s %s/hg38ToHg19.over.chain %s %s  2> /dev/null", $tempFileName, $self->{"scriptDir"},$tempFileName37,$tempFileNameU);
+    my $liftover_query = sprintf("liftOver %s %s/hg38ToHg19.over.chain %s %s", $tempFileName, $self->{"scriptDir"},$tempFileName37,$tempFileNameU);
 
     print "Liftover query: ".$liftover_query if $self->{"verbose"};
     
