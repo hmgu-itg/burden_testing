@@ -262,7 +262,7 @@ while ( my $ID = <$INPUT> ){
 	my ($hash, $genotypes) = &processVar($variants, $parameters,$stableID);
 	# Gene will be skipped if there are no suitable variations left (for MONSTER):
 	if (scalar keys %{$hash} < 2 && !defined($parameters->{"smmat"})){
-	    print "[Warning] Gene $stableID is skipped as not enough variants left to test [NOT_ENOUGH_VAR]\n";
+	    print "[Warning] Gene $name ($stableID)  is skipped as not enough variants left to test [NOT_ENOUGH_VAR]\n";
 	    undef $hash;
 	    undef $genotypes;
 	    next;
@@ -270,7 +270,7 @@ while ( my $ID = <$INPUT> ){
 
 	# The gene will be skipped if there are too many variants (for MONSTER):
 	if (scalar keys %{$hash} > $parameters->{"maxVars"} && !defined($parameters->{"smmat"})){
-	    print "[Warning] Gene $stableID is skipped as more than ".$parameters->{"maxVars"}." variants are in the set [TOO_MANY_VAR]\n";
+	    print "[Warning] Gene $name ($stableID)  is skipped as more than ".$parameters->{"maxVars"}." variants are in the set [TOO_MANY_VAR]\n";
 	    undef $hash;
 	    undef $genotypes;
 	    next;
@@ -281,7 +281,7 @@ while ( my $ID = <$INPUT> ){
 	checkScores($hash) if $parameters->{"score"} ne "NA";
 
 	if ($parameters->{"score"} ne "NA" && scalar keys %{$hash} < 1){
-	    print "[Warning] Gene $stableID is skipped as no variants remaining post-scoring [NO_VAR_REMAIN]\n";
+	    print "[Warning] Gene $name ($stableID)  is skipped as no variants remaining post-scoring [NO_VAR_REMAIN]\n";
 	}
 
 	# We don't save anything unless there at least two variants (for MONSTER):
