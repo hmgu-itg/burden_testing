@@ -731,7 +731,7 @@ if [[ $getCadd == "yes" ]];then
 	echo "Try downloading later\n"
     fi
     cd ..
-    echo "caddPath=${outdir}/scores/whole_genome_SNVs_1.5.tsv.gz" >> ${configfile}
+    echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz" >> ${configfile}
 fi
 
 info "The End\n"
