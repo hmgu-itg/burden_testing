@@ -315,7 +315,7 @@ sub _liftover {
      backticks_bash($liftover_query);
 
     # Reading mapped file:
-    open(my $lifted, "< $tempFileName37") or die "[Error] After liftover run, the mapped file could not be opened.\n";
+    open(my $lifted, "< $tempFileName37") or die "[Error] After liftover run, the mapped file ($tempFileName37) could not be opened.\n";
     
     my $liftedVarNo  = 0;
     
