@@ -1,16 +1,6 @@
 #!/bin/bash
 
-# checks if lines have 5 fields
-function testInputFile {
-    infile=$1
-    c=$(zcat $infile| awk 'BEGIN{FS="\t";}{print NF;}'| sort|uniq)
-    if [[ $c != 5 ]];then
-	return 0
-    else
-	return 1
-}
-
-version="v12 Last modified: 2020.Mar.30"
+version="v13 Last modified: 2020.Oct.09"
 today=$(date "+%Y.%b.%d")
 
 # Folder with the variant selector script:
@@ -105,11 +95,23 @@ if [[ -z "${inputFile}" ]]; then
     exit 1
 fi
 
-testInputFile ${inputFile}
-if [[ $? != 0 ]];then
-    echo "[Error]: each line in $inputFile should have 5 fields"
+# -------------------------------- TESTING INPUT FILE FORMAT -------------------------------------
+
+echo "Checking compression integrity"
+if ! gzip -t ${inputFile};then
+    echo "[Error]: GZIP compression integrity failed for $inputFile"
     exit 1
 fi
+
+echo "Checking format"
+zcat $infile | awk 'BEGIN{FS="\t";x=0;}{if (NF!=5){print "Wrong number of fields (should be 5) in line" NR;print $0;print "";x=1;} if ($2 !~ /^[1-9][0-9]*$/){print "Coordinate (" $2 ") in line " NR " should be an integer";print "";x=1;} if ($4 !~ /^[ACGT]+$/){print "REF allele (" $4 ")in line " NR " has wrong format";print "";x=1;} if ($5 !~ /^[ACGT]+$/){print "ALT allele (" $5 ")in line " NR " has wrong format";print "";x=1;}}END{exit x;}'
+
+if [[ $? != 0 ]];then
+    echo "[Error]: $inputFile has wrong format"
+    exit 1
+fi
+
+# ------------------------------------------------------------------------------------------------
 
 
 if [[ -z "${outputDir}" ]]; then
