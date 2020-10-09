@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# checks if lines have 5 fields
+function testInputFile {
+    infile=$1
+    c=$(zcat $infile| awk 'BEGIN{FS="\t";}{print NF;}'| sort|uniq)
+    if [[ $c != 5 ]];then
+	return 0
+    else
+	return 1
+}
 
 version="v12 Last modified: 2020.Mar.30"
 today=$(date "+%Y.%b.%d")
@@ -95,6 +104,13 @@ if [[ -z "${inputFile}" ]]; then
     "[Error] input file not specified!"
     exit 1
 fi
+
+testInputFile ${inputFile}
+if [[ $? != 0 ]];then
+    echo "[Error]: each line in $inputFile should have 5 fields"
+    exit 1
+fi
+
 
 if [[ -z "${outputDir}" ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Output directory not specified"
