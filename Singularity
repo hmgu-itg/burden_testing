@@ -22,8 +22,7 @@ From: ubuntu:18.04
 	apt update
 	DEBIAN_FRONTEND="noninteractive" apt install -y software-properties-common build-essential autoconf libtool bc man git curl wget make moreutils libbz2-dev zlib1g-dev libncurses5-dev libncursesw5-dev liblzma-dev unzip python libgsl-dev r-base libcurl4-openssl-dev axel
 	wget https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2 && tar -xvjf htslib-1.10.2.tar.bz2 && cd htslib-1.10.2 && make tabix && make bgzip && cp bgzip tabix /usr/bin
-	wget https://github.com/samtools/samtools/releases/download/1.10/samtools-1.10.tar.bz2 && cd bcftools && ./configure && make && make install && cd ../htslib && make 
-	tabix && make bgzip && cp tabix bgzip /usr/bin && cd ../samtools && ./configure && make && make install
+	wget https://github.com/samtools/samtools/releases/download/1.10/samtools-1.10.tar.bz2 && cd bcftools && ./configure && make && make install && cd ../htslib && make tabix && make bgzip && cp tabix bgzip /usr/bin && cd ../samtools && ./configure && make && make install
 	
 	Rscript --vanilla -e "install.packages(c(\"reshape2\", \"parallel\", \"Hmisc\", \"argparser\", \"data.table\", \"BiocManager\"),repos = \"http://cran.us.r-project.org\");BiocManager::install(c(\"SeqArray\", \"SeqVarTools\"));install.packages(\"GMMAT\", repos = \"http://cran.us.r-project.org\")"
 	perl -MCPAN -e 'foreach (@ARGV) { CPAN::Shell->rematein("notest", "install", $_) }' Module::Build DBI Try::Tiny JSON Data::Dumper File::Basename Getopt::Long Data::Types File::Path
