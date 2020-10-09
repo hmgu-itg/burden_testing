@@ -104,7 +104,7 @@ if ! gzip -t ${inputFile};then
 fi
 
 echo "Checking format"
-zcat $infile | awk 'BEGIN{FS="\t";x=0;}{if (NF!=5){print "Wrong number of fields (should be 5) in line" NR;print $0;print "";x=1;} if ($2 !~ /^[1-9][0-9]*$/){print "Coordinate (" $2 ") in line " NR " should be an integer";print "";x=1;} if ($4 !~ /^[ACGT]+$/){print "REF allele (" $4 ")in line " NR " has wrong format";print "";x=1;} if ($5 !~ /^[ACGT]+$/){print "ALT allele (" $5 ")in line " NR " has wrong format";print "";x=1;}}END{exit x;}'
+zcat $inputFile | awk 'BEGIN{FS="\t";x=0;}{if (NF!=5){print "Wrong number of fields (should be 5) in line" NR;print $0;print "";x=1;} if ($2 !~ /^[1-9][0-9]*$/){print "Coordinate (" $2 ") in line " NR " should be an integer";print "";x=1;} if ($4 !~ /^[ACGT]+$/){print "REF allele (" $4 ")in line " NR " has wrong format";print "";x=1;} if ($5 !~ /^[ACGT]+$/){print "ALT allele (" $5 ")in line " NR " has wrong format";print "";x=1;}}END{exit x;}'
 
 if [[ $? != 0 ]];then
     echo "[Error]: $inputFile has wrong format"
