@@ -8,16 +8,12 @@ From: ubuntu:18.04
 	PERL_EXTUTILS_AUTOINSTALL="--defaultdeps"
 	export PERL_EXTUTILS_AUTOINSTALL
 	
-	#PATH=$PATH:/usr/local/bin:/usr/local/bin/burden_testing:/usr/local/bin/burden_testing/testing:/usr/local/bin/.vep/htslib:/usr/local/bin/ensembl-vep:/usr/local/bin/MONSTER:/usr/local/bin/bedtools2/bin/:/usr/local/bin/UCSC.tools
 	PATH=$PATH:/usr/local/bin:/usr/local/bin/burden_testing:/usr/local/bin/burden_testing/testing:/usr/local/bin/MONSTER:/usr/local/bin/bedtools2/bin/:/usr/local/bin/UCSC.tools
 	export PATH
 	
 	LC_ALL=C
 	export LC_ALL
 	
-	#PERL5LIB=$PERL5LIB:/usr/local/bin/.vep
-	#export PERL5LIB
-
 %post
 	apt update
 	DEBIAN_FRONTEND="noninteractive" apt install -y software-properties-common build-essential autoconf libtool bc man git curl wget make moreutils libbz2-dev zlib1g-dev libncurses5-dev libncursesw5-dev liblzma-dev unzip python libgsl-dev r-base libcurl4-openssl-dev axel
@@ -32,37 +28,12 @@ From: ubuntu:18.04
 	cd bcftools
 	make bcftools && cp bcftools /usr/bin
 	
-	#wget https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2 && tar -xvjf htslib-1.10.2.tar.bz2 && cd htslib-1.10.2 && make tabix && make bgzip && cp bgzip tabix /usr/bin
-	#wget https://github.com/samtools/samtools/releases/download/1.10/samtools-1.10.tar.bz2 && tar -jxf samtools-1.10.tar.bz2 && cd samtools-1.10 && ./configure && make && make install
-	
 	Rscript --vanilla -e "install.packages(c(\"reshape2\", \"parallel\", \"Hmisc\", \"argparser\", \"data.table\", \"BiocManager\"),repos = \"http://cran.us.r-project.org\");BiocManager::install(c(\"SeqArray\", \"SeqVarTools\"));install.packages(\"GMMAT\", repos = \"http://cran.us.r-project.org\")"
 	perl -MCPAN -e 'foreach (@ARGV) { CPAN::Shell->rematein("notest", "install", $_) }' Module::Build DBI Try::Tiny JSON Data::Dumper File::Basename Getopt::Long Data::Types File::Path
-	#cpan install Module::Build
-	#cpan install DBI
-	#cpan install Try::Tiny
-	#cpan install JSON
-	#cpan install Data::Dumper
-	#cpan install File::Basename
-	#cpan install Getopt::Long
-	#cpan install Data::Types
-	#cpan install File::Path
 
 	cd /usr/local/bin
 	git clone https://github.com/hmgu-itg/burden_testing
-	
-	# export PERL5LIB=$PERL5LIB:/usr/local/bin/.vep
-	# git clone https://github.com/Ensembl/ensembl-vep.git
-	# cd ensembl-vep
-	# git checkout release/98
-	# mkdir -p /usr/local/bin/.vep && cd /usr/local/bin/.vep && axel -q ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_98_GRCh38.tar.gz && echo Untarring... && tar -xzf homo_sapiens_vep_98_GRCh38.tar.gz && rm homo_sapiens_vep_98_GRCh38.tar.gz && cd -
-	# sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
-	# perl INSTALL.pl -a ac -n --ASSEMBLY GRCh38 -s homo_sapiens -c /usr/local/bin/.vep -d /usr/local/bin/.vep
-	
-	#cd /usr/local/bin
-	#git clone https://github.com/Carldeboer/BigWig-Tools.git
-	#cd BigWig-Tools
-	#git checkout bb83ba1bc28e11e7949884abc26c3f14523dbd0f
-	
+		
 	cd /usr/local/bin
 	mkdir UCSC.tools
 	cd UCSC.tools
