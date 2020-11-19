@@ -79,7 +79,7 @@ line contains all information of the association."
     echo "  -source: from which source the given region is coming from (GENCODE, GTEx, Overlap)."
     echo "  -class: class of the given feature (eg. exon, CDS, gene, enhancer, promoter etc.)"
     echo "  -chr, start, end: GRCh38 coordintes of the feature."
-    echo "  -other sources contain information about the evidence. (linked rsID, tissue in which the feature in active etc.)"
+    echo "  -other information. (linked rsID, tissue in which the feature in active etc.)"
     echo ""
     echo "IMPORTANT: ALL COORDINATES ARE BASED ON GRCh38 BUILD"
     echo ""
@@ -469,7 +469,7 @@ echo "Done"
 #=============================================================================================
 
 ##
-## Step 9. Using intersectbed. Find overlap between GTEx variants and regulatory regions
+## Step 9. Using intersectBed. Overlap between GTEx variants and regulatory regions
 ##
 info "Linking genes to regulatory features using GTEx data ... "
 
