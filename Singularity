@@ -37,8 +37,9 @@ From: ubuntu:18.04
 
 	cd /usr/local/bin
 	git clone https://github.com/hmgu-itg/burden_testing
+	wget ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/liftOver/hg38ToHg19.over.chain.gz
+	wget ftp://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
 		
-	cd /usr/local/bin
 	mkdir UCSC.tools
 	cd UCSC.tools
 	wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64.v385/liftOver
