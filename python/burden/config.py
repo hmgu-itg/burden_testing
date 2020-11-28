@@ -1,4 +1,11 @@
+import logging
 
+LOGGING={
+    "debug":logging.DEBUG,
+    "info":logging.INFO,
+    "warning":logging.WARNING,
+    "error":logging.ERROR
+}
 
 LOF_SEVERITY={
     "transcript_ablation"      : 10,
@@ -29,3 +36,7 @@ CADD_SPECS={
     "SCORE"=6
 }
 
+GENCODE_FEATURES=["gene","exon","transcript","CDS","UTR"]
+REG_FEATURES=["promoter","CTCF","enhancer","promoterFlank","openChrom","TF_bind"]
+
+COFIG_KEYS=["VEPdir","VEPexec","Linked_features","gencode_file","EigenPath","caddPath"]

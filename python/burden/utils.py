@@ -4,10 +4,51 @@ import json
 import re
 import tempfile as tf
 import os
+import sys
+import gzip
 
 import config
 
 LOGGER=logging.getLogger(__name__)
+
+# ==============================================================================================================================
+
+def readGENCODE(fname):
+    D=dict()
+    D["duplicates"]=[]
+    par_re=re.compile("^ENSG\d+.*_PAR_Y$")
+    ID_re=re.compile("^(ENSG\d+)\.")
+    with gzip.open(fname) as F:
+        for line in F:
+            (chrom,start,end,name,ID)=line.rstrip().split("\t")
+            if par_re.match(ID):
+                continue
+            if name in D:
+                LOGGER.warning("duplicate gene name: %s" %(name))
+                del D[name]
+                D["duplicates"].append(name)
+            else:
+                rec={"chr":chrom,"start":start,"end":end,"name":name,"ID":ID}
+                D[name]=rec
+                D[ID]=rec
+                if ID_re.match():
+                    D[ID_re.match().group(1)]=rec
+    return D
+
+# ==============================================================================================================================
+
+def readConfig(fname):
+    D=dict()
+    with open(fname) as F:
+        for line in F:
+            (key,val)=line.rstrip().split("=")
+            D[key]=val
+        config.CONFIG=D
+    if not all(x in config.CONFIG for x in config.CONFIG_KEYS):
+        LOGGER.error("some keys in config (%s) are missing" %(fname))
+        LOGGER.error("keys present: %s" %(",".join(list(config.CONFIG.keys()))))
+        LOGGER.error("required keys: %s" %(",".join(list(config.CONFIG_KEYS))))
+        sys.exit(1)
 
 # ==============================================================================================================================
 
@@ -84,13 +125,13 @@ def selectLines(cmd):
 
 # ==============================================================================================================================
 
-def queryLinkedFeatures(chrom,start,end,fname,gene_ID=None):
+def queryLinkedFeatures(chrom,start,end,gene_ID=None):
     L=list()
-    LOGGER.debug("chrom: %s, start: %s, end: %s, filename: %s" %(chrom,start,end,fname))
-    cmd="intersectBed -wb -a <(echo -e \"%s\\t%s\\t%s\") -b %s -sorted 2>/dev/null | cut -f9-" %(chrom,start,end,fname)
+    LOGGER.debug("chrom: %s, start: %s, end: %s, filename: %s" %(chrom,start,end,config.CONFIG["Linked_features"]))
+    cmd="intersectBed -wb -a <(echo -e \"%s\\t%s\\t%s\") -b %s -sorted 2>/dev/null | cut -f9-" %(chrom,start,end,config.CONFIG["Linked_features"])
     for line in selectLines(cmd):
         if gene_ID is None:
-            d=jsond.decode(line)
+            d=json.decode(line)
             L.append(d)
         else:
             if gene_ID==d["gene_ID"]:
@@ -99,6 +140,9 @@ def queryLinkedFeatures(chrom,start,end,fname,gene_ID=None):
 
 # ==============================================================================================================================
 
+# key1: "source"
+# key2: "class"
+# filters: "GENCODE" --> ["exon", ... ], "overlap" --> ["promoter", ... ]
 def filterRecords(records,filters,key1,key2):
     L=list()
     for r in records:
@@ -124,6 +168,7 @@ def mergeRecords(records,extension):
 
 # ==============================================================================================================================
 
+# TODO: use temp file for tabix
 def selectVariants(records,fname,prefix,vcf=False):
     L=list()
     if vcf:
@@ -141,10 +186,12 @@ def selectVariants(records,fname,prefix,vcf=False):
             r["loftee"]=next((p_loftee.match(s).group(1) for s in f if p_loftee.match(s)),None)
             r["AC"]=next((p_ac.match(s).group(1) for s in f if p_ac.match(s)),None)
             r["AN"]=next((p_an.match(s).group(1) for s in f if p_an.match(s)),None)
+            r["NS"]=len(fields)-9
         else:
             r["loftee"]=None
             r["AC"]=None
             r["AN"]=None
+            r["NS"]=None
         L.append(r)
     return L
 
