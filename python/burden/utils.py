@@ -282,16 +282,20 @@ def liftOver(variants,build="37"):
 
 # ==============================================================================================================================
 
-def addScore(variants,score_file_specs,score_file):
-    tmpfile=tf.NamedTemporaryFile(delete=False,mode="w",prefix="burden_score_")
-    for v in variants:
-        tmpfile.write("%s\t%s\n" %(v["chr"],v["pos"])) # 1-based
-    tmpfile.close()
-    L=list()
-    for line in selectLines("tabix -R %s %s | cut -f %s,%s,%s,%s" % (tmpfile.name,score_file,score_specs["CHR"],score_specs["POS"],score_specs["ALT"],score_specs["SCORE"])):
-        (chrom,pos,alt,score)=line.split("\t")
-        L.append({"chr":chrom,"pos":pos,"alt":alt,"score":score})
-    for v in variants:
-        v["score"]=next((x["score"] for x in L if x["chr"]==v["chr"] and x["pos"]==v["pos"] and x["alt"]==v["alt"]),None)
-    if os.path.isfile(tmpfile.name):
-        os.remove(tmpfile.name)
+def addScore(variants,score_file_specs=None,score_file=None):
+    if score_file_specs is None or score_file is None:
+        for v in variants:
+            v["score"]=1.0
+    else:
+        tmpfile=tf.NamedTemporaryFile(delete=False,mode="w",prefix="burden_score_")
+        for v in variants:
+            tmpfile.write("%s\t%s\n" %(v["chr"],v["pos"])) # 1-based
+        tmpfile.close()
+        L=list()
+        for line in selectLines("tabix -R %s %s | cut -f %s,%s,%s,%s" % (tmpfile.name,score_file,score_specs["CHR"],score_specs["POS"],score_specs["ALT"],score_specs["SCORE"])):
+            (chrom,pos,alt,score)=line.split("\t")
+            L.append({"chr":chrom,"pos":pos,"alt":alt,"score":score})
+        for v in variants:
+            v["score"]=next((x["score"] for x in L if x["chr"]==v["chr"] and x["pos"]==v["pos"] and x["alt"]==v["alt"]),None)
+        if os.path.isfile(tmpfile.name):
+            os.remove(tmpfile.name)
