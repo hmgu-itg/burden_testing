@@ -49,8 +49,6 @@ args=parser.parse_args()
 
 # ------------------------------------------------------------------------------------------------------------------------
 
-verbosity=config.LOGGING[args.verbose]
-
 record_filters=[]
 gencode_opts=None
 if not args.gencode is None:
@@ -86,10 +84,18 @@ if args.subcommand=="monster":
         
 # -------------------------------------------------------- LOGGING -------------------------------------------------------
 
+verbosity=config.LOGGING[args.verbose]
+outdir=args.output_dir
+if outdir.endswith("/"):
+    outdir=outdir[:-1]
+if not os.path.exists(outdir):
+    os.makedirs(outdir)
+logfile=outdir+"/variant_selector.log"
+
 LOGGER=logging.getLogger("Variant Selector")
 LOGGER.setLevel(verbosity)
-ch=logging.StreamHandler()
-#ch=logging.FileHandler(logfile,'w')
+#ch=logging.StreamHandler()
+ch=logging.FileHandler(logfile,'w')
 ch.setLevel(verbosity)
 formatter=logging.Formatter('%(levelname)s - %(name)s - %(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 ch.setFormatter(formatter)
@@ -108,7 +114,6 @@ for arg in vars(args):
 LOGGER.info("")
 
 # ------------------------------------------------------------------------------------------------------------------------
-
         
 io.readConfig(args.config)
 GENCODE=io.readGencode()
