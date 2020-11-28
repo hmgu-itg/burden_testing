@@ -127,18 +127,18 @@ def mergeRecords(records,extension):
 
 # ==============================================================================================================================
 
-# TODO: use temp file for tabix
 def selectVariants(records,fname,prefix,vcf=False):
     L=list()
+    tmpfile=tf.NamedTemporaryFile(delete=False,mode="w",prefix="burden_")
+    for x in records:
+        tmpfile.write("%s\t%s\t%s\n" %(x["chr"],x["start"],x["end"]))
+    tmpfile.close()
     if vcf:
         p_ac=re.compile("^AC=(\d+)")
         p_an=re.compile("^AN=(\d+)")
         p_loftee=re.compile("^LoF_conf=([^;]+)")
-    cmd="tabix %s" %(fname)
-    for r in records:
-        cmd+=" %s%s:%s-%s" %(prefix,r["chr"],r["start"],r["end"])
-    for line in selectLines(cmd):
-        fields = line.split("\t")
+    for line in selectLines("tabix -R %s %s" %(tmpfile.name,fname)):
+        fields=line.split("\t")
         r={"chr":fields[0],"pos":fields[1],"ref":fields[3],"alt":fields[4],"id":"_".join([fields[0],fields[1],fields[3],fields[4]]),"rs":fields[2]}
         if vcf:
             f=fields[7].split(";")
@@ -156,6 +156,8 @@ def selectVariants(records,fname,prefix,vcf=False):
             r["MAF"]=None
             r["MISS"]=None
         L.append(r)
+    if os.path.isfile(tmpfile.name):
+        os.remove(tmpfile.name)
     return L
 
 # ==============================================================================================================================
@@ -210,7 +212,7 @@ def getMostSevereEffect(effects,severity_scores):
                 
 # ==============================================================================================================================
 
-def addConsequences(variants,geneID,severity_scores):
+def addConsequences(variants,geneID):
     ID=geneID
     m=re.match("(ENSG\d+)\.",geneID)
     if m:
@@ -237,7 +239,7 @@ def addConsequences(variants,geneID,severity_scores):
             fields = line.split("\t")
             vID=fields[0]
             effs=fields[1]
-            D[vID]=getMostSevereEffect(effs,severity_scores)
+            D[vID]=getMostSevereEffect(effs,config.LOF_SEVERITY)
         for f in variants:
             if v["id"] in D:
                 v["consequence"]=D[v["id"]]
