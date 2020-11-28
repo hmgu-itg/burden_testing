@@ -9,12 +9,12 @@ LOGGER=logging.getLogger(__name__)
 
 # ==============================================================================================================================
 
-def readGENCODE(fname):
+def readGENCODE():
     D=dict()
     D["duplicates"]=[]
     par_re=re.compile("^ENSG\d+.*_PAR_Y$")
     ID_re=re.compile("^(ENSG\d+)\.")
-    with gzip.open(fname) as F:
+    with gzip.open(config.CONFIG["gencode_file"]) as F:
         for line in F:
             (chrom,start,end,name,ID)=line.rstrip().split("\t")
             if par_re.match(ID):
@@ -46,3 +46,10 @@ def readConfig(fname):
         LOGGER.error("required keys: %s" %(",".join(list(config.CONFIG_KEYS))))
         sys.exit(1)
 
+# ==============================================================================================================================
+
+def appendSMMAT(variants,gene,fname):
+    with open(fname,"w+") as F:
+        for v in variants:
+            if not v["score"] is None:
+                F.write("\t".join([gene,v["chr"],v["pos"],v["ref"],v["alt"],v["score"]])+"\n")

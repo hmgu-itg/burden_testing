@@ -111,7 +111,7 @@ LOGGER.info("")
 
         
 io.readConfig(args.config)
-GENCODE=io.readGencode(config.CONFIG["gencode_file"])
+GENCODE=io.readGencode()
 
 
 # ------------------------------- BEDTOOLS
