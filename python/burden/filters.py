@@ -7,15 +7,9 @@ LOGGER=logging.getLogger(__name__)
 
 def createMAFFilter(f):
     def filter(v):
-        ac=int(v["AC"])
-        if ac is None:
+        maf=v["MAF"]
+        if maf is None:
             return False
-        an=int(v["AN"])
-        if an is None:
-            return False
-        maf=ac/an
-        if maf>0.5:
-            maf=1-maf
         return maf<f
     return filter
 
@@ -39,13 +33,9 @@ def createMACFilter(c):
 
 def createMISSFilter(miss):
     def filter(v):
-        ns=int(v["NS"])
-        if ns is None:
+        ms=v["MISS"]
+        if ms is None:
             return False
-        an=int(v["AN"])
-        if an is None:
-            return False
-        ms=(2*ns-an)/(2*ns)
         return ms<miss
     return filter
 

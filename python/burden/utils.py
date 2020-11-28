@@ -139,20 +139,41 @@ def selectVariants(records,fname,prefix,vcf=False):
         cmd+=" %s%s:%s-%s" %(prefix,r["chr"],r["start"],r["end"])
     for line in selectLines(cmd):
         fields = line.split("\t")
-        r={"chr":fields[0],"pos":fields[1],"ref":fields[3],"alt":fields[4],"id":"_".join([fields[0],fields[1],fields[3],fields[4]])}
+        r={"chr":fields[0],"pos":fields[1],"ref":fields[3],"alt":fields[4],"id":"_".join([fields[0],fields[1],fields[3],fields[4]]),"rs":fields[2]}
         if vcf:
             f=fields[7].split(";")
             r["loftee"]=next((p_loftee.match(s).group(1) for s in f if p_loftee.match(s)),None)
             r["AC"]=next((p_ac.match(s).group(1) for s in f if p_ac.match(s)),None)
             r["AN"]=next((p_an.match(s).group(1) for s in f if p_an.match(s)),None)
             r["NS"]=len(fields)-9
+            r["MAF"]=getMAF(r["AC"],r["AN"])
+            r["MISS"]=getMISS(r["NS"],r["AN"])
         else:
             r["loftee"]=None
             r["AC"]=None
             r["AN"]=None
             r["NS"]=None
+            r["MAF"]=None
+            r["MISS"]=None
         L.append(r)
     return L
+
+# ==============================================================================================================================
+
+def getMAF(ac,an):
+    if ac is None or an is None:
+        return None
+    maf=int(ac)/int(an)
+    if maf>0.5:
+        maf=1-maf
+    return maf
+
+# ==============================================================================================================================
+
+def getMiss(ns,an):
+    if ns is None or an is None:
+        return None
+    return (2*int(ns)-int(an))/(2*int(ns))
 
 # ==============================================================================================================================
 
