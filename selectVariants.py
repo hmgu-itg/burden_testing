@@ -6,6 +6,7 @@ import logging
 from burden import config
 from burden import utils
 from burden import filters
+from burden import io
 
 # ------------------------------------------------------------------------------------------------------------------------
 
@@ -95,7 +96,7 @@ ch.setFormatter(formatter)
 LOGGER.addHandler(ch)
 LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 
-for m in ["utils","filters"]:
+for m in ["utils","filters","io"]:
     logging.getLogger("burden."+m).addHandler(ch)
     logging.getLogger("burden."+m).addHandler(logging.StreamHandler(sys.stdout))
     logging.getLogger("burden."+m).setLevel(verbosity)
@@ -109,8 +110,8 @@ LOGGER.info("")
 # ------------------------------------------------------------------------------------------------------------------------
 
         
-utils.readConfig(args.config)
-GENCODE=utils.readGencode(config.CONFIG["gencode_file"])
+io.readConfig(args.config)
+GENCODE=io.readGencode(config.CONFIG["gencode_file"])
 
 
 # ------------------------------- BEDTOOLS
