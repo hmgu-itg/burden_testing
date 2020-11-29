@@ -1,6 +1,8 @@
 import logging
 import re
 
+from burden import config
+
 LOGGER=logging.getLogger(__name__)
 
 # ==============================================================================================================================
@@ -57,4 +59,14 @@ def createLofteeHCFilter:
         if lt is None:
             return False
         return lt=="HC"
+    return filter
+
+# ==============================================================================================================================
+
+def createLofFilter:
+    def filter(v):
+        c=v["consequence"]
+        if c is None:
+            return False
+        return c in config.LOF_SEVERITY
     return filter

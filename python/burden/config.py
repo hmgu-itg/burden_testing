@@ -40,3 +40,5 @@ GENCODE_FEATURES=["gene","exon","transcript","CDS","UTR"]
 REG_FEATURES=["promoter","CTCF","enhancer","promoterFlank","openChrom","TF_bind"]
 
 COFIG_KEYS=["VEPdir","VEPexec","Linked_features","gencode_file","EigenPath","caddPath"]
+
+DEFAULT_EXTENSION=0

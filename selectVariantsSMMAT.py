@@ -17,6 +17,8 @@ parser.add_argument("--input",action="store",type=str,help="Required: input gene
 parser.add_argument("--config",action="store",type=str,help="Required: config file",required=True)
 parser.add_argument("--output-dir",action="store",type=str,help="Required: output directory",required=True)
 parser.add_argument("--output-prefix",action="store",type=str,help="Required: output filename prefix",required=True)
+parser_smmat.add_argument("--smmat",action="store",type=str,help="5 column tab-delimited input list of variants",required=True)
+
 parser.add_argument("--gencode",action="store",type=str,help="Optional: comma separated list of GENCODE features (%s)" %(",".join(config.GENCODE_FEATURES+"[all]")),required=False)
 parser.add_argument("--gtex",action="store",type=str,help="Optional: comma separated list of regulatory features (%s)" %(",".join(config.REG_FEATURES+"[all]")),required=False)
 parser.add_argument("--overlap",action="store",type=str,help="Optional: comma separated list of regulatory features (%s)" %(",".join(config.REG_FEATURES+"[all]")),required=False)
@@ -25,25 +27,6 @@ parser.add_argument("--skipminor",action="store_true",help="Optional: skip minor
 parser.add_argument("--verbose",help="Optional: verbosity level; default: info",required=False,choices=("debug","info","warning","error"),default="info")
 parser.add_argument("--score",action="store",type=str,help="Optional: which score to use to weight variants; default: none",required=False,default="none",choices=("CADD","EigenPhred","none"))
 parser.add_argument("--lof",action="store_true",help="Optional: only select high impact variants; default: False",required=False)
-
-# sub-commands
-subparsers=parser.add_subparsers(dest="subcommand",help="sub-command help")
-parser_monster=subparsers.add_parser("monster", help="MONSTER help")
-parser_smmat=subparsers.add_parser("smmat", help="SMMAT help")
-
-# MONSTER options
-parser_monster.add_argument("--vcf",action="store",type=str,help="Input VCF(s)",required=True)
-parser_monster.add_argument("--maxvars",action="store",type=int,help="Optional: max number of variants in a gene",default=config.DEFAULT_MAXVARS,required=False)
-parser_monster.add_argument("--maf",action="store",type=float,help="Optional: MAF upper threshold",default=config.DEFAULT_MAF,required=False)
-parser_monster.add_argument("--mac",action="store",type=float,help="Optional: MAC lower threshold",default=config.DEFAULT_MAC,required=False)
-parser_monster.add_argument("--missingness",action="store",type=float,help="Optional: upper missingness threshold",default=config.DEFAULT_MISSINGNESS,required=False)
-parser_monster.add_argument("--chr-prefix",action="store",type=str,help="Optional: chromosome prefix in VCF files",default=config.CHR_PREFIX,required=False)
-mutex_options_loftee=parser_monster.add_mutually_exclusive_group()
-mutex_options_loftee.add_argument("--loftee",action="store_true",help="Optional: only select LOFTEE variants",required=False)
-mutex_options_loftee.add_argument("--lofteeHC",action="store_true",help="Optional: only select high confidence LOFTEE variants",required=False)
-
-# SMMAT options
-parser_smmat.add_argument("--smmat",action="store",type=str,help="5 column tab-delimited input list of variants")
 
 args=parser.parse_args()
 
@@ -73,14 +56,8 @@ if not args.overlap is None:
     record_filters["overlap"]=overlap_opts
 
 variant_filters=[]
-if args.subcommand=="monster":
-    variant_filters.append(filters.createMAFFilter(args.maf))
-    variant_filters.append(filters.createMACFilter(args.mac))
-    variant_filters.append(filters.createMISSFilter(args.missingness))
-    if args.loftee:
-        variant_filters.append(filters.createLofteeFilter())
-    if args.lofteeHC:
-        variant_filters.append(filters.createLofteeHCFilter())
+if args.lof:
+    variant_filters.append(filters.createLofFilter())
         
 # -------------------------------------------------------- LOGGING -------------------------------------------------------
 
