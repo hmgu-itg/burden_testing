@@ -48,7 +48,7 @@ def readConfig(fname):
 
 # ==============================================================================================================================
 
-def writeSMMAT(variants,gene,fname):
+def writeOutput(variants,gene,fname):
     with open(fname,"w+") as F:
         for v in variants:
             if not v["score"] is None:

@@ -13,12 +13,13 @@ from burden import io
 
 parser=argparse.ArgumentParser()
 
-# common options
+# required
 parser.add_argument("--input",action="store",type=str,help="Required: input gene list",required=True)
 parser.add_argument("--config",action="store",type=str,help="Required: config file",required=True)
 parser.add_argument("--output-dir",action="store",type=str,help="Required: output directory",required=True)
 parser_smmat.add_argument("--smmat",action="store",type=str,help="Required: 5 column tab-delimited input list of variants, bgzipped and tabixed",required=True)
 
+# optional
 parser.add_argument("--gencode",action="store",type=str,help="Optional: comma separated list of GENCODE features (%s)" %(",".join(config.GENCODE_FEATURES+"[all]")),required=False)
 parser.add_argument("--gtex",action="store",type=str,help="Optional: comma separated list of regulatory features (%s)" %(",".join(config.REG_FEATURES+"[all]")),required=False)
 parser.add_argument("--overlap",action="store",type=str,help="Optional: comma separated list of regulatory features (%s)" %(",".join(config.REG_FEATURES+"[all]")),required=False)
@@ -30,31 +31,62 @@ parser.add_argument("--lof",action="store_true",help="Optional: only select high
 
 args=parser.parse_args()
 
-# ------------------------------------------------------------------------------------------------------------------------
-
-# TODO: translate
+# ------------------------------------------------- RECORD AND VARIANT FILTERS ------------------------------------------
 
 record_filters=[]
 gencode_opts=None
 if not args.gencode is None:
     if "all" in args.gencode.split(","):
+        for f in args.gencode.split(","):
+            if f=="all":
+                continue
+            if not f in config.GENCODE_FEATURES:
+                LOGGING.warning("Provided GENCODE feature \"%s\" is not valid" %(f))
+        LOGGING.info("Using all GENCODE features")
         gencode_opts=config.GENCODE_FEATURES
     else:
-        gencode_opts=args.gencode.split(",")
+        for f in args.gencode.split(","):
+            if f in config.GENCODE_FEATURES:
+                if not f in gencode_opts:
+                    gencode_opts.append(f)
+            else:
+                LOGGING.warning("Provided GENCODE feature \"%s\" is not valid; skipping" %(f))
     record_filters["GENCODE"]=gencode_opts
 gtex_opts=None
 if not args.gtex is None:
     if "all" in args.gtex.split(","):
-        gtex_opts=config.REG_FEATURES
+        for f in args.gtex.split(","):
+            if f=="all":
+                continue
+            if not f in config.REG_FEATURES:
+                LOGGING.warning("Provided GTEx feature \"%s\" is not valid" %(f))
+        LOGGING.info("Using all regulatory features for \"GTEx\" source")
+        gtex_opts=list(config.REG_FEATURES.keys())
     else:
-        gtex_opts=args.gtex.split(",")
+        for f in args.gtex.split(","):
+            if f in config.REG_FEATURES:
+                if not config.REG_FEATURES[f] in gtex_opts:
+                    gtex_opts.append(config.REG_FEATURES[f])
+            else:
+                LOGGING.warning("Provided GTEx feature \"%s\" is not valid; skipping" %(f))
     record_filters["GTEx"]=gtex_opts
 overlap_opts=None
 if not args.overlap is None:
     if "all" in args.overlap.split(","):
-        overlap_opts=config.REG_FEATURES
+        for f in args.overlap.split(","):
+            if f=="all":
+                continue
+            if not f in config.REG_FEATURES:
+                LOGGING.warning("Provided overlap feature \"%s\" is not valid" %(f))
+        LOGGING.info("Using all regulatory features for \"overlap\" source")
+        overlap_opts=list(config.REG_FEATURES.keys())
     else:
-        overlap_opts=args.overlap.split(",")
+        for f in args.overlap.split(","):
+            if f in config.REG_FEATURES:
+                if not config.REG_FEATURES[f] in overlap_opts:
+                    overlap_opts.append(config.REG_FEATURES[f])
+            else:
+                LOGGING.warning("Provided GTEx feature \"%s\" is not valid; skipping" %(f))
     record_filters["overlap"]=overlap_opts
 
 variant_filters=[]
@@ -105,6 +137,8 @@ GENCODE=io.readGencode()
 if os.path.isfile(outfile):
     os.remove(outfile)
 
+# ------------------------------------------------------ MAIN LOOP -------------------------------------------------------
+
 with open(args.input) as F:
     for line in F:
         current_gene=line.rstrip()
@@ -125,7 +159,7 @@ with open(args.input) as F:
             utils.addScore(filtered_variants)
         else:
             utils.addScore(filtered_variants,config.SCORE_SPECS[score],config.CONFIG[config.SCORE_FILES[score]])
-        utils.writeSMMAT(filtered_variants,current_gene,outfile)
+        utils.writeOutput(filtered_variants,current_gene,outfile)
 
 
 
