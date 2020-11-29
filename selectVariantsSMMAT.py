@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import os
 
 from burden import config
 from burden import utils
@@ -17,7 +18,7 @@ parser.add_argument("--input",action="store",type=str,help="Required: input gene
 parser.add_argument("--config",action="store",type=str,help="Required: config file",required=True)
 parser.add_argument("--output-dir",action="store",type=str,help="Required: output directory",required=True)
 parser.add_argument("--output-prefix",action="store",type=str,help="Required: output filename prefix",required=True)
-parser_smmat.add_argument("--smmat",action="store",type=str,help="5 column tab-delimited input list of variants",required=True)
+parser_smmat.add_argument("--smmat",action="store",type=str,help="Required: 5 column tab-delimited input list of variants, bgzipped and tabixed",required=True)
 
 parser.add_argument("--gencode",action="store",type=str,help="Optional: comma separated list of GENCODE features (%s)" %(",".join(config.GENCODE_FEATURES+"[all]")),required=False)
 parser.add_argument("--gtex",action="store",type=str,help="Optional: comma separated list of regulatory features (%s)" %(",".join(config.REG_FEATURES+"[all]")),required=False)
@@ -95,7 +96,19 @@ LOGGER.info("")
 io.readConfig(args.config)
 GENCODE=io.readGencode()
 
+with open(args.input) as F:
+    for line in F:
+        current_gene=line.rstrip()
+        if not current_gene in GENCODE:
+            if current_gene in GENCODE["duplicates"]:
+                LOGGER.warning("Gene %s occurs multiple times in GENCODE; skipping" %(current_gene))
+            else:
+                LOGGER.warning("Gene %s not found in GENCODE; skipping" %(current_gene))
+            continue
+        rec=GENCODE[current_gene]
 
+
+        
 # ------------------------------- BEDTOOLS
 
 
