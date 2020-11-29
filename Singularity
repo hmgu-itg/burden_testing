@@ -10,6 +10,8 @@ From: ubuntu:18.04
 	
 	PATH=$PATH:/usr/local/bin:/usr/local/bin/burden_testing:/usr/local/bin/burden_testing/testing:/usr/local/bin/MONSTER:/usr/local/bin/bedtools2/bin/:/usr/local/bin/UCSC.tools
 	export PATH
+
+	export PYTHONPATH=/usr/local/bin/burden_testing/python:$PYTHONPATH
 	
 	LC_ALL=C
 	export LC_ALL
