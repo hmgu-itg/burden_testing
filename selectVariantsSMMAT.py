@@ -17,7 +17,6 @@ parser=argparse.ArgumentParser()
 parser.add_argument("--input",action="store",type=str,help="Required: input gene list",required=True)
 parser.add_argument("--config",action="store",type=str,help="Required: config file",required=True)
 parser.add_argument("--output-dir",action="store",type=str,help="Required: output directory",required=True)
-parser.add_argument("--output-prefix",action="store",type=str,help="Required: output filename prefix",required=True)
 parser_smmat.add_argument("--smmat",action="store",type=str,help="Required: 5 column tab-delimited input list of variants, bgzipped and tabixed",required=True)
 
 parser.add_argument("--gencode",action="store",type=str,help="Optional: comma separated list of GENCODE features (%s)" %(",".join(config.GENCODE_FEATURES+"[all]")),required=False)
@@ -32,6 +31,8 @@ parser.add_argument("--lof",action="store_true",help="Optional: only select high
 args=parser.parse_args()
 
 # ------------------------------------------------------------------------------------------------------------------------
+
+# TODO: translate
 
 record_filters=[]
 gencode_opts=None
@@ -69,6 +70,7 @@ if outdir.endswith("/"):
 if not os.path.exists(outdir):
     os.makedirs(outdir)
 logfile=outdir+"/variant_selector.log"
+outfile=outdir+"/group_file.txt"
 
 LOGGER=logging.getLogger("Variant Selector")
 LOGGER.setLevel(verbosity)
@@ -92,9 +94,16 @@ for arg in vars(args):
 LOGGER.info("")
 
 # ------------------------------------------------------------------------------------------------------------------------
-        
+
+bp_extension=args.extend
+in_list=args.smmat
+score=args.score
+
 io.readConfig(args.config)
 GENCODE=io.readGencode()
+
+if os.path.isfile(outfile):
+    os.remove(outfile)
 
 with open(args.input) as F:
     for line in F:
@@ -106,26 +115,17 @@ with open(args.input) as F:
                 LOGGER.warning("Gene %s not found in GENCODE; skipping" %(current_gene))
             continue
         rec=GENCODE[current_gene]
-
-
-        
-# ------------------------------- BEDTOOLS
-
-
-
-# ------------------------------- FILTER
-
-
-
-# ------------------------------- SELECT VARIANTS
-
-
-# ------------------------------- FILTER VARIANTS
-
-
-
-# ------------------------------- ADD SCORES
-
+        regions=utils.queryLinkedFeatures(rec["chr"],rec["start"],rec["end"],rec["ID"])
+        filtered_regions=utils.filterRecords(regions,record_filters,"source","class")
+        merged_regions=utils.mergeRecords(filtered_regions,bp_extension)
+        variants=utils.selectVariants(merged_regions,in_list)
+        filtered_variants=utils.filterVariants(variants,variant_filters)
+        utils.addConsequences(filtered_variants,rec["ID"])
+        if score=="none":
+            utils.addScore(filtered_variants)
+        else:
+            utils.addScore(filtered_variants,config.SCORE_SPECS[score],config.CONFIG[config.SCORE_FILES[score]])
+        utils.writeSMMAT(filtered_variants,current_gene,outfile)
 
 
 

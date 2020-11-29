@@ -86,6 +86,7 @@ def selectLines(cmd):
 
 def queryLinkedFeatures(chrom,start,end,gene_ID=None):
     L=list()
+    ID_re=re.compile("^(ENSG\d+)\.")
     LOGGER.debug("chrom: %s, start: %s, end: %s, filename: %s" %(chrom,start,end,config.CONFIG["Linked_features"]))
     cmd="intersectBed -wb -a <(echo -e \"%s\\t%s\\t%s\") -b %s -sorted 2>/dev/null | cut -f9-" %(chrom,start,end,config.CONFIG["Linked_features"])
     for line in selectLines(cmd):
@@ -95,6 +96,9 @@ def queryLinkedFeatures(chrom,start,end,gene_ID=None):
         else:
             if gene_ID==d["gene_ID"]:
                 L.append(d)
+            else:
+                if ID_re.match(gene_ID) and ID_re.match(gene_ID).group(1)==d["gene_ID"]:
+                    L.append(d)
     return L
 
 # ==============================================================================================================================
@@ -127,35 +131,15 @@ def mergeRecords(records,extension):
 
 # ==============================================================================================================================
 
-def selectVariants(records,fname,prefix,vcf=False):
+def selectVariants(records,fname):
     L=list()
     tmpfile=tf.NamedTemporaryFile(delete=False,mode="w",prefix="burden_")
     for x in records:
         tmpfile.write("%s\t%s\t%s\n" %(x["chr"],x["start"],x["end"]))
     tmpfile.close()
-    if vcf:
-        p_ac=re.compile("^AC=(\d+)")
-        p_an=re.compile("^AN=(\d+)")
-        p_loftee=re.compile("^LoF_conf=([^;]+)")
     for line in selectLines("tabix -R %s %s" %(tmpfile.name,fname)):
         fields=line.split("\t")
-        r={"chr":fields[0],"pos":fields[1],"ref":fields[3],"alt":fields[4],"id":"_".join([fields[0],fields[1],fields[3],fields[4]]),"rs":fields[2]}
-        if vcf:
-            f=fields[7].split(";")
-            r["loftee"]=next((p_loftee.match(s).group(1) for s in f if p_loftee.match(s)),None)
-            r["AC"]=next((p_ac.match(s).group(1) for s in f if p_ac.match(s)),None)
-            r["AN"]=next((p_an.match(s).group(1) for s in f if p_an.match(s)),None)
-            r["NS"]=len(fields)-9
-            r["MAF"]=getMAF(r["AC"],r["AN"])
-            r["MISS"]=getMISS(r["NS"],r["AN"])
-        else:
-            r["loftee"]=None
-            r["AC"]=None
-            r["AN"]=None
-            r["NS"]=None
-            r["MAF"]=None
-            r["MISS"]=None
-        L.append(r)
+        L.append({"chr":fields[0],"pos":fields[1],"ref":fields[3],"alt":fields[4],"id":"_".join([fields[0],fields[1],fields[3],fields[4]])})
     if os.path.isfile(tmpfile.name):
         os.remove(tmpfile.name)
     return L
@@ -264,8 +248,8 @@ def liftOver(variants,build="37"):
 
 # ==============================================================================================================================
 
-def addScore(variants,score_file_specs=None,score_file=None):
-    if score_file_specs is None or score_file is None:
+def addScore(variants,score_specs=None,score_file=None):
+    if score_specs is None or score_file is None:
         for v in variants:
             v["score"]=1.0
     else:

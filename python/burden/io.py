@@ -27,8 +27,8 @@ def readGENCODE():
                 rec={"chr":chrom,"start":start,"end":end,"name":name,"ID":ID}
                 D[name]=rec
                 D[ID]=rec
-                if ID_re.match():
-                    D[ID_re.match().group(1)]=rec
+                if ID_re.match(ID):
+                    D[ID_re.match(ID).group(1)]=rec
     return D
 
 # ==============================================================================================================================
@@ -48,7 +48,7 @@ def readConfig(fname):
 
 # ==============================================================================================================================
 
-def appendSMMAT(variants,gene,fname):
+def writeSMMAT(variants,gene,fname):
     with open(fname,"w+") as F:
         for v in variants:
             if not v["score"] is None:

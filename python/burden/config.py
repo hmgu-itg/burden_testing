@@ -36,9 +36,12 @@ CADD_SPECS={
     "SCORE"=6
 }
 
+SCORE_SPECS={"EigenPhred":EIGEN_SPECS,"CADD":CADD_SPECS}
+SCORE_FILES={"EigenPhred":"EigenPath","CADD":"caddPath"}
+
 GENCODE_FEATURES=["gene","exon","transcript","CDS","UTR"]
 REG_FEATURES=["promoter","CTCF","enhancer","promoterFlank","openChrom","TF_bind"]
 
-COFIG_KEYS=["VEPdir","VEPexec","Linked_features","gencode_file","EigenPath","caddPath"]
+CONFIG_KEYS=["VEPdir","VEPexec","Linked_features","gencode_file","EigenPath","caddPath"]
 
 DEFAULT_EXTENSION=0
