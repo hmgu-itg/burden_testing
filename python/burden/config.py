@@ -21,19 +21,19 @@ LOF_SEVERITY={
 }
 
 EIGEN_SPECS={
-    "CHR"=1,
-    "POS"=2,
-    "REF"=3,
-    "ALT"=4,
-    "SCORE"=7
+    "CHR":1,
+    "POS":2,
+    "REF":3,
+    "ALT":4,
+    "SCORE":7
 }
 
-CADD_SPECS={
-    "CHR"=1,
-    "POS"=2,
-    "REF"=3,
-    "ALT"=4,
-    "SCORE"=6
+CADD_SPECS:{
+    "CHR":1,
+    "POS":2,
+    "REF":3,
+    "ALT":4,
+    "SCORE":6
 }
 
 SCORE_SPECS={"EigenPhred":EIGEN_SPECS,"CADD":CADD_SPECS}
