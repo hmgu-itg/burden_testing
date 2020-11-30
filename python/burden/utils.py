@@ -125,11 +125,12 @@ def mergeRecords(records,extension):
 
 # ==============================================================================================================================
 
+# records' coordinates are 0-based, SMMAT list is 1-based
 def selectVariants(records,fname):
     L=list()
     tmpfile=tf.NamedTemporaryFile(delete=False,mode="w",prefix="burden_")
     for x in records:
-        tmpfile.write("%s\t%s\t%s\n" %(x["chr"],x["start"],x["end"]))
+        tmpfile.write("%s\t%s\t%s\n" %(x["chr"],str(int(x["start"])+1),x["end"]))
     tmpfile.close()
     for line in selectLines("tabix -R %s %s" %(tmpfile.name,fname)):
         fields=line.split("\t")
@@ -254,7 +255,7 @@ def liftOver(variants,build="37"):
 def addScore(variants,score_specs=None,score_file=None):
     if score_specs is None or score_file is None:
         for v in variants:
-            v["score"]=1.0
+            v["score"]=1
     else:
         tmpfile=tf.NamedTemporaryFile(delete=False,mode="w",prefix="burden_score_")
         for v in variants:

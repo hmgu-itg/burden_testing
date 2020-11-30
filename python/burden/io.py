@@ -49,7 +49,7 @@ def readConfig(fname):
 # ==============================================================================================================================
 
 def writeOutput(variants,gene,fname):
-    with open(fname,"w+") as F:
+    with open(fname,"a") as F:
         for v in variants:
             if not v["score"] is None:
                 F.write("\t".join([gene,v["chr"],v["pos"],v["ref"],v["alt"],str(v["score"])])+"\n")

@@ -70,3 +70,10 @@ def createLofFilter():
             return False
         return c in config.LOF_SEVERITY
     return filter
+
+# ==============================================================================================================================
+
+def createIndelFilter():
+    def filter(v):
+        return len(v["ref"])!=1 or len(v["alt"])!=1
+    return filter

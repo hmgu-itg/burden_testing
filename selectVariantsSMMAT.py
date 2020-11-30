@@ -129,20 +129,20 @@ if not args.overlap is None:
     if len(overlap_opts)!=0:
         record_filters["overlap"]=overlap_opts
 
+score=args.score
 variant_filters=list()
 if args.lof:
     variant_filters.append(filters.createLofFilter())
+if not score is None:
+    variant_filters.append(filters.createIndelFilter())
         
 # ------------------------------------------------------------------------------------------------------------------------
 
 bp_extension=args.extend
 in_list=args.smmat
-score=args.score
-
 io.readConfig(args.config)
-LOGGER.info("CONFIG:")
 for x in config.CONFIG:
-    LOGGER.info("%s=%s" % (x,config.CONFIG[x]))
+    LOGGER.info("CONFIG: %s=%s" % (x,config.CONFIG[x]))
 LOGGER.info("")
 
 GENCODE=io.readGENCODE()
@@ -162,27 +162,36 @@ with open(args.input) as F:
                 LOGGER.warning("Gene %s not found in GENCODE; skipping" %(current_gene))
             continue
         rec=GENCODE[current_gene]
-        LOGGER.debug("Current gene: %s %s" %(current_gene,str(rec)))
+        LOGGER.info("CURRENT GENE: %s %s" %(current_gene,str(rec)))
         regions=utils.queryLinkedFeatures(rec["chr"],str(int(rec["start"])-1),rec["end"],rec["ID"])
-        LOGGER.debug("Got %d region(s)" %(len(regions)))
+        for r in regions:
+            LOGGER.debug("REGIONS: %s:%s-%s" %(r["chr"],r["start"],r["end"]))
         filtered_regions=utils.filterRecords(regions,record_filters,"source","class")
-        LOGGER.debug("After filtering: %d region(s)" %(len(filtered_regions)))
+        for r in filtered_regions:
+            LOGGER.debug("FILTERED REGIONS: %s:%s-%s" %(r["chr"],r["start"],r["end"]))
         merged_regions=utils.mergeRecords(filtered_regions,bp_extension)
-        LOGGER.debug("After merging: %d region(s)" %(len(merged_regions)))
+        for r in merged_regions:
+            LOGGER.debug("MERGED REGIONS: %s:%s-%s" %(r["chr"],r["start"],r["end"]))
         variants=utils.selectVariants(merged_regions,in_list)
-        LOGGER.debug("Selected %d variant(s)" %(len(variants)))
+        for v in variants:
+            LOGGER.debug("VARIANTS: %s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"]))        
         if len(variants)>0:
-            utils.addConsequences(variants,rec["ID"])
-            print(str(variants))
+            if args.lof:
+                utils.addConsequences(variants,rec["ID"])
+                for v in variants:
+                    LOGGER.debug("CONSEQUENCES: %s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"]))        
             if score is None:
                 utils.addScore(variants)
             else:
                 utils.addScore(variants,config.SCORE_SPECS[score],config.CONFIG[config.SCORE_FILES[score]])
+            for v in variants:
+                LOGGER.debug("SCORES: %s\t%s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"],v["score"]))        
             filtered_variants=utils.filterVariants(variants,variant_filters)
-            LOGGER.debug("After filtering: %d variant(s)" %(len(filtered_variants)))
+            for v in filtered_variants:
+                LOGGER.debug("FILTERED VARIANTS: %s\t%s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"],v["score"]))        
             if len(filtered_variants)>0:
                 io.writeOutput(filtered_variants,current_gene,outfile)
-        LOGGER.debug("")
+        LOGGER.info("")
 
 
 
