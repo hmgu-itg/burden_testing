@@ -270,7 +270,7 @@ def addScore(variants,score):
         LOGGER.info("Input: %d variants" %(len(variants)))
         score_specs=config.SCORE_SPECS[score]
         score_file=config.CONFIG[config.SCORE_FILES[score]]
-        if score=="EgenPhred":
+        if score=="EigenPhred":
             vars1=liftOver(variants)
         else:
             vars1=variants
