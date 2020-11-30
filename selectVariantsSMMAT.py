@@ -47,12 +47,12 @@ else:
     logfile=args.log
 outfile=outdir+"/group_file.txt"
 
-LOGGER=logging.getLogger("Variant Selector")
+LOGGER=logging.getLogger("MAIN")
 LOGGER.setLevel(verbosity)
-#ch=logging.StreamHandler()
 ch=logging.FileHandler(logfile,'w')
 ch.setLevel(verbosity)
-formatter=logging.Formatter('%(levelname)s - %(name)s - %(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+#formatter=logging.Formatter('%(levelname)s - %(name)s - %(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+formatter=logging.Formatter('%(levelname)s - %(name)s - %(asctime)s - %(funcName)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 ch.setFormatter(formatter)
 LOGGER.addHandler(ch)
 LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -179,39 +179,54 @@ with open(args.input) as F:
         rec=GENCODE[current_gene]
         LOGGER.info("CURRENT GENE: %s %s" %(current_gene,str(rec)))
         regions=utils.queryLinkedFeatures(rec["chr"],str(int(rec["start"])-1),rec["end"],rec["ID"])
+        if len(regions)==0:
+            LOGGER.info("No regions found")
+            LOGGER.info("")
+            continue
         for r in regions:
             LOGGER.debug("REGIONS: %s:%s-%s" %(r["chr"],r["start"],r["end"]))
         filtered_regions=utils.filterRecords(regions,record_filters,"source","class")
+        if len(filtered_regions)==0:
+            LOGGER.info("No regions after filtering")
+            LOGGER.info("")
+            continue
         for r in filtered_regions:
             LOGGER.debug("FILTERED REGIONS: %s:%s-%s" %(r["chr"],r["start"],r["end"]))
         merged_regions=utils.mergeRecords(filtered_regions,bp_extension)
         for r in merged_regions:
             LOGGER.debug("MERGED REGIONS: %s:%s-%s" %(r["chr"],r["start"],r["end"]))
         variants=utils.selectVariants(merged_regions,in_list)
+        if len(variants)==0:
+            LOGGER.info("No variants found")
+            LOGGER.info("")
+            continue
         for v in variants:
-            LOGGER.debug("VARIANTS: %s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"]))        
-        if len(variants)>0:
-            if args.lof:
-                utils.addConsequences(variants,rec["ID"])
-                for v in variants:
-                    LOGGER.debug("CONSEQUENCES: %s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"]))        
-            if score is None:
-                utils.addScore(variants)
-            else:
-                utils.addScore(variants,config.SCORE_SPECS[score],config.CONFIG[config.SCORE_FILES[score]])
+            LOGGER.debug("VARIANTS: %s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"]))
+        if args.lof:
+            utils.addConsequences(variants,rec["ID"])
             for v in variants:
-                if args.lof:
-                    LOGGER.debug("SCORES: %s\t%s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"],v["score"]))
-                else:
-                    LOGGER.debug("SCORES: %s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["score"]))
-            filtered_variants=utils.filterVariants(variants,variant_filters)
-            for v in filtered_variants:
-                if args.lof:
-                    LOGGER.debug("FILTERED VARIANTS: %s\t%s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"],v["score"]))
-                else:
-                    LOGGER.debug("FILTERED VARIANTS: %s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["score"]))
-            if len(filtered_variants)>0:
-                io.writeOutput(filtered_variants,current_gene,outfile)
+                LOGGER.debug("CONSEQUENCES: %s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"]))        
+        filtered_variants=utils.filterVariants(variants,variant_filters)
+        if len(filtered_variants)==0:
+            LOGGER.info("No variants after filtering")
+            LOGGER.info("")
+            continue
+        for v in filtered_variants:
+            if args.lof:
+                LOGGER.debug("FILTERED VARIANTS: %s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"]))
+            else:
+                LOGGER.debug("FILTERED VARIANTS: %s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"]))
+        variants_scores=utils.addScore(filtered_variants,score)
+        if len(variants_scores)==0:
+            LOGGER.info("No variants after scoring")
+            LOGGER.info("")
+            continue
+        for v in variants_scores:
+            if args.lof:
+                LOGGER.debug("SCORES: %s\t%s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"],v["score"]))
+            else:
+                LOGGER.debug("SCORES: %s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["score"]))
+        io.writeOutput(variants_scores,current_gene,outfile)
         LOGGER.info("")
 
 

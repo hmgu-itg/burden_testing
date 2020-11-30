@@ -75,5 +75,5 @@ def createLofFilter():
 
 def createIndelFilter():
     def filter(v):
-        return len(v["ref"])!=1 or len(v["alt"])!=1
+        return len(v["ref"])==1 and len(v["alt"])==1
     return filter

@@ -112,6 +112,8 @@ def filterRecords(records,filters,key1,key2):
 
 def mergeRecords(records,extension):
     L=list()
+    if len(records)==0:
+        return L
     tmpfile=tf.NamedTemporaryFile(delete=False,mode="w",prefix="burden_")
     for x in sorted(records,key=lambda x:int(x["start"])):
         tmpfile.write("%s\t%d\t%d\n" %(x["chr"],int(x["start"])-int(extension),int(x["end"])+int(extension)))
@@ -128,6 +130,8 @@ def mergeRecords(records,extension):
 # records' coordinates are 0-based, SMMAT list is 1-based
 def selectVariants(records,fname):
     L=list()
+    if len(records)==0:
+        return L
     tmpfile=tf.NamedTemporaryFile(delete=False,mode="w",prefix="burden_")
     for x in records:
         tmpfile.write("%s\t%s\t%s\n" %(x["chr"],str(int(x["start"])+1),x["end"]))
@@ -191,6 +195,7 @@ def getMostSevereEffect(effects,severity_scores):
                 
 # ==============================================================================================================================
 
+# modify input variants
 def addConsequences(variants,geneID):
     ID=geneID
     m=re.match("(ENSG\d+)\.",geneID)
@@ -238,34 +243,52 @@ def addConsequences(variants,geneID):
 
 # ==============================================================================================================================
 
+# returns new list of variants that could be remapped
 def liftOver(variants,build="37"):
     L=list()
-    lifted=runLiftOver([{"chr":x["chr"],"start":str(int(x["pos"])-1),"end":x["pos"],"":x["id"]} for x in variants],build) # 0-based
+    LOGGER.info("Input: %d variants" %(len(variants)))
+    prefix="chr"
+    lifted=runLiftOver([{"chr":prefix+x["chr"],"start":str(int(x["pos"])-1),"end":x["pos"],"":x["id"]} for x in variants],build) # 0-based
     for v in variants:
         new_chrpos=next(({"chr":x["chr"],"pos":x["end"]} for x in lifted if x["id"]==v["id"]),None)
         if not new_chrpos is None:
             x=v.copy()
-            x["chr"]=new_chrpos["chr"]
+            x["chr"]=new_chrpos["chr"][len(prefix):]
             x["pos"]=new_chrpos["pos"]
             L.append(x)
+    LOGGER.info("Output: %d variants" %(len(L)))
     return L
 
 # ==============================================================================================================================
 
-def addScore(variants,score_specs=None,score_file=None):
-    if score_specs is None or score_file is None:
+def addScore(variants,score):
+    if score is None:
         for v in variants:
             v["score"]=1
+        return variants
     else:
+        LOGGER.info("Input: %d variants" %(len(variants)))
+        score_specs=config.SCORE_SPECS[score]
+        score_file=config.CONFIG[config.SCORE_FILES[score]]
+        if score=="EgenPhred":
+            vars1=liftOver(variants)
+        else:
+            vars1=variants
         tmpfile=tf.NamedTemporaryFile(delete=False,mode="w",prefix="burden_score_")
-        for v in variants:
+        for v in vars1:
             tmpfile.write("%s\t%s\n" %(v["chr"],v["pos"])) # 1-based
         tmpfile.close()
         L=list()
         for line in selectLines("tabix -R %s %s | cut -f %s,%s,%s,%s" % (tmpfile.name,score_file,score_specs["CHR"],score_specs["POS"],score_specs["ALT"],score_specs["SCORE"])):
             (chrom,pos,alt,score)=line.split("\t")
             L.append({"chr":chrom,"pos":pos,"alt":alt,"score":score})
-        for v in variants:
-            v["score"]=next((x["score"] for x in L if x["chr"]==v["chr"] and x["pos"]==v["pos"] and x["alt"]==v["alt"]),None)
+        ret=list()
+        for v in vars1:
+            sc=next((x["score"] for x in L if x["chr"]==v["chr"] and x["pos"]==v["pos"] and x["alt"]==v["alt"]),None)
+            if not sc is None:
+                v["score"]=sc
+                ret.append(v)
         if os.path.isfile(tmpfile.name):
             os.remove(tmpfile.name)
+        LOGGER.info("Output: %d variants" %(len(ret)))
+        return ret
