@@ -78,8 +78,8 @@ if not args.gencode is None:
             if f=="all":
                 continue
             if not f in config.GENCODE_FEATURES:
-                LOGGING.warning("Provided GENCODE feature \"%s\" is not valid" %(f))
-        LOGGING.info("Using all GENCODE features")
+                LOGGER.warning("Provided GENCODE feature \"%s\" is not valid" %(f))
+        LOGGER.info("Using all GENCODE features")
         gencode_opts=config.GENCODE_FEATURES
     else:
         for f in args.gencode.split(","):
@@ -87,12 +87,12 @@ if not args.gencode is None:
                 if not f in gencode_opts:
                     gencode_opts.append(f)
             else:
-                LOGGING.warning("Provided GENCODE feature \"%s\" is not valid; skipping" %(f))
+                LOGGER.warning("Provided GENCODE feature \"%s\" is not valid; skipping" %(f))
     if len(gencode_opts)!=0:
         record_filters["GENCODE"]=gencode_opts
-        LOGGING.info("Using GENCODE features: %s" %(",".join(gencode_opts)))
+        LOGGER.info("Using GENCODE features: %s" %(",".join(gencode_opts)))
     else:
-        LOGGING.info("Using GENCODE features: none")
+        LOGGER.info("Using GENCODE features: none")
 gtex_opts=list()
 if not args.gtex is None:
     if "all" in args.gtex.split(","):
@@ -100,8 +100,8 @@ if not args.gtex is None:
             if f=="all":
                 continue
             if not f in config.REG_FEATURES:
-                LOGGING.warning("Provided GTEx feature \"%s\" is not valid" %(f))
-        LOGGING.info("Using all regulatory features for \"GTEx\" source")
+                LOGGER.warning("Provided GTEx feature \"%s\" is not valid" %(f))
+        LOGGER.info("Using all regulatory features for \"GTEx\" source")
         gtex_opts=list(config.REG_FEATURES.keys())
     else:
         for f in args.gtex.split(","):
@@ -109,12 +109,12 @@ if not args.gtex is None:
                 if not config.REG_FEATURES[f] in gtex_opts:
                     gtex_opts.append(config.REG_FEATURES[f])
             else:
-                LOGGING.warning("Provided GTEx feature \"%s\" is not valid; skipping" %(f))
+                LOGGER.warning("Provided GTEx feature \"%s\" is not valid; skipping" %(f))
     if len(gtex_opts)!=0:
         record_filters["GTEx"]=gtex_opts
-        LOGGING.info("Using regulatory features for \"GTEx\" source: %s" %(",".join(gtex_opts)))
+        LOGGER.info("Using regulatory features for \"GTEx\" source: %s" %(",".join(gtex_opts)))
     else:
-        LOGGING.info("Using regulatory features for \"GTEx\" source: none")
+        LOGGER.info("Using regulatory features for \"GTEx\" source: none")
 overlap_opts=list()
 if not args.overlap is None:
     if "all" in args.overlap.split(","):
@@ -122,8 +122,8 @@ if not args.overlap is None:
             if f=="all":
                 continue
             if not f in config.REG_FEATURES:
-                LOGGING.warning("Provided overlap feature \"%s\" is not valid" %(f))
-        LOGGING.info("Using all regulatory features for \"overlap\" source")
+                LOGGER.warning("Provided overlap feature \"%s\" is not valid" %(f))
+        LOGGER.info("Using all regulatory features for \"overlap\" source")
         overlap_opts=list(config.REG_FEATURES.keys())
     else:
         for f in args.overlap.split(","):
@@ -131,12 +131,12 @@ if not args.overlap is None:
                 if not config.REG_FEATURES[f] in overlap_opts:
                     overlap_opts.append(config.REG_FEATURES[f])
             else:
-                LOGGING.warning("Provided GTEx feature \"%s\" is not valid; skipping" %(f))
+                LOGGER.warning("Provided GTEx feature \"%s\" is not valid; skipping" %(f))
     if len(overlap_opts)!=0:
         record_filters["overlap"]=overlap_opts
-        LOGGING.info("Using regulatory features for \"overlap\" source: %s" %(",".join(overlap_opts)))
+        LOGGER.info("Using regulatory features for \"overlap\" source: %s" %(",".join(overlap_opts)))
     else:
-        LOGGING.info("Using regulatory features for \"overlap\" source: none")
+        LOGGER.info("Using regulatory features for \"overlap\" source: none")
 
 score=args.score
 variant_filters=list()
