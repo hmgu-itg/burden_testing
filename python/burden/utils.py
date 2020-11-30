@@ -34,11 +34,6 @@ def runLiftOver(input_data,build="38"):
     in_bed.close()
 
     LOGGER.debug("Input: %d record(s)" % len(input_data))
-    
-    if which("liftOver") is None:
-        LOGGER.error("liftOver was not found in PATH")
-        return None
-        
     LOGGER.debug("Calling: liftOver %s %s %s %s" %(in_bed.name,chain,out_fname,unmapped_fname))
     cmdline="liftOver %s %s %s %s" %(in_bed.name,chain,out_fname,unmapped_fname)
     subprocess.Popen(cmdline,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
