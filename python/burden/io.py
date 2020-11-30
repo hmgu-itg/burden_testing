@@ -52,4 +52,4 @@ def writeOutput(variants,gene,fname):
     with open(fname,"w+") as F:
         for v in variants:
             if not v["score"] is None:
-                F.write("\t".join([gene,v["chr"],v["pos"],v["ref"],v["alt"],v["score"]])+"\n")
+                F.write("\t".join([gene,v["chr"],v["pos"],v["ref"],v["alt"],str(v["score"])])+"\n")

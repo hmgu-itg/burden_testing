@@ -11,7 +11,7 @@ use File::Path qw(make_path);
 use Cwd qw(abs_path);
 
 # Version information:
-our $version = "v7.1 Last modified: 2020.Sep.30";
+our $version = "v7.1 Last modified: 2020.Nov.30";
 
 # Get script directory:
 my $scriptDir;
@@ -129,6 +129,10 @@ GetOptions(
     'vcf=s' => \$parameters->{"vcf"},
     'help|h' => \$help
     );
+
+if ($help){
+    &usage && exit(0);
+}
 
 $parameters->{"maxVars"}=1000 unless $parameters->{"maxVars"};
 

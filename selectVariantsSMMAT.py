@@ -27,7 +27,7 @@ parser.add_argument("--overlap",action="store",type=str,help="Optional: comma se
 parser.add_argument("--extend",action="store",type=int,help="Optional: by how many basepairs the GENCODE features should be extended; default: %d" %(config.DEFAULT_EXTENSION),default=config.DEFAULT_EXTENSION,required=False)
 parser.add_argument("--skipminor",action="store_true",help="Optional: skip minor APPRIS transcripts; default: False",required=False)
 parser.add_argument("--verbose",help="Optional: verbosity level; default: info",required=False,choices=("debug","info","warning","error"),default="info")
-parser.add_argument("--score",action="store",type=str,help="Optional: which score to use to weight variants; default: none",required=False,default="none",choices=("CADD","EigenPhred","none"))
+parser.add_argument("--score",action="store",type=str,help="Optional: which score to use to weight variants; default: none",required=False,default=None,choices=("CADD","EigenPhred"))
 parser.add_argument("--lof",action="store_true",help="Optional: only select high impact variants; default: False",required=False)
 parser.add_argument("--log",action="store",help="Optional: log file; default: \"variant_selector.log\" in the output directory",required=False)
 
@@ -68,7 +68,7 @@ for arg in vars(args):
     LOGGER.info("INPUT OPTIONS: %s : %s" % (arg, getattr(args, arg)))
 LOGGER.info("")
 
-# ------------------------------------------------- RECORD AND VARIANT FILTERS ------------------------------------------
+# ------------------------------------------------- RECORD AND VARIANT FILTERS -------------------------------------------
 
 record_filters=dict()
 gencode_opts=list()
@@ -140,7 +140,7 @@ in_list=args.smmat
 score=args.score
 
 io.readConfig(args.config)
-LOGGER.info("Config file:")
+LOGGER.info("CONFIG:")
 for x in config.CONFIG:
     LOGGER.info("%s=%s" % (x,config.CONFIG[x]))
 LOGGER.info("")
@@ -163,23 +163,25 @@ with open(args.input) as F:
             continue
         rec=GENCODE[current_gene]
         LOGGER.debug("Current gene: %s %s" %(current_gene,str(rec)))
-        regions=utils.queryLinkedFeatures(rec["chr"],rec["start"],rec["end"],rec["ID"])
+        regions=utils.queryLinkedFeatures(rec["chr"],str(int(rec["start"])-1),rec["end"],rec["ID"])
         LOGGER.debug("Got %d region(s)" %(len(regions)))
         filtered_regions=utils.filterRecords(regions,record_filters,"source","class")
         LOGGER.debug("After filtering: %d region(s)" %(len(filtered_regions)))
         merged_regions=utils.mergeRecords(filtered_regions,bp_extension)
         LOGGER.debug("After merging: %d region(s)" %(len(merged_regions)))
         variants=utils.selectVariants(merged_regions,in_list)
-        LOGGER.debug("Got %d variant(s)" %(len(variants)))
+        LOGGER.debug("Selected %d variant(s)" %(len(variants)))
         if len(variants)>0:
             utils.addConsequences(variants,rec["ID"])
-            if score=="none":
+            print(str(variants))
+            if score is None:
                 utils.addScore(variants)
             else:
                 utils.addScore(variants,config.SCORE_SPECS[score],config.CONFIG[config.SCORE_FILES[score]])
             filtered_variants=utils.filterVariants(variants,variant_filters)
             LOGGER.debug("After filtering: %d variant(s)" %(len(filtered_variants)))
-            io.writeOutput(filtered_variants,current_gene,outfile)
+            if len(filtered_variants)>0:
+                io.writeOutput(filtered_variants,current_gene,outfile)
         LOGGER.debug("")
 
 

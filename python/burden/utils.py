@@ -75,7 +75,6 @@ def runLiftOver(input_data,build="38"):
 # ==============================================================================================================================
 
 def selectLines(cmd):
-    LOGGER.debug("Command line: %s" %(cmd))
     return subprocess.Popen(cmd,shell=True,executable="/bin/bash",universal_newlines=True,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL).communicate()[0].splitlines()
 
 # ==============================================================================================================================
@@ -83,10 +82,8 @@ def selectLines(cmd):
 def queryLinkedFeatures(chrom,start,end,gene_ID=None):
     L=list()
     ID_re=re.compile("^(ENSG\d+)\.")
-    #LOGGER.debug("chrom: %s, start: %s, end: %s, filename: %s" %(chrom,start,end,config.CONFIG["Linked_features"]))
     cmd="intersectBed -wb -a <(echo -e \"%s\\t%s\\t%s\") -b %s -sorted | cut -f 8" %(chrom,start,end,config.CONFIG["Linked_features"])
     for line in selectLines(cmd):
-#        LOGGER.debug("JSON: %s" %(line))
         d=json.loads(line)
         if gene_ID is None:
             L.append(d)
@@ -181,7 +178,7 @@ def getVepRecord(v):
 def getMostSevereEffect(effects,severity_scores):
     max_score=0
     max_effect=None
-    for e in effects.split(","):
+    for e in effects:
         if e in severity_scores:
             if severity_scores[e]>max_score:
                 max_score=severity_scores[e]
@@ -209,23 +206,30 @@ def addConsequences(variants,geneID):
             continue
         else:
             vep_input.write("%s\n" %(s))
-            LOGGER.debug(s)
             count+=1
     vep_input.close()
     D=dict()
     if count==0:
-        LOGGER.warning("No variants left")
+        LOGGER.warning("No variants in VEP input")
     else:
-        cmd=" ".join(["PERL5LIB=\$PERL5LIB:%s" %(vepdir),vepexec,"-i",vep_input.name,"--dir",vepdir,"--dir-cache",vepdir,"-o STDOUT --offline --no_stats | grep -v \"^#\" | awk -v g=%s" %(ID),"'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7"])
+        cmd=" ".join(["PERL5LIB=$PERL5LIB:%s" %(vepdir),vepexec,"-i",vep_input.name,"--dir",vepdir,"--dir_cache",vepdir,"-o STDOUT --offline --no_stats | grep -v \"^#\" | awk -v g=%s" %(ID),"'BEGIN{FS=\"\\t\";}$4==g{print $0;}' | cut -f 1,7"])
+        H=dict()
         for line in selectLines(cmd):
-            LOGGER.debug("Line: %s" %(line))
             fields = line.split("\t")
             vID=fields[0]
             effs=fields[1]
-            D[vID]=getMostSevereEffect(effs,config.LOF_SEVERITY)
-        for f in variants:
-            if v["id"] in D:
-                v["consequence"]=D[v["id"]]
+            if vID in H:
+                for e in effs.split(","):
+                    if not e in H[vID]:
+                        H[vID].append(e)
+            else:
+                H[vID]=[]
+                for e in effs.split(","):
+                    if not e in H[vID]:
+                        H[vID].append(e)
+        for v in variants:
+            if v["id"] in H:
+                v["consequence"]=getMostSevereEffect(H[v["id"]],config.LOF_SEVERITY)
             else:
                 v["consequence"]=None
     if os.path.isfile(vep_input.name):
