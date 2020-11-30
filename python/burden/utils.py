@@ -248,7 +248,7 @@ def liftOver(variants,build="37"):
     L=list()
     LOGGER.info("Input: %d variants" %(len(variants)))
     prefix="chr"
-    lifted=runLiftOver([{"chr":prefix+x["chr"],"start":str(int(x["pos"])-1),"end":x["pos"],"":x["id"]} for x in variants],build) # 0-based
+    lifted=runLiftOver([{"chr":prefix+x["chr"],"start":str(int(x["pos"])-1),"end":x["pos"],"id":x["id"]} for x in variants],build) # 0-based
     for v in variants:
         new_chrpos=next(({"chr":x["chr"],"pos":x["end"]} for x in lifted if x["id"]==v["id"]),None)
         if not new_chrpos is None:
