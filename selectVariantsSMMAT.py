@@ -90,6 +90,9 @@ if not args.gencode is None:
                 LOGGING.warning("Provided GENCODE feature \"%s\" is not valid; skipping" %(f))
     if len(gencode_opts)!=0:
         record_filters["GENCODE"]=gencode_opts
+        LOGGING.info("Using GENCODE features: %s" %(",".join(gencode_opts)))
+    else:
+        LOGGING.info("Using GENCODE features: none")
 gtex_opts=list()
 if not args.gtex is None:
     if "all" in args.gtex.split(","):
@@ -109,6 +112,9 @@ if not args.gtex is None:
                 LOGGING.warning("Provided GTEx feature \"%s\" is not valid; skipping" %(f))
     if len(gtex_opts)!=0:
         record_filters["GTEx"]=gtex_opts
+        LOGGING.info("Using regulatory features for \"GTEx\" source: %s" %(",".join(gtex_opts)))
+    else:
+        LOGGING.info("Using regulatory features for \"GTEx\" source: none")
 overlap_opts=list()
 if not args.overlap is None:
     if "all" in args.overlap.split(","):
@@ -128,6 +134,9 @@ if not args.overlap is None:
                 LOGGING.warning("Provided GTEx feature \"%s\" is not valid; skipping" %(f))
     if len(overlap_opts)!=0:
         record_filters["overlap"]=overlap_opts
+        LOGGING.info("Using regulatory features for \"overlap\" source: %s" %(",".join(overlap_opts)))
+    else:
+        LOGGING.info("Using regulatory features for \"overlap\" source: none")
 
 score=args.score
 variant_filters=list()
