@@ -194,10 +194,16 @@ with open(args.input) as F:
             else:
                 utils.addScore(variants,config.SCORE_SPECS[score],config.CONFIG[config.SCORE_FILES[score]])
             for v in variants:
-                LOGGER.debug("SCORES: %s\t%s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"],v["score"]))        
+                if args.lof:
+                    LOGGER.debug("SCORES: %s\t%s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"],v["score"]))
+                else:
+                    LOGGER.debug("SCORES: %s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["score"]))
             filtered_variants=utils.filterVariants(variants,variant_filters)
             for v in filtered_variants:
-                LOGGER.debug("FILTERED VARIANTS: %s\t%s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"],v["score"]))        
+                if args.lof:
+                    LOGGER.debug("FILTERED VARIANTS: %s\t%s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"],v["score"]))
+                else:
+                    LOGGER.debug("FILTERED VARIANTS: %s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["score"]))
             if len(filtered_variants)>0:
                 io.writeOutput(filtered_variants,current_gene,outfile)
         LOGGER.info("")
