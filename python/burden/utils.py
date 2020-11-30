@@ -5,7 +5,7 @@ import re
 import tempfile as tf
 import os
 
-import config
+from burden import config
 
 LOGGER=logging.getLogger(__name__)
 
@@ -75,23 +75,20 @@ def runLiftOver(input_data,build="38"):
 # ==============================================================================================================================
 
 def selectLines(cmd):
-    L=list()
     LOGGER.debug("Command line: %s" %(cmd))
-    output = subprocess.Popen(query,shell=True,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-    for line in output.stdout.readlines():
-        L.append(line)
-    return L
+    return subprocess.Popen(cmd,shell=True,executable="/bin/bash",universal_newlines=True,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL).communicate()[0].splitlines()
 
 # ==============================================================================================================================
 
 def queryLinkedFeatures(chrom,start,end,gene_ID=None):
     L=list()
     ID_re=re.compile("^(ENSG\d+)\.")
-    LOGGER.debug("chrom: %s, start: %s, end: %s, filename: %s" %(chrom,start,end,config.CONFIG["Linked_features"]))
-    cmd="intersectBed -wb -a <(echo -e \"%s\\t%s\\t%s\") -b %s -sorted 2>/dev/null | cut -f9-" %(chrom,start,end,config.CONFIG["Linked_features"])
+    #LOGGER.debug("chrom: %s, start: %s, end: %s, filename: %s" %(chrom,start,end,config.CONFIG["Linked_features"]))
+    cmd="intersectBed -wb -a <(echo -e \"%s\\t%s\\t%s\") -b %s -sorted | cut -f 8" %(chrom,start,end,config.CONFIG["Linked_features"])
     for line in selectLines(cmd):
+#        LOGGER.debug("JSON: %s" %(line))
+        d=json.loads(line)
         if gene_ID is None:
-            d=json.decode(line)
             L.append(d)
         else:
             if gene_ID==d["gene_ID"]:
@@ -201,17 +198,18 @@ def addConsequences(variants,geneID):
     m=re.match("(ENSG\d+)\.",geneID)
     if m:
         ID=m.group(1)
-    vepdir=config.VEPDIR
-    vepexec=config.VEPEXEC
+    vepdir=config.CONFIG["VEPdir"]
+    vepexec=config.CONFIG["VEPexec"]
     count=0
     vep_input=tf.NamedTemporaryFile(delete=False,mode="w",prefix="burden_vep_")
     for v in variants:
         s=getVepRecord(v)
-        if s in None:
+        if s is None:
             LOGGER.warning("Wrong variant type for %s; skipping" %(v["id"]))
             continue
         else:
             vep_input.write("%s\n" %(s))
+            LOGGER.debug(s)
             count+=1
     vep_input.close()
     D=dict()
@@ -220,6 +218,7 @@ def addConsequences(variants,geneID):
     else:
         cmd=" ".join(["PERL5LIB=\$PERL5LIB:%s" %(vepdir),vepexec,"-i",vep_input.name,"--dir",vepdir,"--dir-cache",vepdir,"-o STDOUT --offline --no_stats | grep -v \"^#\" | awk -v g=%s" %(ID),"'BEGIN{FS=\"\\t\";}\$4==g{print \$0;}' | cut -f 1,7"])
         for line in selectLines(cmd):
+            LOGGER.debug("Line: %s" %(line))
             fields = line.split("\t")
             vID=fields[0]
             effs=fields[1]

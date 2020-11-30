@@ -3,7 +3,7 @@ import re
 import sys
 import gzip
 
-import config
+from burden import config
 
 LOGGER=logging.getLogger(__name__)
 
@@ -14,13 +14,13 @@ def readGENCODE():
     D["duplicates"]=[]
     par_re=re.compile("^ENSG\d+.*_PAR_Y$")
     ID_re=re.compile("^(ENSG\d+)\.")
-    with gzip.open(config.CONFIG["gencode_file"]) as F:
+    with gzip.open(config.CONFIG["gencode_file"],"rt") as F:
         for line in F:
             (chrom,start,end,name,ID)=line.rstrip().split("\t")
             if par_re.match(ID):
                 continue
             if name in D:
-                LOGGER.warning("duplicate gene name: %s" %(name))
+                #LOGGER.debug("duplicate gene name: %s" %(name))
                 del D[name]
                 D["duplicates"].append(name)
             else:

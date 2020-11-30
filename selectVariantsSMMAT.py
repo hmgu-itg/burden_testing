@@ -3,6 +3,7 @@
 import argparse
 import logging
 import os
+import sys
 
 from burden import config
 from burden import utils
@@ -17,12 +18,12 @@ parser=argparse.ArgumentParser()
 parser.add_argument("--input",action="store",type=str,help="Required: input gene list",required=True)
 parser.add_argument("--config",action="store",type=str,help="Required: config file",required=True)
 parser.add_argument("--output-dir",action="store",type=str,help="Required: output directory",required=True)
-parser_smmat.add_argument("--smmat",action="store",type=str,help="Required: 5 column tab-delimited input list of variants, bgzipped and tabixed",required=True)
+parser.add_argument("--smmat",action="store",type=str,help="Required: 5 column tab-delimited input list of variants, bgzipped and tabixed",required=True)
 
 # optional
-parser.add_argument("--gencode",action="store",type=str,help="Optional: comma separated list of GENCODE features (%s)" %(",".join(config.GENCODE_FEATURES+"[all]")),required=False)
-parser.add_argument("--gtex",action="store",type=str,help="Optional: comma separated list of regulatory features (%s)" %(",".join(config.REG_FEATURES+"[all]")),required=False)
-parser.add_argument("--overlap",action="store",type=str,help="Optional: comma separated list of regulatory features (%s)" %(",".join(config.REG_FEATURES+"[all]")),required=False)
+parser.add_argument("--gencode",action="store",type=str,help="Optional: comma separated list of GENCODE features (%s)" %(",".join(config.GENCODE_FEATURES+["all"])),required=False)
+parser.add_argument("--gtex",action="store",type=str,help="Optional: comma separated list of regulatory features (%s)" %(",".join(list(config.REG_FEATURES.keys())+["all"])),required=False)
+parser.add_argument("--overlap",action="store",type=str,help="Optional: comma separated list of regulatory features (%s)" %(",".join(list(config.REG_FEATURES.keys())+["all"])),required=False)
 parser.add_argument("--extend",action="store",type=int,help="Optional: by how many basepairs the GENCODE features should be extended; default: %d" %(config.DEFAULT_EXTENSION),default=config.DEFAULT_EXTENSION,required=False)
 parser.add_argument("--skipminor",action="store_true",help="Optional: skip minor APPRIS transcripts; default: False",required=False)
 parser.add_argument("--verbose",help="Optional: verbosity level; default: info",required=False,choices=("debug","info","warning","error"),default="info")
@@ -69,8 +70,8 @@ LOGGER.info("")
 
 # ------------------------------------------------- RECORD AND VARIANT FILTERS ------------------------------------------
 
-record_filters=[]
-gencode_opts=None
+record_filters=dict()
+gencode_opts=list()
 if not args.gencode is None:
     if "all" in args.gencode.split(","):
         for f in args.gencode.split(","):
@@ -87,8 +88,9 @@ if not args.gencode is None:
                     gencode_opts.append(f)
             else:
                 LOGGING.warning("Provided GENCODE feature \"%s\" is not valid; skipping" %(f))
-    record_filters["GENCODE"]=gencode_opts
-gtex_opts=None
+    if len(gencode_opts)!=0:
+        record_filters["GENCODE"]=gencode_opts
+gtex_opts=list()
 if not args.gtex is None:
     if "all" in args.gtex.split(","):
         for f in args.gtex.split(","):
@@ -105,8 +107,9 @@ if not args.gtex is None:
                     gtex_opts.append(config.REG_FEATURES[f])
             else:
                 LOGGING.warning("Provided GTEx feature \"%s\" is not valid; skipping" %(f))
-    record_filters["GTEx"]=gtex_opts
-overlap_opts=None
+    if len(gtex_opts)!=0:
+        record_filters["GTEx"]=gtex_opts
+overlap_opts=list()
 if not args.overlap is None:
     if "all" in args.overlap.split(","):
         for f in args.overlap.split(","):
@@ -123,9 +126,10 @@ if not args.overlap is None:
                     overlap_opts.append(config.REG_FEATURES[f])
             else:
                 LOGGING.warning("Provided GTEx feature \"%s\" is not valid; skipping" %(f))
-    record_filters["overlap"]=overlap_opts
+    if len(overlap_opts)!=0:
+        record_filters["overlap"]=overlap_opts
 
-variant_filters=[]
+variant_filters=list()
 if args.lof:
     variant_filters.append(filters.createLofFilter())
         
@@ -136,7 +140,12 @@ in_list=args.smmat
 score=args.score
 
 io.readConfig(args.config)
-GENCODE=io.readGencode()
+LOGGER.info("Config file:")
+for x in config.CONFIG:
+    LOGGER.info("%s=%s" % (x,config.CONFIG[x]))
+LOGGER.info("")
+
+GENCODE=io.readGENCODE()
 
 if os.path.isfile(outfile):
     os.remove(outfile)
@@ -153,18 +162,25 @@ with open(args.input) as F:
                 LOGGER.warning("Gene %s not found in GENCODE; skipping" %(current_gene))
             continue
         rec=GENCODE[current_gene]
+        LOGGER.debug("Current gene: %s %s" %(current_gene,str(rec)))
         regions=utils.queryLinkedFeatures(rec["chr"],rec["start"],rec["end"],rec["ID"])
+        LOGGER.debug("Got %d region(s)" %(len(regions)))
         filtered_regions=utils.filterRecords(regions,record_filters,"source","class")
+        LOGGER.debug("After filtering: %d region(s)" %(len(filtered_regions)))
         merged_regions=utils.mergeRecords(filtered_regions,bp_extension)
+        LOGGER.debug("After merging: %d region(s)" %(len(merged_regions)))
         variants=utils.selectVariants(merged_regions,in_list)
-        filtered_variants=utils.filterVariants(variants,variant_filters)
-        utils.addConsequences(filtered_variants,rec["ID"])
-        if score=="none":
-            utils.addScore(filtered_variants)
-        else:
-            utils.addScore(filtered_variants,config.SCORE_SPECS[score],config.CONFIG[config.SCORE_FILES[score]])
-        utils.writeOutput(filtered_variants,current_gene,outfile)
-
+        LOGGER.debug("Got %d variant(s)" %(len(variants)))
+        if len(variants)>0:
+            utils.addConsequences(variants,rec["ID"])
+            if score=="none":
+                utils.addScore(variants)
+            else:
+                utils.addScore(variants,config.SCORE_SPECS[score],config.CONFIG[config.SCORE_FILES[score]])
+            filtered_variants=utils.filterVariants(variants,variant_filters)
+            LOGGER.debug("After filtering: %d variant(s)" %(len(filtered_variants)))
+            io.writeOutput(filtered_variants,current_gene,outfile)
+        LOGGER.debug("")
 
 
 

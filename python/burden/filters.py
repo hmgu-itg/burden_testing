@@ -43,7 +43,7 @@ def createMISSFilter(miss):
 
 # ==============================================================================================================================
 
-def createLofteeFilter:
+def createLofteeFilter():
     def filter(v):
         lt=v["loftee"]
         if lt is None:
@@ -53,7 +53,7 @@ def createLofteeFilter:
 
 # ==============================================================================================================================
 
-def createLofteeHCFilter:
+def createLofteeHCFilter():
     def filter(v):
         lt=v["loftee"]
         if lt is None:
@@ -63,7 +63,7 @@ def createLofteeHCFilter:
 
 # ==============================================================================================================================
 
-def createLofFilter:
+def createLofFilter():
     def filter(v):
         c=v["consequence"]
         if c is None:

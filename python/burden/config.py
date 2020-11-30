@@ -28,7 +28,7 @@ EIGEN_SPECS={
     "SCORE":7
 }
 
-CADD_SPECS:{
+CADD_SPECS={
     "CHR":1,
     "POS":2,
     "REF":3,
