@@ -93,6 +93,8 @@ if not args.gencode is None:
         LOGGER.info("Using GENCODE features: %s" %(",".join(gencode_opts)))
     else:
         LOGGER.info("Using GENCODE features: none")
+else:
+    LOGGER.info("Using GENCODE features: none")
 gtex_opts=list()
 if not args.gtex is None:
     if "all" in args.gtex.split(","):
@@ -115,6 +117,8 @@ if not args.gtex is None:
         LOGGER.info("Using regulatory features for \"GTEx\" source: %s" %(",".join(gtex_opts)))
     else:
         LOGGER.info("Using regulatory features for \"GTEx\" source: none")
+else:
+    LOGGER.info("Using regulatory features for \"GTEx\" source: none")
 overlap_opts=list()
 if not args.overlap is None:
     if "all" in args.overlap.split(","):
@@ -137,6 +141,8 @@ if not args.overlap is None:
         LOGGER.info("Using regulatory features for \"overlap\" source: %s" %(",".join(overlap_opts)))
     else:
         LOGGER.info("Using regulatory features for \"overlap\" source: none")
+else:
+    LOGGER.info("Using regulatory features for \"overlap\" source: none")
 
 score=args.score
 variant_filters=list()
