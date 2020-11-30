@@ -351,8 +351,8 @@ echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Variant filtering options:" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "input file: ${inputFile}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "GENCODE feaures: ${gencode:--}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "GTEx feaures: ${gtex:--}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "GENCODE features: ${gencode:--}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "GTEx features: ${gtex:--}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "Overlapping reg.features: ${overlap:-NA}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "Features are extended by ${xtend:-0}bp" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}

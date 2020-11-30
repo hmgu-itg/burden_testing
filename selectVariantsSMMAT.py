@@ -28,8 +28,44 @@ parser.add_argument("--skipminor",action="store_true",help="Optional: skip minor
 parser.add_argument("--verbose",help="Optional: verbosity level; default: info",required=False,choices=("debug","info","warning","error"),default="info")
 parser.add_argument("--score",action="store",type=str,help="Optional: which score to use to weight variants; default: none",required=False,default="none",choices=("CADD","EigenPhred","none"))
 parser.add_argument("--lof",action="store_true",help="Optional: only select high impact variants; default: False",required=False)
+parser.add_argument("--log",action="store",help="Optional: log file; default: \"variant_selector.log\" in the output directory",required=False)
 
 args=parser.parse_args()
+
+# -------------------------------------------------------- LOGGING -------------------------------------------------------
+
+verbosity=config.LOGGING[args.verbose]
+outdir=args.output_dir
+if outdir.endswith("/"):
+    outdir=outdir[:-1]
+if not os.path.exists(outdir):
+    os.makedirs(outdir)
+if args.log is None:
+    logfile=outdir+"/variant_selector.log"
+else:
+    logfile=args.log
+outfile=outdir+"/group_file.txt"
+
+LOGGER=logging.getLogger("Variant Selector")
+LOGGER.setLevel(verbosity)
+#ch=logging.StreamHandler()
+ch=logging.FileHandler(logfile,'w')
+ch.setLevel(verbosity)
+formatter=logging.Formatter('%(levelname)s - %(name)s - %(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+ch.setFormatter(formatter)
+LOGGER.addHandler(ch)
+LOGGER.addHandler(logging.StreamHandler(sys.stdout))
+
+for m in ["utils","filters","io"]:
+    logging.getLogger("burden."+m).addHandler(ch)
+    logging.getLogger("burden."+m).addHandler(logging.StreamHandler(sys.stdout))
+    logging.getLogger("burden."+m).setLevel(verbosity)
+
+# ------------------------------------------------------------------------------------------------------------------------
+
+for arg in vars(args):
+    LOGGER.info("INPUT OPTIONS: %s : %s" % (arg, getattr(args, arg)))
+LOGGER.info("")
 
 # ------------------------------------------------- RECORD AND VARIANT FILTERS ------------------------------------------
 
@@ -93,38 +129,6 @@ variant_filters=[]
 if args.lof:
     variant_filters.append(filters.createLofFilter())
         
-# -------------------------------------------------------- LOGGING -------------------------------------------------------
-
-verbosity=config.LOGGING[args.verbose]
-outdir=args.output_dir
-if outdir.endswith("/"):
-    outdir=outdir[:-1]
-if not os.path.exists(outdir):
-    os.makedirs(outdir)
-logfile=outdir+"/variant_selector.log"
-outfile=outdir+"/group_file.txt"
-
-LOGGER=logging.getLogger("Variant Selector")
-LOGGER.setLevel(verbosity)
-#ch=logging.StreamHandler()
-ch=logging.FileHandler(logfile,'w')
-ch.setLevel(verbosity)
-formatter=logging.Formatter('%(levelname)s - %(name)s - %(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-ch.setFormatter(formatter)
-LOGGER.addHandler(ch)
-LOGGER.addHandler(logging.StreamHandler(sys.stdout))
-
-for m in ["utils","filters","io"]:
-    logging.getLogger("burden."+m).addHandler(ch)
-    logging.getLogger("burden."+m).addHandler(logging.StreamHandler(sys.stdout))
-    logging.getLogger("burden."+m).setLevel(verbosity)
-
-# ------------------------------------------------------------------------------------------------------------------------
-
-for arg in vars(args):
-    LOGGER.info("INPUT OPTIONS: %s : %s" % (arg, getattr(args, arg)))
-LOGGER.info("")
-
 # ------------------------------------------------------------------------------------------------------------------------
 
 bp_extension=args.extend

@@ -1,18 +1,17 @@
 #!/bin/bash
 
-version="v13 Last modified: 2020.Oct.09"
+version="v1.0 Last modified: 2020.Nov.30"
 today=$(date "+%Y.%b.%d")
 
 # Folder with the variant selector script:
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-regionSelector=${scriptDir}/"Burden_testing.pl"
+regionSelector=${scriptDir}/"selectVariantsSMMAT.py"
 
-#missing_cutoff=1 : Missingness threshold, individuals having missingness higher than this threshold will be excluded.
 configFile=""
-
 chunksTotal=1
 chunkNo=""
-#MAF=1.0
+
+# SMMAT Python selector wrapper
 
 # --- print out help message and exit:
 function display_help() {
@@ -34,8 +33,6 @@ function display_help() {
     echo ""
     echo "Parameters to set up scores for variants:"
     echo "     -s  - apply weighting; accepted values: CADD, EigenPhred"
-    echo "     -t  - the value with which the scores will be shifted (default value: if Eigen score weighting specified: 1, otherwise: 0)"
-    echo "     -k  - below the specified cutoff value, the variants will be excluded (default: 0)"
     echo ""
     echo "Gene list and chunking:"
     echo "     -L  - file with gene IDs (if not specified all genes will be analyzed)."
@@ -47,6 +44,7 @@ function display_help() {
     echo ""
     echo "Other options:"
     echo "     -h  - print this message and exit"
+    echo "     -v  - increase verbosity from INFO to DEBUG"
     echo ""
     echo ""
 
@@ -60,9 +58,10 @@ if [ $# == 0 ]; then display_help; fi
 OPTIND=1
 score=""
 geneListFile=""
+verbosity="info"
 
 #while getopts ":hL:c:d:bg:m:s:l:e:x:k:t:ofw:jC:V:" optname; do
-while getopts ":hL:c:d:bg:s:l:e:x:k:t:ow:C:i:" optname; do
+while getopts ":hL:c:d:bg:s:l:e:x:ow:C:i:v" optname; do
     case "$optname" in
       # Gene list related parameters:
         "L") geneListFile=${OPTARG} ;;
@@ -75,11 +74,10 @@ while getopts ":hL:c:d:bg:s:l:e:x:k:t:ow:C:i:" optname; do
         "l") overlap=${OPTARG} ;;
         "e") gtex=${OPTARG} ;;
         "x") xtend=${OPTARG} ;;
-        "k") cutoff=${OPTARG} ;;
-        "t") scoreshift=${OPTARG} ;;
         "o") lof=1 ;;
         "C") configFile=${OPTARG} ;;
         "i") inputFile=${OPTARG} ;;
+        "v") verbosity="debug" ;;
 
       # Other parameters:
         "w") outputDir=${OPTARG} ;;
@@ -187,19 +185,19 @@ fi
 outprefix="group_file"
 # GENCODE features
 if [[ ! -z "${gencode}" ]]; then
-    commandOptions="${commandOptions} --GENCODE ${gencode}"
+    commandOptions="${commandOptions} --gencode ${gencode}"
     str=$( echo "${gencode}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
     outprefix=${outprefix}"_GENCODE_"${str}
 fi
 
-# GTEx - expecting a list of feature names separeted by comma.
+# GTEx - expecting a comma separated list of regulatory features.
 if [[ ! -z "$gtex" ]]; then
-    commandOptions="${commandOptions} --GTEx ${gtex}"
+    commandOptions="${commandOptions} --gtex ${gtex}"
     str=$( echo "${gtex}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
     outprefix=${outprefix}"_GTEx_"${str}
 fi
 
-# Overlap - expecting a list of features separeated by comma.
+# Overlap - expecting a comma separated list of regulatory features.
 if [[ ! -z "${overlap}" ]]; then
     commandOptions="${commandOptions} --overlap ${overlap}"
     str=$( echo "${overlap}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
@@ -240,22 +238,9 @@ if [[ "${score}" != "noweight" ]]; then
 fi
 outprefix=${outprefix}"_score_"${score}
 
-# If Eigen score is applied, we shift the scores by 1, if no other value is specified:
-if [[ ("${score}" == "Eigen") && (-z "${scoreshift}" ) ]]; then scoreshift=1; fi
-
 if [[ ! -z "${xtend}" ]]; then
     commandOptions="${commandOptions} --extend ${xtend}"
     outprefix=${outprefix}"_extend_"${xtend}
-fi
-
-# Setting score cutoff, below which the variant will be removed from the test:
-if [[ ! -z "${cutoff}" ]]; then
-    commandOptions="${commandOptions} --cutoff ${cutoff}"
-fi
-
-# Setting score shift
-if [[ ! -z "${scoreshift}" ]]; then
-    commandOptions="${commandOptions} --shift ${scoreshift}"
 fi
 
 outputDir2=${outputDir}"/"${outprefix}
@@ -275,8 +260,7 @@ if [[ ! -d ${outputDir3} ]];then
     exit 1
 fi
 
-commandOptions="${commandOptions} --output-dir ${outputDir3} --output ${outFile}"
-
+commandOptions="${commandOptions} --output-dir ${outputDir3}"
 LOGFILE=${outputDir3}/"make_group_file_gene_set.${chunkNo}.log"
 
 #--------------------------------------------------------------------------------------------
@@ -287,7 +271,7 @@ if [[ -z ${geneListFile} ]];then
 fi
 
 if [[ ! -e "${geneListFile}" ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene list file could not be opened: $geneListFile"
+    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene list file could not be opened: $geneListFile" >> ${LOGFILE}
     echo `date "+%Y.%b.%d_%H:%M"` "[Info] MAKE GROUP FILE DONE" >> ${LOGFILE}
     exit 1
 fi
@@ -314,6 +298,7 @@ if [[ $n -eq 0 ]];then
 fi
 
 # -----------------------------------------------------------------------------------------------------------------------------
+
 if [[ ! -z ${warning1} ]];then
     echo `date "+%Y.%b.%d_%H:%M"` ${warning1} >> ${LOGFILE}
 fi
@@ -331,6 +316,7 @@ if [[ ! -z ${no_list_warning} ]];then
 fi
 
 # --- Reporting parameters ------------------------------------------------------
+
 echo `date "+%Y.%b.%d_%H:%M"` "##"  >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "## Version ${version}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "## Date: ${today}" >> ${LOGFILE}
@@ -351,66 +337,25 @@ echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Variant filtering options:" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "input file: ${inputFile}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "GENCODE feaures: ${gencode:--}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "GTEx feaures: ${gtex:--}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "GENCODE features: ${gencode:--}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"`  "GTEx features: ${gtex:--}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "Overlapping reg.features: ${overlap:-NA}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "Features are extended by ${xtend:-0}bp" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Weighting options:" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "Weighting: ${score}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "Score cutoff: ${cutoff:-0}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "Scores shifted by: ${scoreshift:-0}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+
+echo `date "+%Y.%b.%d_%H:%M"`  "[Info] Verbosity: ${verbosity}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] command line options for the selector script: ${commandOptions}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+
 # -----------------------------------------------------------------------------------------------------------------------------
 
 selectorLog=${outputDir3}/"selector_chunk_"${chunkNo}.log
-
-echo `date "+%Y.%b.%d_%H:%M"` "Calling ${regionSelector} --input ${inputGeneList} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}"  >> ${LOGFILE}
-${regionSelector} --input ${inputGeneList} ${commandOptions} --verbose > ${selectorLog} 2 > ${selectorLog}
-
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Checking output..." >> ${LOGFILE}
-
-cd ${outputDir3}
-
-# We have to check if both files are generated AND they have enough lines.
-gene_notenough=$(cat ${selectorLog} | grep -c NOT_ENOUGH_VAR)
-gene_toomany=$(cat ${selectorLog} | grep -c TOO_MANY_VAR)
-gene_noremain=$(cat ${selectorLog} | grep -c NO_VAR_REMAIN)
-gene_absent=$(cat ${selectorLog} | grep -c NO_GENE)
-region_absent=$(cat ${selectorLog} | grep -c NO_REGION)
-
-echo `date "+%Y.%b.%d_%H:%M"` -e "[Info] WARNING/ERROR REPORTING FROM VARIANT SELECTOR" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` -e "[Info] =====================================" >> ${LOGFILE}
-
-if [[ "$gene_notenough" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Not enough variants [NOT_ENOUGH_VAR]: $(cat ${selectorLog} | grep NOT_ENOUGH_VAR | sed 's/.*Gene.//;s/ .*//' | tr '\n' ' ')" >> ${LOGFILE}
-fi
-if [[ "$gene_toomany" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Too many variants [TOO_MANY_VAR]: $(cat ${selectorLog} | grep TOO_MANY_VAR | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
-fi
-if [[ "$gene_noremain" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] No variants after scoring [NO_VAR_REMAIN] for genes: $(cat ${selectorLog} | grep NO_VAR_REMAIN | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
-fi
-if [[ "$gene_absent" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] Gene name unknown [NO_GENE]: $(cat ${selectorLog} | grep NO_GENE | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
-fi
-if [[ "$region_absent" -ne 0 ]]; then
-        echo `date "+%Y.%b.%d_%H:%M"` -e "[Warning] No region in gene [NO_REGION]: $(cat ${selectorLog} | grep NO_REGION | sed 's/.*Gene.//;s/ .*//'| tr '\n' ' ')" >> ${LOGFILE}
-fi
-
-# true output group file name, as the --output to the Burden_testing.pl specifies output prefix only
-outFile=${outputDir3}/${outFile}".txt"
-
-if [[ ! -e ${outFile} ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed. No group file has been generated" >> ${LOGFILE}
-#    exit 1
-elif [[ $(cat ${outFile} | wc -l ) -lt 1 ]]; then
-    echo `date "+%Y.%b.%d_%H:%M"` "[Error] Gene set ${chunkNo} has failed, group file is empty" >> ${LOGFILE}
-#    exit 1
-fi
-
+echo `date "+%Y.%b.%d_%H:%M"` "Calling ${regionSelector} --input ${inputGeneList} ${commandOptions} --verbose ${verbosity} --log ${selectorLog}"  >> ${LOGFILE}
+${regionSelector} --input ${inputGeneList} ${commandOptions} --verbose ${verbosity} --log ${selectorLog}
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] MAKE GROUP FILE DONE" >> ${LOGFILE}
