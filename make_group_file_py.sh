@@ -17,7 +17,7 @@ chunkNo=""
 function display_help() {
     echo "$1"
     echo ""
-    echo "Create group file"
+    echo "Create SMMAT group file"
     echo "version: ${version}"
     echo ""
     echo "Usage: $0 <parameters>"
