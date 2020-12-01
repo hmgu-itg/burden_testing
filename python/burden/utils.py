@@ -11,18 +11,18 @@ LOGGER=logging.getLogger(__name__)
 
 # ==============================================================================================================================
 
-def runLiftOver(input_data,build="38"):
-    if build!="38" and build!="37":
+def runLiftOver(input_data,source_build="38"):
+    if source_build!="38" and source_build!="37":
         LOGGER.error("provided build: %s; build should be either 37 or 38" % build)
         return None
     
     L=list()
 
     chain="/usr/local/bin/hg38ToHg19.over.chain.gz"
-    if build=="37":
+    if source_build=="37":
         chain="/usr/local/bin/hg19ToHg38.over.chain.gz"
 
-    in_bed=tf.NamedTemporaryFile(delete=False,mode="w",prefix="annotator_")
+    in_bed=tf.NamedTemporaryFile(delete=False,mode="w",prefix="burden_liftover_")
     LOGGER.debug("Input bed file: %s" % (in_bed.name))
     out_fname=tf.mktemp(prefix="annotator_")
     LOGGER.debug("Output bed file: %s" % (out_fname))
@@ -36,7 +36,8 @@ def runLiftOver(input_data,build="38"):
     LOGGER.debug("Input: %d record(s)" % len(input_data))
     LOGGER.debug("Calling: liftOver %s %s %s %s" %(in_bed.name,chain,out_fname,unmapped_fname))
     cmdline="liftOver %s %s %s %s" %(in_bed.name,chain,out_fname,unmapped_fname)
-    subprocess.Popen(cmdline,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
+    #subprocess.Popen(cmdline,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
+    subprocess.run(cmdline,shell=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 
     if not os.path.isfile(out_fname):
         LOGGER.error("liftOver failed to create output file %s" % out_fname)
@@ -227,10 +228,10 @@ def addConsequences(variants,geneID):
 
 # ==============================================================================================================================
 
-# modifies list of variants
-def liftOver(variants,build="38"):
+# modify input variants
+def liftOver(variants,source_build="38"):
     prefix="chr"
-    lifted=runLiftOver([{"chr":prefix+x["chr"],"start":str(int(x["pos"])-1),"end":x["pos"],"id":x["id"]} for x in variants],build) # 0-based
+    lifted=runLiftOver([{"chr":prefix+x["chr"],"start":str(int(x["pos"])-1),"end":x["pos"],"id":x["id"]} for x in variants],source_build) # 0-based
     for v in variants:
         new_chrpos=next(({"chr":x["chr"],"pos":x["end"]} for x in lifted if x["id"]==v["id"]),None)
         if not new_chrpos is None:
