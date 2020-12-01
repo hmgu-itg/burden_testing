@@ -45,7 +45,6 @@ def runLiftOver(input_data,source_build="38"):
 
     if os.path.getsize(out_fname)==0:
         LOGGER.warning("liftOver produced empty output file %s" % out_fname)
-        return None
 
     count=0
     with open(out_fname) as F:
