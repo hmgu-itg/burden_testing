@@ -188,8 +188,12 @@ sub _get_CADD {
             my ($ref, $alt, $phred) = split("\t", $line);
 
             # Testing alleles:
-            if (($ref eq $hash{$var}{alleles}[0] and $alt eq $hash{$var}{alleles}[1]) or
-                ($ref eq $hash{$var}{alleles}[1] and $alt eq $hash{$var}{alleles}[0])) {
+
+            # if (($ref eq $hash{$var}{alleles}[0] and $alt eq $hash{$var}{alleles}[1]) or
+            #     ($ref eq $hash{$var}{alleles}[1] and $alt eq $hash{$var}{alleles}[0])) {
+		
+	    # matching REF/REF and ALT/ALT only
+            if (($ref eq $hash{$var}{alleles}[0] and $alt eq $hash{$var}{alleles}[1])) {
                     $hash{$var}{"score"} = $phred;
             }
         }
@@ -242,8 +246,11 @@ sub _get_Eigen_Score {
             my @array = split("\t", $line);
 
             # Testing alleles:
-            if (($array[2] eq $hash{$var}{alleles}[0] and $array[3] eq $hash{$var}{alleles}[1]) or
-                ($array[2] eq $hash{$var}{alleles}[1] and $array[3] eq $hash{$var}{alleles}[0])) {
+            # if (($array[2] eq $hash{$var}{alleles}[0] and $array[3] eq $hash{$var}{alleles}[1]) or
+            #     ($array[2] eq $hash{$var}{alleles}[1] and $array[3] eq $hash{$var}{alleles}[0])) {
+
+	    # matching REF/REF and ALT/ALT only
+            if (($array[2] eq $hash{$var}{alleles}[0] and $array[3] eq $hash{$var}{alleles}[1])) {
 
 
 		my $sc="NA";
