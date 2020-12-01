@@ -44,7 +44,7 @@ function display_help() {
     echo ""
     echo "Other options:"
     echo "     -h  - print this message and exit"
-    echo "     -v  - increase verbosity from INFO to DEBUG"
+#    echo "     -v  - increase verbosity from from INFO to DEBUG"
     echo ""
     echo ""
 
@@ -58,7 +58,7 @@ if [ $# == 0 ]; then display_help; fi
 OPTIND=1
 score=""
 geneListFile=""
-verbosity="info"
+verbosity="debug"
 
 #while getopts ":hL:c:d:bg:m:s:l:e:x:k:t:ofw:jC:V:" optname; do
 while getopts ":hL:c:d:bg:s:l:e:x:ow:C:i:v" optname; do
@@ -77,7 +77,7 @@ while getopts ":hL:c:d:bg:s:l:e:x:ow:C:i:v" optname; do
         "o") lof=1 ;;
         "C") configFile=${OPTARG} ;;
         "i") inputFile=${OPTARG} ;;
-        "v") verbosity="debug" ;;
+#        "v") verbosity="debug" ;;
 
       # Other parameters:
         "w") outputDir=${OPTARG} ;;

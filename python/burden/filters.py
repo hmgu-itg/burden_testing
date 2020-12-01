@@ -77,3 +77,26 @@ def createIndelFilter():
     def filter(v):
         return len(v["ref"])==1 and len(v["alt"])==1
     return filter
+
+# ==============================================================================================================================
+
+# D: "GENCODE" --> ["exon", ... ], "overlap" --> ["promoter", ... ]
+def createRecordClassFilter(D):
+    def filter(rec):
+        s=rec["source"]
+        c=rec["class"]
+        if s in D:
+            if c in D[s]:
+                return True
+        return False
+    return filter
+
+# ==============================================================================================================================
+
+def createAPPRISFilter():
+    def filter(rec):
+        if "appris" in rec:
+            return rec["appris"]!="Minor"
+        else:
+            return True
+    return filter

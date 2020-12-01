@@ -70,7 +70,7 @@ LOGGER.info("")
 
 # ------------------------------------------------- RECORD AND VARIANT FILTERS -------------------------------------------
 
-record_filters=dict()
+record_filters_dict=dict()
 gencode_opts=list()
 if not args.gencode is None:
     if "all" in args.gencode.split(","):
@@ -89,7 +89,7 @@ if not args.gencode is None:
             else:
                 LOGGER.warning("Provided GENCODE feature \"%s\" is not valid; skipping" %(f))
     if len(gencode_opts)!=0:
-        record_filters["GENCODE"]=gencode_opts
+        record_filters_dict["GENCODE"]=gencode_opts
         LOGGER.info("Using GENCODE features: %s" %(",".join(gencode_opts)))
     else:
         LOGGER.info("Using GENCODE features: none")
@@ -113,7 +113,7 @@ if not args.gtex is None:
             else:
                 LOGGER.warning("Provided GTEx feature \"%s\" is not valid; skipping" %(f))
     if len(gtex_opts)!=0:
-        record_filters["GTEx"]=gtex_opts
+        record_filters_dict["GTEx"]=gtex_opts
         LOGGER.info("Using regulatory features for \"GTEx\" source: %s" %(",".join(gtex_opts)))
     else:
         LOGGER.info("Using regulatory features for \"GTEx\" source: none")
@@ -137,13 +137,18 @@ if not args.overlap is None:
             else:
                 LOGGER.warning("Provided GTEx feature \"%s\" is not valid; skipping" %(f))
     if len(overlap_opts)!=0:
-        record_filters["overlap"]=overlap_opts
+        record_filters_dict["overlap"]=overlap_opts
         LOGGER.info("Using regulatory features for \"overlap\" source: %s" %(",".join(overlap_opts)))
     else:
         LOGGER.info("Using regulatory features for \"overlap\" source: none")
 else:
     LOGGER.info("Using regulatory features for \"overlap\" source: none")
 
+record_filters=list()
+record_filters.append(filters.createRecordClassFilter(record_filters_dict))
+if args.skipminor:
+    record_filters.append(filters.createAPPRISFilter())
+    
 score=args.score
 variant_filters=list()
 if args.lof:
@@ -185,7 +190,7 @@ with open(args.input) as F:
             continue
         for r in regions:
             LOGGER.debug("REGIONS: %s:%s-%s" %(r["chr"],r["start"],r["end"]))
-        filtered_regions=utils.filterRecords(regions,record_filters,"source","class")
+        filtered_regions=utils.runFilter(regions,record_filters)
         if len(filtered_regions)==0:
             LOGGER.info("No regions after filtering")
             LOGGER.info("")
@@ -206,7 +211,7 @@ with open(args.input) as F:
             utils.addConsequences(variants,rec["ID"])
             for v in variants:
                 LOGGER.debug("CONSEQUENCES: %s\t%s\t%s\t%s\t%s" %(v["chr"],v["pos"],v["ref"],v["alt"],v["consequence"]))        
-        filtered_variants=utils.filterVariants(variants,variant_filters)
+        filtered_variants=utils.runFilter(variants,variant_filters)
         if len(filtered_variants)==0:
             LOGGER.info("No variants after filtering")
             LOGGER.info("")

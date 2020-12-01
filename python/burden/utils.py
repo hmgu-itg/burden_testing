@@ -80,6 +80,8 @@ def queryLinkedFeatures(chrom,start,end,gene_ID=None):
     cmd="intersectBed -wb -a <(echo -e \"%s\\t%s\\t%s\") -b %s -sorted | cut -f 8" %(chrom,start,end,config.CONFIG["Linked_features"])
     for line in selectLines(cmd):
         d=json.loads(line)
+        if "start" in d:
+            d["start"]=str(d["start"])
         if gene_ID is None:
             L.append(d)
         else:
@@ -88,19 +90,6 @@ def queryLinkedFeatures(chrom,start,end,gene_ID=None):
             else:
                 if ID_re.match(gene_ID) and ID_re.match(gene_ID).group(1)==d["gene_ID"]:
                     L.append(d)
-    return L
-
-# ==============================================================================================================================
-
-# key1: "source"
-# key2: "class"
-# filters: "GENCODE" --> ["exon", ... ], "overlap" --> ["promoter", ... ]
-def filterRecords(records,filters,key1,key2):
-    L=list()
-    for r in records:
-        if r[key1] in filters:
-            if r[key2] in filters[r[key1]]:
-                L.append(r)
     return L
 
 # ==============================================================================================================================
@@ -157,8 +146,8 @@ def getMiss(ns,an):
 
 # ==============================================================================================================================
 
-def filterVariants(variants,filters):
-    return [s for s in filter( lambda x: all(f(x) for f in filters), variants )]
+def runFilter(data,filters):
+    return [s for s in filter( lambda x: all(f(x) for f in filters),data)]
 
 # ==============================================================================================================================
 
@@ -238,21 +227,18 @@ def addConsequences(variants,geneID):
 
 # ==============================================================================================================================
 
-# returns new list of variants that could be remapped
-def liftOver(variants,build="37"):
-    L=list()
-    LOGGER.info("Input: %d variants" %(len(variants)))
+# modifies list of variants
+def liftOver(variants,build="38"):
     prefix="chr"
     lifted=runLiftOver([{"chr":prefix+x["chr"],"start":str(int(x["pos"])-1),"end":x["pos"],"id":x["id"]} for x in variants],build) # 0-based
     for v in variants:
         new_chrpos=next(({"chr":x["chr"],"pos":x["end"]} for x in lifted if x["id"]==v["id"]),None)
         if not new_chrpos is None:
-            x=v.copy()
-            x["chr"]=new_chrpos["chr"][len(prefix):]
-            x["pos"]=new_chrpos["pos"]
-            L.append(x)
-    LOGGER.info("Output: %d variants" %(len(L)))
-    return L
+            v["chr_liftover"]=new_chrpos["chr"][len(prefix):]
+            v["pos_liftover"]=new_chrpos["pos"]
+        else:
+            v["chr_liftover"]=None
+            v["pos_liftover"]=None
 
 # ==============================================================================================================================
 
@@ -262,28 +248,32 @@ def addScore(variants,score):
             v["score"]=1
         return variants
     else:
-        LOGGER.info("Input: %d variants" %(len(variants)))
+        LOGGER.info("Input: %d variant(s)" %(len(variants)))
         score_specs=config.SCORE_SPECS[score]
         score_file=config.CONFIG[config.SCORE_FILES[score]]
-        if score=="EigenPhred":
-            vars1=liftOver(variants)
-        else:
-            vars1=variants
         tmpfile=tf.NamedTemporaryFile(delete=False,mode="w",prefix="burden_score_")
-        for v in vars1:
-            tmpfile.write("%s\t%s\n" %(v["chr"],v["pos"])) # 1-based
+        chr_label="chr"
+        pos_label="pos"
+        if score=="EigenPhred":
+            liftOver(variants)
+            chr_label="chr_liftover"
+            pos_label="pos_liftover"            
+        for v in variants:
+            if not v[chr_label] is None and not v[pos_label] is None:
+                tmpfile.write("%s\t%s\n" %(v[chr_label],v[pos_label])) # 1-based
+                LOGGER.debug("TMPFILE: %s\t%s\t%s\t%s" %(v["chr"],v["pos"],v[chr_label],v[pos_label]))
         tmpfile.close()
         L=list()
         for line in selectLines("tabix -R %s %s | cut -f %s,%s,%s,%s" % (tmpfile.name,score_file,score_specs["CHR"],score_specs["POS"],score_specs["ALT"],score_specs["SCORE"])):
             (chrom,pos,alt,score)=line.split("\t")
             L.append({"chr":chrom,"pos":pos,"alt":alt,"score":score})
         ret=list()
-        for v in vars1:
-            sc=next((x["score"] for x in L if x["chr"]==v["chr"] and x["pos"]==v["pos"] and x["alt"]==v["alt"]),None)
+        for v in variants:
+            sc=next((x["score"] for x in L if x["chr"]==v[chr_label] and x["pos"]==v[pos_label] and x["ref"]==v["ref"] and x["alt"]==v["alt"]),None)
             if not sc is None:
                 v["score"]=sc
                 ret.append(v)
         if os.path.isfile(tmpfile.name):
             os.remove(tmpfile.name)
-        LOGGER.info("Output: %d variants" %(len(ret)))
+        LOGGER.info("Output: %d variant(s)" %(len(ret)))
         return ret
