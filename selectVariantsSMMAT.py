@@ -15,21 +15,22 @@ from burden import io
 parser=argparse.ArgumentParser()
 
 # required
-parser.add_argument("--input",action="store",type=str,help="Required: input gene list",required=True)
-parser.add_argument("--config",action="store",type=str,help="Required: config file",required=True)
-parser.add_argument("--output-dir",action="store",type=str,help="Required: output directory",required=True)
-parser.add_argument("--smmat",action="store",type=str,help="Required: 5 column tab-delimited input list of variants, bgzipped and tabixed",required=True)
+required_arguments=parser.add_argument_group('required arguments')
+required_arguments.add_argument("--input",action="store",type=str,help="input gene list",required=True)
+required_arguments.add_argument("--config",action="store",type=str,help="config file",required=True)
+required_arguments.add_argument("--output-dir",action="store",type=str,help="output directory",required=True)
+required_arguments.add_argument("--smmat",action="store",type=str,help="5 column tab-delimited input list of variants, bgzipped and tabixed",required=True)
 
 # optional
-parser.add_argument("--gencode",action="store",type=str,help="Optional: comma separated list of GENCODE features (%s)" %(",".join(config.GENCODE_FEATURES+["all"])),required=False)
-parser.add_argument("--gtex",action="store",type=str,help="Optional: comma separated list of regulatory features (%s)" %(",".join(list(config.REG_FEATURES.keys())+["all"])),required=False)
-parser.add_argument("--overlap",action="store",type=str,help="Optional: comma separated list of regulatory features (%s)" %(",".join(list(config.REG_FEATURES.keys())+["all"])),required=False)
-parser.add_argument("--extend",action="store",type=int,help="Optional: by how many basepairs the GENCODE features should be extended; default: %d" %(config.DEFAULT_EXTENSION),default=config.DEFAULT_EXTENSION,required=False)
-parser.add_argument("--skipminor",action="store_true",help="Optional: skip minor APPRIS transcripts; default: False",required=False)
-parser.add_argument("--verbose",help="Optional: verbosity level; default: info",required=False,choices=("debug","info","warning","error"),default="info")
-parser.add_argument("--score",action="store",type=str,help="Optional: which score to use to weight variants; default: none",required=False,default=None,choices=("CADD","EigenPhred"))
-parser.add_argument("--lof",action="store_true",help="Optional: only select high impact variants; default: False",required=False)
-parser.add_argument("--log",action="store",help="Optional: log file; default: \"variant_selector.log\" in the output directory",required=False)
+parser.add_argument("--gencode",action="store",type=str,help="comma separated list of GENCODE features (%s)" %(",".join(config.GENCODE_FEATURES+["all"])),required=False)
+parser.add_argument("--gtex",action="store",type=str,help="comma separated list of regulatory features (%s)" %(",".join(list(config.REG_FEATURES.keys())+["all"])),required=False)
+parser.add_argument("--overlap",action="store",type=str,help="comma separated list of regulatory features (%s)" %(",".join(list(config.REG_FEATURES.keys())+["all"])),required=False)
+parser.add_argument("--extend",action="store",type=int,help="by how many basepairs the GENCODE features should be extended; default: %d" %(config.DEFAULT_EXTENSION),default=config.DEFAULT_EXTENSION,required=False)
+parser.add_argument("--skipminor",action="store_true",help="skip minor APPRIS transcripts; default: False",required=False)
+parser.add_argument("--verbose",help="verbosity level; default: info",required=False,choices=("debug","info","warning","error"),default="info")
+parser.add_argument("--score",action="store",type=str,help="which score to use to weight variants; default: none",required=False,default=None,choices=("CADD","EigenPhred"))
+parser.add_argument("--lof",action="store_true",help="only select high impact variants; default: False",required=False)
+parser.add_argument("--log",action="store",help="log file; default: \"variant_selector.log\" in the output directory",required=False)
 
 args=parser.parse_args()
 
