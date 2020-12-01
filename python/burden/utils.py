@@ -264,9 +264,9 @@ def addScore(variants,score):
                 LOGGER.debug("TMPFILE: %s\t%s\t%s\t%s" %(v["chr"],v["pos"],v[chr_label],v[pos_label]))
         tmpfile.close()
         L=list()
-        for line in selectLines("tabix -R %s %s | cut -f %s,%s,%s,%s" % (tmpfile.name,score_file,score_specs["CHR"],score_specs["POS"],score_specs["ALT"],score_specs["SCORE"])):
-            (chrom,pos,alt,score)=line.split("\t")
-            L.append({"chr":chrom,"pos":pos,"alt":alt,"score":score})
+        for line in selectLines("tabix -R %s %s | cut -f %s,%s,%s,%s,%s" % (tmpfile.name,score_file,score_specs["CHR"],score_specs["POS"],score_specs["REF"],score_specs["ALT"],score_specs["SCORE"])):
+            (chrom,pos,ref,alt,score)=line.split("\t")
+            L.append({"chr":chrom,"pos":pos,"ref":ref,"alt":alt,"score":score})
         ret=list()
         for v in variants:
             sc=next((x["score"] for x in L if x["chr"]==v[chr_label] and x["pos"]==v[pos_label] and x["ref"]==v["ref"] and x["alt"]==v["alt"]),None)
