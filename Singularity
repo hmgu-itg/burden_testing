@@ -71,6 +71,8 @@ From: ubuntu:18.04
 	mv transpose2 /usr/local/bin
 	cd /usr/local/bin
 	rm -rf transpose-2.0/
+
+	apt-get install -y time valgrind
 	
 	CREATIONDATE=`date`
 
