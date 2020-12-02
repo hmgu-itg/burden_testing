@@ -23,7 +23,7 @@ check_args=function(args, parser){
     print(p)
     stop("\t[ERROR] : cohort name, matrix prefix, GDS file, phenotype and group file must all be defined.")
   }
-  if(args$matrix_type %nin% c("GCTA", "GEMMA")){
+  if(args$matrix_type %nin% c("GCTA", "GEMMA","GCTA-BIN")){
     stop(paste("\t[ERROR] : Only GEMMA and GCTA are supported matrix types (you supplied",args$matrix_type,")"))
   }
   if(is.na(args$fam_file) & args$matrix_type=="GEMMA"){
@@ -69,13 +69,10 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
       if(is.na(file.info(paste0(matrix_prefix, ".grm.bin"))[1,1]) | file.info(paste0(matrix_prefix, ".grm.bin"))[1,1]==0 | is.na(file.info(paste0(matrix_prefix, ".grm.id"))[1,1]) | file.info(paste0(matrix_prefix, ".grm.id"))[1,1]==0){
         stop(paste("\t[ERROR] : Matrix file not found or is of size 0. Please make sure", paste0(matrix_prefix, ".grm.id"), "and", paste0(matrix_prefix, ".grm.bin"), "exist."))
       }
-      grm.mat=readGRM(matrix_prefix)
-      # grm=as.matrix(fread(paste0(matrix_prefix, ".grm.gz"), header=F))
-      # grm.names=as.character(fread(paste0(matrix_prefix, ".grm.id"), header=F)$V1)
-      # grm=as.data.table(grm)
-      # grm[, c("id1", "id2"):=list(grm.names[V1], grm.names[V2])]
-      # grm.mat=acast(formula=id1~id2, value.var="V4", data=grm)#xtabs(V4~V1+V2, data=ha.grm)
-      # grm.mat[is.na(grm.mat)]=t(grm.mat)[is.na(grm.mat)]
+      grm.mat<-readGRM(matrix_prefix)
+      rownames(grm.mat)<-lapply(rownames(grm.mat),function(x) {strsplit(x,"[.]")[[1]][[1]]})
+      colnames(grm.mat)<-lapply(colnames(grm.mat),function(x) {strsplit(x,"[.]")[[1]][[1]]})
+      grm.names=as.character(fread(paste0(matrix_prefix, ".grm.id"), header=F)$V1)
     # ---------------------------------------------------------------------------------
     }else{
       if(is.null(fam_file)){stop("\t[ERROR] : GEMMA matrix files don't contain IDs, please supply a FAM file.")}
