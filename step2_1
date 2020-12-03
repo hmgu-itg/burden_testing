@@ -2,7 +2,7 @@
 
 check_for_packages=function(){
   cat(paste("[INFO] Checking for installed R packages.", "\n"))
-  list.of.packages <- c("GMMAT", "reshape2", "parallel", "data.table", "Hmisc", "argparser", "plinkFile")
+  list.of.packages <- c("GMMAT", "reshape2", "parallel", "data.table", "Hmisc", "argparser", "plinkFile","doMC")
   list.of.bloated.bioconductor.packages = c("SeqArray")
   list.of.packages=c(list.of.packages, list.of.bloated.bioconductor.packages)
   new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
