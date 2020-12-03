@@ -271,8 +271,12 @@ def addScore(variants,score):
         for v in variants:
             sc=next((x["score"] for x in L if x["chr"]==v[chr_label] and x["pos"]==v[pos_label] and x["ref"]==v["ref"] and x["alt"]==v["alt"]),None)
             if not sc is None:
-                v["score"]=sc
-                ret.append(v)
+                try:
+                    float(sc)
+                    v["score"]=sc
+                    ret.append(v)
+                except ValueError:
+                    LOGGER.debug("Invalid value for %s score: %s; skipping" %(score,sc))
         if os.path.isfile(tmpfile.name):
             os.remove(tmpfile.name)
         LOGGER.info("Output: %d variant(s)" %(len(ret)))
