@@ -272,9 +272,12 @@ def addScore(variants,score):
             sc=next((x["score"] for x in L if x["chr"]==v[chr_label] and x["pos"]==v[pos_label] and x["ref"]==v["ref"] and x["alt"]==v["alt"]),None)
             if not sc is None:
                 try:
-                    float(sc)
-                    v["score"]=sc
-                    ret.append(v)
+                    s1=float(sc)
+                    if s1!=float("Inf"):
+                        v["score"]=sc
+                        ret.append(v)
+                    else:
+                        LOGGER.debug("Infinite %s score: %s; skipping" %(score,sc))
                 except ValueError:
                     LOGGER.debug("Invalid value for %s score: %s; skipping" %(score,sc))
         if os.path.isfile(tmpfile.name):
