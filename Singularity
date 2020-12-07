@@ -8,7 +8,7 @@ From: ubuntu:18.04
 	PERL_EXTUTILS_AUTOINSTALL="--defaultdeps"
 	export PERL_EXTUTILS_AUTOINSTALL
 	
-	PATH=$PATH:/usr/local/bin:/usr/local/bin/burden_testing:/usr/local/bin/burden_testing/testing:/usr/local/bin/MONSTER:/usr/local/bin/bedtools2/bin/:/usr/local/bin/UCSC.tools
+	PATH=$PATH:/usr/local/bin:/usr/local/bin/burden_testing:/usr/local/bin/burden_testing/testing:/usr/local/bin/MONSTER:/usr/local/bin/bedtools2/bin/:/usr/local/bin/UCSC.tools:/usr/local/bin/SAIGE
 	export PATH
 
 	export PYTHONPATH=/usr/local/bin/burden_testing/python:$PYTHONPATH
@@ -73,7 +73,15 @@ From: ubuntu:18.04
 	rm -rf transpose-2.0/
 
 	apt-get install -y time valgrind
-	
+
+	Rscript -e "install.packages(c(\"RcppArmadillo\",\"SPAtest\",\"SKAT\",\"RcppEigen\",\"BH\",\"optparse\",\"RcppParallel\"));install.packages(\"https://cran.r-project.org/src/contrib/Archive/MetaSKAT/MetaSKAT_0.80.tar.gz\",repos=NULL)"
+	cd /usr/local/bin
+	git clone --depth 1 "https://github.com/weizhouUMICH/SAIGE"
+	apt-get install -y python-pip cmake
+	pip install cget
+	R CMD INSTALL --library=/usr/local/lib/R/site-library SAIGE
+	chmod +x /usr/local/bin/SAIGE/extdata/*.R
+
 	CREATIONDATE=`date`
 
 %runscript
