@@ -225,6 +225,10 @@ if [ ${cur_step} -ge ${step1} ] && [ ${cur_step} -le ${step2} ];then
 	echo "Downloading cell type : $cell"
 	custom_axel ${targetDir}/ENSEMBL/${cell}.gff.gz ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.GRCh38.${cell}.Regulatory_Build.regulatory_activity.20190329.gff.gz
 	testFile "${targetDir}/ENSEMBL/${cell}.gff.gz"
+	if ! gzip -q -t "${targetDir}/ENSEMBL/${cell}.gff.gz";then
+	    echo -e "WARNING: integrity check failed for ${targetDir}/ENSEMBL/${cell}.gff.gz\n"
+	    continue
+	fi
     done
     info "Done\n"
 fi

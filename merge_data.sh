@@ -298,7 +298,7 @@ for cell in ${CellTypes}; do
 
     # Check integrity 
     if ! gzip -q -t ${fn};then
-	echo -e "\nWARNING: integrity check failed for $fn; skipping\n"
+#	echo -e "\nWARNING: integrity check failed for $fn; skipping\n"
 	continue
     fi
     
