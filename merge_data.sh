@@ -61,7 +61,7 @@ line contains all information of the association."
 }
 
 function checkdir {
-    echo -n "Check if directory $1 exists ... "
+    echo -n "Checking if directory $1 exists ... "
     if [[ ! -d "$1"  ]]; then
         echo "[Error] Directory does not exist: $1"
         echo "[Error] Exit"
@@ -72,7 +72,7 @@ function checkdir {
 }
 
 function checkfile {
-    echo -n "Check if file $1 exists ... "
+    echo -n "Checking if file $1 exists ... "
     if [[ ! -f "$1"  ]]; then
         echo "[Error] File does not exist: $1"
         echo "[Error] Exit"

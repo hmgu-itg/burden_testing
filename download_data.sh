@@ -104,7 +104,7 @@ function custom_axel() {
 }
 
 function checkfile {
-    echo -n "Check if file $1 exists ... "
+    echo -n "Checking if file $1 exists ... "
     if [[ ! -f "$1"  ]]; then
         echo "[Error] File does not exist: $1"
         echo "[Error] Exit"
