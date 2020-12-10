@@ -113,27 +113,6 @@ function testFile {
     fi
 }
 
-# We also run a test to check if the number of lines of a temporary file is zero or not.
-# If it is zero, the script exits, because it indicates there were some problems.
-function testFileLines {
-
-    # Check if file is zipped:
-    IsCompressed=$( file $1 | grep compressed | wc -l)
-
-    # Check the number of lines:
-    if [[ $IsCompressed -ne 0 ]]; then
-        lines=$( zcat $1 | wc -l )
-    else
-        lines=$( cat $1 | wc -l )
-    fi
-
-    # exit if lines are zero:
-    if [[ $lines == 0 ]]; then
-        echo "[Error] file ($1) contains no lines. Exit";
-        exit 1;
-    fi
-}
-
 function info {
     hourMin=$(date +"%T" | awk 'BEGIN{FS=OFS=":"}{print $1, $2}')
     echo -ne "[Info ${hourMin}] $1"
@@ -182,7 +161,7 @@ fi
 outdir=`readlink -f $outdir`
 outdir=${outdir%/}
 
-targetDir=${outdir}"/prepare_regions_tempfiles"
+targetDir=${outdir}"/downloads"
 mkdir -p ${targetDir}
 if [ $? -ne 0 ] ; then
     echo "[Error] Could not create ${targetDir}"
@@ -208,10 +187,12 @@ cur_step=2
 #====================================== GTEx =================================================
 
 if [ ${cur_step} -ge ${step1} ] && [ ${cur_step} -le ${step2} ];then
-    #cd ${outdir}
     info "STEP 2. Downloading GTEx data ...\n"
-    custom_axel GTEx_Analysis_v8_eQTL.tar https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
-    testFile "GTEx_Analysis_v8_eQTL.tar"
+    mkdir -p ${targetDir}/GTEx
+    custom_axel ${targetDir}/GTEx/GTEx.tar https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
+    testFile "${targetDir}/GTEx/GTEx.tar"
+    gzip -f "${targetDir}/GTEx/GTEx.tar"
+    testFile "${targetDir}/GTEx/GTEx.tar.gz"
     info "Done\n"
 fi
 
@@ -221,8 +202,8 @@ cur_step=3
 if [ ${cur_step} -ge ${step1} ] && [ ${cur_step} -le ${step2} ];then
     info "STEP 3. Downloading GENCODE data ...\n"
     mkdir -p ${targetDir}/GENCODE
-    custom_axel ${targetDir}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz
-    testFile "${targetDir}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
+    custom_axel ${targetDir}/GENCODE/gencode.annotation.gtf.gz ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz
+    testFile "${targetDir}/GENCODE/gencode.annotation.gtf.gz"
     info "Done\n"
 fi
 
@@ -231,7 +212,7 @@ cur_step=4
 
 if [ ${cur_step} -ge ${step1} ] && [ ${cur_step} -le ${step2} ];then
     info "STEP 4. Downloading Regulation data ...\n"
-    mkdir -p ${targetDir}/EnsemblRegulation
+    mkdir -p ${targetDir}/ENSEMBL
     cells=$(curl -s ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/ | perl -lane 'print $F[-1]')
     if [ -z "${cells}" ]; then
 	echo "[Error] No cell types were found in the Ensembl regulation folder: ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/"
@@ -242,8 +223,8 @@ if [ ${cur_step} -ge ${step1} ] && [ ${cur_step} -le ${step2} ];then
     #Download all cell type data:
     for cell in ${cells}; do
 	echo "Downloading cell type : $cell"
-	custom_axel ${targetDir}/EnsemblRegulation/${cell}.gff.gz ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.GRCh38.${cell}.Regulatory_Build.regulatory_activity.20190329.gff.gz
-	testFile "${targetDir}/EnsemblRegulation/${cell}.gff.gz"
+	custom_axel ${targetDir}/ENSEMBL/${cell}.gff.gz ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.GRCh38.${cell}.Regulatory_Build.regulatory_activity.20190329.gff.gz
+	testFile "${targetDir}/ENSEMBL/${cell}.gff.gz"
     done
     info "Done\n"
 fi
