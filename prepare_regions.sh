@@ -117,6 +117,18 @@ function testFileLines {
     fi
 }
 
+# check if GZ file is OK
+function checkGZfile {
+    echo -n "Checking GZ file integrity: $1 ... "
+    if ! gzip -q -t "$1";then
+	echo "[Error] Integrity check failed for $1"
+        echo "[Error] Exit"
+        exit 1
+    else
+	echo "OK"
+    fi
+}
+
 # This function prints out all the reports that were generated during the run (with time stamp!):
 function info {
     hourMin=$(date +"%T" | awk 'BEGIN{FS=OFS=":"}{print $1, $2}')
@@ -249,10 +261,7 @@ for cell in ${cells}; do
     echo "Downloading cell type : $cell"
     axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
-    if ! gzip -q -t "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz";then
-	echo -e "WARNING: integrity check failed for ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz\n"
-	continue
-    fi
+    checkGZfile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
 done
 echo "Done"
 
@@ -383,15 +392,10 @@ CellTypes=$( ls -la ${targetDir}/${today}/EnsemblRegulation/ | perl -lane 'print
 for cell in ${CellTypes}; do
     export cell
     fn=${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+    checkGZfile ${fn}
     
     # parsing cell specific files (At this point we only consider active features. Although repressed regions might also be informative):
 
-    # Check integrity 
-    if ! gzip -q -t ${fn};then
-#	echo "\nWARNING: integrity check failed for $fn; skipping\n"
-	continue
-    fi
-    
     zcat ${fn} | grep -i "activity=active" \
         | perl -F"\t" -lane 'next unless length($F[0]) < 3 || $F[0]=~/^chr/; # We skip irregular chromosome names.
                 $F[0]=~s/^chr//;

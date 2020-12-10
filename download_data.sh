@@ -103,13 +103,26 @@ function custom_axel() {
     fi
 }
 
-# Function to test if a given file exists or not in which case it reports and terminates the
-# execution.
-function testFile {
-    if [[ ! -e "$1"  ]]; then
-        echo "[Error] At this step something failed. The file was not created! $1"
+function checkfile {
+    echo -n "Check if file $1 exists ... "
+    if [[ ! -f "$1"  ]]; then
+        echo "[Error] File does not exist: $1"
         echo "[Error] Exit"
         exit 1
+    else
+	echo "OK"
+    fi
+}
+
+# check if GZ file is OK
+function checkGZfile {
+    echo -n "Checking GZ file integrity: $1 ... "
+    if ! gzip -q -t "$1";then
+	echo "[Error] Integrity check failed for $1"
+        echo "[Error] Exit"
+        exit 1
+    else
+	echo "OK"
     fi
 }
 
@@ -190,9 +203,9 @@ if [ ${cur_step} -ge ${step1} ] && [ ${cur_step} -le ${step2} ];then
     info "STEP 2. Downloading GTEx data ...\n"
     mkdir -p ${targetDir}/GTEx
     custom_axel ${targetDir}/GTEx/GTEx.tar https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
-    testFile "${targetDir}/GTEx/GTEx.tar"
+    checkfile "${targetDir}/GTEx/GTEx.tar"
     gzip -f "${targetDir}/GTEx/GTEx.tar"
-    testFile "${targetDir}/GTEx/GTEx.tar.gz"
+    checkfile "${targetDir}/GTEx/GTEx.tar.gz"
     info "Done\n"
 fi
 
@@ -203,7 +216,7 @@ if [ ${cur_step} -ge ${step1} ] && [ ${cur_step} -le ${step2} ];then
     info "STEP 3. Downloading GENCODE data ...\n"
     mkdir -p ${targetDir}/GENCODE
     custom_axel ${targetDir}/GENCODE/gencode.annotation.gtf.gz ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz
-    testFile "${targetDir}/GENCODE/gencode.annotation.gtf.gz"
+    checkfile "${targetDir}/GENCODE/gencode.annotation.gtf.gz"
     info "Done\n"
 fi
 
@@ -216,7 +229,7 @@ if [ ${cur_step} -ge ${step1} ] && [ ${cur_step} -le ${step2} ];then
     cells=$(curl -s ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/ | perl -lane 'print $F[-1]')
     if [ -z "${cells}" ]; then
 	echo "[Error] No cell types were found in the Ensembl regulation folder: ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/"
-	echo "Exit"
+	echo "[Error] Exit"
 	exit 1
     fi
 
@@ -224,11 +237,8 @@ if [ ${cur_step} -ge ${step1} ] && [ ${cur_step} -le ${step2} ];then
     for cell in ${cells}; do
 	echo "Downloading cell type : $cell"
 	custom_axel ${targetDir}/ENSEMBL/${cell}.gff.gz ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.GRCh38.${cell}.Regulatory_Build.regulatory_activity.20190329.gff.gz
-	testFile "${targetDir}/ENSEMBL/${cell}.gff.gz"
-	if ! gzip -q -t "${targetDir}/ENSEMBL/${cell}.gff.gz";then
-	    echo -e "WARNING: integrity check failed for ${targetDir}/ENSEMBL/${cell}.gff.gz\n"
-	    continue
-	fi
+	checkfile "${targetDir}/ENSEMBL/${cell}.gff.gz"
+	checkGZfile "${targetDir}/ENSEMBL/${cell}.gff.gz"
     done
     info "Done\n"
 fi
@@ -240,7 +250,7 @@ if [ ${cur_step} -ge ${step1} ] && [ ${cur_step} -le ${step2} ];then
     info "STEP 5. Downloading APPRIS isoform data ...\n"
     mkdir -p ${targetDir}/APPRIS
     custom_axel ${targetDir}/APPRIS/appris_data.principal.txt http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt
-    testFile "${targetDir}/APPRIS/appris_data.principal.txt"
+    checkfile "${targetDir}/APPRIS/appris_data.principal.txt"
     info "Done\n"
 fi
 
@@ -251,9 +261,9 @@ if [ ${cur_step} -ge ${step1} ] && [ ${cur_step} -le ${step2} ];then
     info "STEP 6. Downloading Eigen Phred scores ...\n"
     mkdir -p scores
     custom_axel scores/eigen.phred_v2.dat ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
-    testFile "scores/eigen.phred_v2.dat"
+    checkfile "scores/eigen.phred_v2.dat"
     custom_axel scores/eigen.phred_v2.dat.tbi ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
-    testFile "scores/eigen.phred_v2.dat.tbi"
+    checkfile "scores/eigen.phred_v2.dat.tbi"
     info "Done\n"
 fi
 
@@ -264,9 +274,9 @@ if [ ${cur_step} -ge ${step1} ] && [ ${cur_step} -le ${step2} ];then
     info "STEP 7. Downloading CADD scores ...\n"
     mkdir -p scores
     custom_axel scores/whole_genome_SNVs.tsv.gz https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
-    testFile "scores/whole_genome_SNVs.tsv.gz"
+    checkfile "scores/whole_genome_SNVs.tsv.gz"
     custom_axel scores/whole_genome_SNVs.tsv.gz.tbi https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
-    testFile "scores/whole_genome_SNVs.tsv.gz.tbi"
+    checkfile "scores/whole_genome_SNVs.tsv.gz.tbi"
     info "Done\n"
 fi
 

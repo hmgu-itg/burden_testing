@@ -61,24 +61,36 @@ line contains all information of the association."
 }
 
 function checkdir {
-    echo "Check if directory $1 exists"
+    echo -n "Check if directory $1 exists ... "
     if [[ ! -d "$1"  ]]; then
         echo "[Error] Directory does not exist: $1"
         echo "[Error] Exit"
         exit 1
     else
-	echo -e "OK\n"
+	echo "OK"
     fi
 }
 
 function checkfile {
-    echo "Check if file $1 exists"
+    echo -n "Check if file $1 exists ... "
     if [[ ! -f "$1"  ]]; then
         echo "[Error] File does not exist: $1"
         echo "[Error] Exit"
         exit 1
     else
-	echo -e "OK\n"
+	echo "OK"
+    fi
+}
+
+# check if GZ file is OK
+function checkGZfile {
+    echo -n "Checking GZ file integrity: $1 ... "
+    if ! gzip -q -t "$1";then
+	echo "[Error] Integrity check failed for $1"
+        echo "[Error] Exit"
+        exit 1
+    else
+	echo "OK"
     fi
 }
 
@@ -150,7 +162,6 @@ APPRISFILE="${APPRISDIR}/appris_data.principal.txt"
 
 checkdir ${ENSVEPDIR}
 checkdir ${VEPDIR}
-#checkdir ${VEPDIR}/htslib
 checkdir ${targetDir}
 checkdir ${GENCODEDIR}
 checkdir ${ENSDIR}
@@ -296,11 +307,8 @@ for cell in ${CellTypes}; do
     
     # parsing cell specific files (At this point we only consider active features. Although repressed regions might also be informative):
 
-    # Check integrity 
-    if ! gzip -q -t ${fn};then
-#	echo -e "\nWARNING: integrity check failed for $fn; skipping\n"
-	continue
-    fi
+    # Check integrity
+    checkGZfile ${fn}
     
     zcat ${fn} | grep -i "activity=active" \
         | perl -F"\t" -lane 'next unless length($F[0]) < 3 || $F[0]=~/^chr/; # We skip irregular chromosome names.
