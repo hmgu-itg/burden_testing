@@ -249,6 +249,10 @@ for cell in ${cells}; do
     echo "Downloading cell type : $cell"
     axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
+    if ! gzip -q -t "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz";then
+	echo -e "WARNING: integrity check failed for ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz\n"
+	continue
+    fi
 done
 echo "Done"
 
@@ -384,7 +388,7 @@ for cell in ${CellTypes}; do
 
     # Check integrity 
     if ! gzip -q -t ${fn};then
-	echo "\nWARNING: integrity check failed for $fn; skipping\n"
+#	echo "\nWARNING: integrity check failed for $fn; skipping\n"
 	continue
     fi
     
