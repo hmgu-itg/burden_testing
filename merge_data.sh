@@ -67,7 +67,7 @@ function checkdir {
         echo "[Error] Exit"
         exit 1
     else
-	echo "OK\n"
+	echo -e "OK\n"
     fi
 }
 
@@ -78,7 +78,7 @@ function checkfile {
         echo "[Error] Exit"
         exit 1
     else
-	echo "OK\n"
+	echo -e "OK\n"
     fi
 }
 
@@ -103,7 +103,7 @@ function testFileLines {
 # This function prints out all the reports that were generated during the run (with time stamp!):
 function info {
     hourMin=$(date +"%T" | awk 'BEGIN{FS=OFS=":"}{print $1, $2}')
-    echo -ne "[Info ${hourMin}] $1"
+    echo -e "[Info ${hourMin}] $1"
 }
 
 # Printing help message if no parameters are given:
@@ -150,7 +150,7 @@ APPRISFILE="${APPRISDIR}/appris_data.principal.txt"
 
 checkdir ${ENSVEPDIR}
 checkdir ${VEPDIR}
-checkdir ${VEPDIR}/htslib
+#checkdir ${VEPDIR}/htslib
 checkdir ${targetDir}
 checkdir ${GENCODEDIR}
 checkdir ${ENSDIR}
@@ -177,13 +177,13 @@ cd ${indir}
 
 # Get the most recent version of the data:
 genes=$(zcat ${GENCODEFILE} | awk 'BEGIN{FS="\t";}$3 == "gene"{print $3;}' | wc -l )
-info "Total number of genes in the GENCODE file: ${genes}\n\n"
+info "Total number of genes in the GENCODE file: ${genes}\n"
 
 #=================================== REGULATION ==============================================
 
 # Printing out report of the downloaded cell types:
 cellTypeCount=$(ls -la ${ENSDIR}/*gff.gz | wc -l)
-info "Number of downloaded cell types: ${cellTypeCount}\n\n"
+info "Number of downloaded cell types: ${cellTypeCount}\n"
 
 #=============================================================================================
 #Combining APPRIS and GENCODE data
@@ -280,7 +280,7 @@ echo "Done"
 
 # Print out report:
 appris_lines=$(zcat ${PROCDIR}/Appris_annotation_added.txt.gz | wc -l | awk '{print $1}')
-info "Number of Appris annotated GENCODE annotations: ${appris_lines}\n\n"
+info "Number of Appris annotated GENCODE annotations: ${appris_lines}\n"
 
 #=============================================================================================
 
@@ -298,7 +298,7 @@ for cell in ${CellTypes}; do
 
     # Check integrity 
     if ! gzip -q -t ${fn};then
-	echo "\nWARNING: integrity check failed for $fn; skipping\n"
+	echo -e "\nWARNING: integrity check failed for $fn; skipping\n"
 	continue
     fi
     
@@ -342,7 +342,7 @@ echo  "Done"
 
 # Print out report:
 cellSpecFeatLines=$(zcat ${PROCDIR}/Cell_spec_regulatory_features.bed.gz | wc -l | awk '{print $1}')
-info "Number of cell specific regulatory features: $cellSpecFeatLines\n\n"
+info "Number of cell specific regulatory features: $cellSpecFeatLines\n"
 
 #=============================================================================================
 
@@ -449,7 +449,7 @@ echo "Done"
 
 # Generate report:
 GTExLinkedFeatures=$( zcat ${PROCDIR}/GTEx_Regulation_linked.txt.gz | wc -l | awk '{print $1}')
-info "Number of GTEx linked regulatory features: ${GTExLinkedFeatures}\n\n"
+info "Number of GTEx linked regulatory features: ${GTExLinkedFeatures}\n"
 
 #=============================================================================================
 
@@ -528,7 +528,7 @@ testFileLines ${PROCDIR}/overlapping_features.txt.gz
 
 # Generate report:
 OverlapLinkedFeatures=$( zcat ${PROCDIR}/overlapping_features.txt.gz | wc -l | awk '{print $1}')
-info "Number of regulatory features linked by overlap: ${OverlapLinkedFeatures}\n\n"
+info "Number of regulatory features linked by overlap: ${OverlapLinkedFeatures}\n"
 
 #=============================================================================================
 
@@ -602,7 +602,7 @@ echo "gencode_file=${indir}/gencode.basic.annotation.tsv.gz" >> ${configfile}
 FailedAssoc=$(wc -l ${indir}/failed | awk '{print $1}')
 FailedGenes=$( cat ${indir}/failed | perl -lane '$_ =~ /(ENSG\d+)/; print $1' | sort | uniq | wc -l )
 FailedSources=$( cat ${indir}/failed | perl -lane '$_ =~ /"source":"(.+?)"/; print $1' | sort | uniq | tr "\n" ", " )
-info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sournces: ${FailedSources}\n\n"
+info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sournces: ${FailedSources}\n"
 
 if [[ $backup == "yes" ]];then
     info "Backing up intermediate files ...\n"
