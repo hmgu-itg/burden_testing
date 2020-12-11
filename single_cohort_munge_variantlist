@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 fn=$1
 mis=$2
 maf=$3 
