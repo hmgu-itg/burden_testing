@@ -119,13 +119,13 @@ function testFileLines {
 
 # check if GZ file is OK
 function checkGZfile {
-    echo -n "Checking GZ file integrity: $1 ... "
+#    echo -n "Checking GZ file integrity: $1 ... "
     if ! gzip -q -t "$1";then
 	echo "[Error] Integrity check failed for $1"
         echo "[Error] Exit"
         exit 1
-    else
-	echo "OK"
+#    else
+#	echo "OK"
     fi
 }
 
