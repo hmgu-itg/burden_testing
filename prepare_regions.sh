@@ -698,8 +698,8 @@ echo "gencode_file=${outdir}/gencode.basic.annotation.tsv.gz" >> ${configfile}
 # Report failed associations:
 FailedAssoc=$(wc -l ${targetDir}/${today}/failed | awk '{print $1}')
 FailedGenes=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /(ENSG\d+)/; print $1' | sort | uniq | wc -l )
-FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":"(.+?)"/; print $1' | sort | uniq | tr "\n" ", " )
-info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sournces: ${FailedSources}\n\n"
+FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":"(.+?)"/; print $1' | sort | uniq | tr "\n" ", " | sed 's/,$/\n/')
+info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sources: ${FailedSources}\n\n"
 
 if [[ $backup == "yes" ]];then
     info "Backing up intermediate files ...\n"
