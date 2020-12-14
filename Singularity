@@ -38,7 +38,7 @@ From: ubuntu:18.04
 	perl -MCPAN -e 'foreach (@ARGV) { CPAN::Shell->rematein("notest", "install", $_) }' Module::Build DBI Try::Tiny JSON Data::Dumper File::Basename Getopt::Long Data::Types File::Path
 
 	cd /usr/local/bin
-	git clone https://github.com/hmgu-itg/burden_testing
+	git clone -b dev https://github.com/hmgu-itg/burden_testing
 	wget ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/liftOver/hg38ToHg19.over.chain.gz
 	wget ftp://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
 		
