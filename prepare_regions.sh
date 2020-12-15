@@ -268,6 +268,7 @@ else
     echo "[Error] Checksum invalid. The download probably failed. Please rerun with the reuse option (-r) to retry."
     rm ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
     exit 1
+  fi
 fi
 # Counting genes in the dataset:
 genes=$(zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | awk 'BEGIN{FS="\t";}$3 == "gene"{print $3;}' | wc -l )
