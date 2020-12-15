@@ -222,7 +222,7 @@ if [ $? -ne 0 ] ; then
 fi
 
 GTExFile=$outdir/GTEx_Analysis_v8_eQTL.tar
-if (( "$reuse" > 0 )) && [[ -s "$GTExFile" ]] && [[ $(md5sum $GTExFile | cut -d' ' -f1) -eq d35b32152bdb21316b2509c46b0af998 ]]; then
+if (( "$reuse" > 0 )) && [[ -s "$GTExFile" ]] && [[ $(md5sum $GTExFile | cut -d' ' -f1) == "d35b32152bdb21316b2509c46b0af998" ]]; then
   echo "[Info] GTEx file found and has the right checksum. Skipping download..."
 else
   cd ${outdir}
@@ -235,7 +235,7 @@ else
   fi
 fi
 
-if [[ $(md5sum $GTExFile | cut -d' ' -f1) -ne d35b32152bdb21316b2509c46b0af998 ]]; then
+if [[ $(md5sum $GTExFile | cut -d' ' -f1) != "d35b32152bdb21316b2509c46b0af998" ]]; then
   echo "[Error] Checksum invalid. The download probably failed. Please rerun with the reuse option (-r) to retry."
   rm $GTExFile
   exit 1
@@ -253,7 +253,7 @@ info "Working directory: ${targetDir}/${today}\n\n"
 mkdir -p ${targetDir}/${today}/GENCODE
 checksum=$(wget -q -O- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/MD5SUMS | grep -w gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)
 
-if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] && [[ "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1))" -eq $checksum ]]; then
+if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] && [[ "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1))" == "$checksum" ]]; then
   echo "[Info] GENCODE file found and has the right checksum. Skipping download..."
   mv $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 else
@@ -264,7 +264,7 @@ else
   # Testing if the file exists:
   testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
 
-  if [[ "$(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz)" -ne "$checksum" ]]; then
+  if [[ "$(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz)" != "$checksum" ]]; then
     echo "[Error] Checksum invalid. The download probably failed. Please rerun with the reuse option (-r) to retry."
     rm ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
     exit 1
