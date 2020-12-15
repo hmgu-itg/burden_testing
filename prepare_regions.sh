@@ -41,6 +41,7 @@ function usage {
     echo "          -c : optional, do not download CADD scores"
     echo "          -x : optional, create backup of the downloaded data"
     echo "          -r : optional, re-use previous downloads if present"
+    echo "          -d : just download data and exit, do not process them"
     echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
@@ -147,7 +148,8 @@ outdir=""
 getCadd="yes"
 backup="no"
 reuse=0
-while getopts "hncxre:o:" optname; do
+justdl=0
+while getopts "hncxerd:o:" optname; do
     case "$optname" in
         "h" ) usage ;;
         "n" ) getScores="no" ;;
@@ -155,6 +157,7 @@ while getopts "hncxre:o:" optname; do
         "x" ) backup="yes" ;;
         "e" ) ensftp="${OPTARG}" ;;
         "r" ) reuse=1 ;;
+        "d" ) justdl=1 ;;
         "o" ) outdir="${OPTARG}" ;;
         "?" ) usage ;;
         *) usage ;;
@@ -182,9 +185,9 @@ if [ "$reuse" -eq 0 ]; then
   rm -f ${configfile}
 else
   if [[ -s "${configfile}" ]]; then
-    echo "[Info] Previous config file found at ${configfile}."
+    info "Previous config file found at ${configfile}."
   else
-    echo "[Info] Reuse flag is set but no or empty config file found at ${configfile}. Starting from scratch."
+    info "Reuse flag is set but no or empty config file found at ${configfile}. Starting from scratch."
   fi
 fi
 
@@ -192,7 +195,7 @@ fi
 #===================================== VEP ===================================================
 
 if (( "$reuse" > 0 )) && [[ ! -z "$(grep VEPdir ${configfile})" ]]; then
-  echo "[Info] VEP information found in config file. Skipping VEP download..."
+  info "VEP information found in config file. Skipping VEP download (unsafe - no checks performed)..."
 else
   cd ${outdir}
 
@@ -223,7 +226,7 @@ fi
 
 GTExFile=$outdir/GTEx_Analysis_v8_eQTL.tar
 if (( "$reuse" > 0 )) && [[ -s "$GTExFile" ]] && [[ $(md5sum $GTExFile | cut -d' ' -f1) == "d35b32152bdb21316b2509c46b0af998" ]]; then
-  echo "[Info] GTEx file found and has the right checksum. Skipping download..."
+  info "GTEx file found and has the right checksum. Skipping download..."
 else
   cd ${outdir}
   axel -a https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
@@ -254,7 +257,7 @@ mkdir -p ${targetDir}/${today}/GENCODE
 checksum=$(wget -q -O- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/MD5SUMS | grep -w gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)
 
 if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] && [[ "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
-  echo "[Info] GENCODE file found and has the right checksum. Skipping download..."
+  info "GENCODE file found and has the right checksum. Skipping download..."
   mv $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 else
   info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
@@ -297,7 +300,7 @@ for cell in ${cells}; do
     echo "Downloading cell type : $cell"
     checksum=$(wget -O- -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/CHECKSUM| cut -f1 -d' ')
     if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name ${cell}.gff.gz | head -1)" ]] && [[ "$(md5sum $(find $targetDir -name ${cell}.gff.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
-      echo "[Info] File found and has the right checksum. Skipping download..."
+      info "File found and has the right checksum. Skipping download..."
       mv $(find $targetDir -name ${cell}.gff.gz | head -1) ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     else
     axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
@@ -321,7 +324,7 @@ info "Number of downloaded cell types: ${cellTypeCount}\n\n"
 #Downloading APPRIS data:
 mkdir -p ${targetDir}/${today}/APPRIS
 if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name appris_data.principal.txt | head -1)" ]]; then
-  echo "[Info] Appris file found (no checksum - unsafe!). Skipping download..."
+  info "Appris file found (no checksum - unsafe!). Skipping download..."
   mv $(find $targetDir -name appris_data.principal.txt | head -1) ${targetDir}/${today}/APPRIS/appris_data.principal.txt
 else
   info "Downloading APPRIS isoform data\n"
@@ -331,8 +334,67 @@ else
 
   # Testing if the file exists or not:
   testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
-fi
 info "Download complete\n\n"
+fi
+
+#=================================== moved UP to do downloads first
+# Downloading scores
+if [[ $getScores == "yes" ]];then
+  if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/eigen.phred_v2.dat" ]] && [[ $(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1) == "2346005c1cd457bb5ff48c64667736b2" ]]; then
+    info "Eigen scores file found and has the right checksum. Skipping download..."
+  else
+    info "Downloading Eigen Phred scores\n"
+    mkdir -p $outdir/scores
+    cd $outdir/scores
+
+    axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
+    axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
+
+    if [[ $? -ne 0 ]];then
+	     echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
+	      echo "Try downloading later\n"
+    fi
+    localcksm=$(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1)
+    if [[ "$localcksm" != "2346005c1cd457bb5ff48c64667736b2" ]]; then
+      echo "[Error] Downloaded checksum ($localcksm) differs from expected (2346005c1cd457bb5ff48c64667736b2). Download probably failed. Rerun with reuse (-r) option."
+      rm  $outdir/scores/eigen.phred_v2.dat
+    fi
+    cd ..
+  fi
+fi
+echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat" >> ${configfile}
+
+if [[ $getCadd == "yes" ]];then
+  if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/whole_genome_SNVs.tsv.gz" ]] && [[ $(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1) == "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
+    info "CADD scores file found and has the right checksum. Skipping download..."
+  else
+    info "Downloading CADD scores\n"
+    mkdir -p scores
+    cd scores
+    axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
+    axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
+
+    if [[ $? -ne 0 ]];then
+	     echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
+	      echo "Try downloading later\n"
+    fi
+    localcksm=$(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1)
+    if [[ "$localcksm" != "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
+      echo "[Error] Downloaded checksum ($localcksm) differs from expected (cb3856be4c3bb969ff8f0a6139ca226f). Download probably failed. Rerun with reuse (-r) option."
+      rm  $outdir/scores/whole_genome_SNVs.tsv.gz
+    fi
+    cd ..
+  fi
+fi
+echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz" >> ${configfile}
+
+#=============================================================================================
+# Stopping early if just downloading
+
+if (( "$justdl" > 0 )); then
+  info Download flag enabled, stopping early.
+  exit 0
+fi
 
 #=============================================================================================
 #Combining APPRIS and GENCODE data
@@ -768,36 +830,5 @@ else
     rm -rf ${targetDir}
 fi
 
-# Downloading scores
-if [[ $getScores == "yes" ]];then
-    info "Downloading Eigen Phred scores\n"
-    mkdir -p scores
-    cd scores
-    axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
-    axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
-
-    if [[ $? -ne 0 ]];then
-	echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
-	echo "Try downloading later\n"
-    fi
-    cd ..
-    echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat" >> ${configfile}
-fi
-
-if [[ $getCadd == "yes" ]];then
-    info "Downloading CADD scores\n"
-    mkdir -p scores
-    cd scores
-    axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
-    axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
-
-    if [[ $? -ne 0 ]];then
-	echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
-	echo "Try downloading later\n"
-    fi
-    cd ..
-    echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz" >> ${configfile}
-fi
 
 info "The End\n"
-exit 0
