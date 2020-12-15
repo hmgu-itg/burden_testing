@@ -40,6 +40,7 @@ function usage {
     echo "          -n : optional, do not download Eigen scores"
     echo "          -c : optional, do not download CADD scores"
     echo "          -x : optional, create backup of the downloaded data"
+    echo "          -r : optional, re-use previous downloads if present"
     echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
@@ -145,13 +146,15 @@ OPTIND=1
 outdir=""
 getCadd="yes"
 backup="no"
-while getopts "hnce:o:" optname; do
+reuse=0
+while getopts "hncxre:o:" optname; do
     case "$optname" in
         "h" ) usage ;;
         "n" ) getScores="no" ;;
         "c" ) getCadd="no" ;;
         "x" ) backup="yes" ;;
         "e" ) ensftp="${OPTARG}" ;;
+        "r" ) reuse=1 ;;
         "o" ) outdir="${OPTARG}" ;;
         "?" ) usage ;;
         *) usage ;;
@@ -175,31 +178,43 @@ outdir=${outdir%/}
 
 # output config file
 configfile=${outdir}/config.txt
-rm -f ${configfile}
+if [ "$reuse" -eq 0 ]; then
+  rm -f ${configfile}
+else
+  if [[ -s "${configfile}" ]]; then
+    echo "[Info] Previous config file found at ${configfile}."
+  else
+    echo "[Info] Reuse flag is set but no or empty config file found at ${configfile}. Starting from scratch."
+  fi
+fi
+
 
 #===================================== VEP ===================================================
 
-cd ${outdir}
+if (( "$reuse" > 0 )) && [[ ! -z "$(grep VEPdir ${configfile})" ]]; then
+  echo "[Info] VEP information found in config file. Skipping VEP download..."
+else
+  cd ${outdir}
 
-git clone https://github.com/Ensembl/ensembl-vep.git
-cd ensembl-vep
-git checkout release/98
+  git clone https://github.com/Ensembl/ensembl-vep.git
+  cd ensembl-vep
+  git checkout release/$Ensembl_release
 
-mkdir -p ${outdir}/vep && cd ${outdir}/vep && axel -a ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_98_GRCh38.tar.gz && echo Unpacking ... && tar -xzf homo_sapiens_vep_98_GRCh38.tar.gz && rm homo_sapiens_vep_98_GRCh38.tar.gz && cd -
+  mkdir -p ${outdir}/vep && cd ${outdir}/vep && axel -a ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && echo Unpacking ... && tar -xzf homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && rm homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && cd -
 
-sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
+  sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
 
-PATH=$PATH:${outdir}/vep/htslib PERL5LIB=$PERL5LIB:${outdir}/vep perl INSTALL.pl -a ac -n --ASSEMBLY GRCh38 -s homo_sapiens -c ${outdir}/vep -d ${outdir}/vep
+  PATH=$PATH:${outdir}/vep/htslib PERL5LIB=$PERL5LIB:${outdir}/vep perl INSTALL.pl -a ac -n --ASSEMBLY GRCh38 -s homo_sapiens -c ${outdir}/vep -d ${outdir}/vep
 
-echo "VEPdir=${outdir}/vep" >>  ${configfile}
-echo "VEPexec=${outdir}/ensembl-vep/vep" >>  ${configfile}
+  echo "VEPdir=${outdir}/vep" >>  ${configfile}
+  echo "VEPexec=${outdir}/ensembl-vep/vep" >>  ${configfile}
+fi
 
-cd ${outdir}
-
-#exit 0
+exit 0
 
 #=============================================================================================
 
+cd ${outdir}
 targetDir=${outdir}"/prepare_regions_tempfiles"
 mkdir -p ${targetDir}
 if [ $? -ne 0 ] ; then
@@ -305,7 +320,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
                 }{
                     if ( $_ =~ /gene_id\s+\"(ENSG.+?)\"/){ # Gene related annotation
                         $geneID = $1;
-                        # if the gene is from PAR region on Y then we keep the full gene ID and transcript ID 
+                        # if the gene is from PAR region on Y then we keep the full gene ID and transcript ID
                         # otherwise, we remove the suffix
                         if ($geneID !~ /_PAR_Y/){
                         $geneID =~ /(ENSG\d+)\./;
@@ -393,7 +408,7 @@ for cell in ${CellTypes}; do
     export cell
     fn=${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     checkGZfile ${fn}
-    
+
     # parsing cell specific files (At this point we only consider active features. Although repressed regions might also be informative):
 
     zcat ${fn} | grep -i "activity=active" \
@@ -408,7 +423,7 @@ for cell in ${CellTypes}; do
                 $type = $F[2];
                 $end = $F[4];
                 ($ID) = $_ =~ /regulatory_feature_stable_id=(ENSR\d+)/;
-                print join "\t", $cell_type, $F[0], $start, $end, $ID, $type;' 
+                print join "\t", $cell_type, $F[0], $start, $end, $ID, $type;'
 # Now combining these lines in a fashion that each line will contain all active tissues:
 done | perl -F"\t" -lane '
     $x =shift @F;
