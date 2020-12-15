@@ -149,7 +149,7 @@ getCadd="yes"
 backup="no"
 reuse=0
 justdl=0
-while getopts "hncxerd:o:" optname; do
+while getopts "hncxe:rdo:" optname; do
     case "$optname" in
         "h" ) usage ;;
         "n" ) getScores="no" ;;
