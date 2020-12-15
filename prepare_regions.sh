@@ -315,19 +315,23 @@ echo "Done"
 # Printing out report of the downloaded cell types:
 cellTypeCount=$(ls -la ${targetDir}/${today}/EnsemblRegulation/*gff.gz | wc -l)
 info "Number of downloaded cell types: ${cellTypeCount}\n\n"
-exit 0
+
 #=================================== APPRIS ==================================================
 
 #Downloading APPRIS data:
 mkdir -p ${targetDir}/${today}/APPRIS
-info "Downloading APPRIS isoform data\n"
-info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
-axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
-    -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name appris_data.principal.txt | head -1)" ]]; then
+  echo "[Info] Appris file found (no checksum - unsafe!). Skipping download..."
+  mv $(find $targetDir -name appris_data.principal.txt | head -1) ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+else
+  info "Downloading APPRIS isoform data\n"
+  info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
+  axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
+      -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
 
-# Testing if the file exists or not:
-testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
-
+  # Testing if the file exists or not:
+  testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
+fi
 info "Download complete\n\n"
 
 #=============================================================================================
@@ -336,6 +340,12 @@ info "Download complete\n\n"
 info "Combining APPRIS and GENCODE data.. "
 mkdir -p ${targetDir}/${today}/processed
 export APPRIS_FILE=${targetDir}/${today}/APPRIS/appris_data.principal.txt
+
+## Warning: we cannot check the contents since they are dynamic
+
+#if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name Appris_annotation_added.txt.gz | head -1)" ]]; then
+#    echo "[Info] Appris has already been combined with Gencode. Skipping merge, but this is unsafe."
+
 zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "#" | awk '$3 != "Selenocysteine" && $3 != "start_codon" && $3 != "stop_codon"' \
                 | perl -MJSON -M"Data::Dumper"  -F"\t" -lane '
                 BEGIN {
