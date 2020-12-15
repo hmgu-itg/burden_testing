@@ -210,7 +210,6 @@ else
   echo "VEPexec=${outdir}/ensembl-vep/vep" >>  ${configfile}
 fi
 
-exit 0
 
 #=============================================================================================
 
@@ -222,22 +221,25 @@ if [ $? -ne 0 ] ; then
     exit 1
 fi
 
-cd ${outdir}
-axel -a https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
-gzip -f GTEx_Analysis_v8_eQTL.tar
+GTExFile=$outdir/GTEx_Analysis_v8_eQTL.tar
+if (( "$reuse" > 0 )) && [[ ! -s "$GTExFile" ]] && [[ $(md5sum $GTExFile | cut -d' ' -f1) -eq d35b32152bdb21316b2509c46b0af998 ]]; then
+  echo "[Info] GTEx file found and has the right checksum. Skipping download..."
+else
+  cd ${outdir}
+  axel -a https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
+  #gzip -f GTEx_Analysis_v8_eQTL.tar
 
-GTExFile="GTEx_Analysis_v8_eQTL.tar.gz"
-
-if [[ ! -e "${GTExFile}" ]]; then
-    echo "[Error] GTEx file (${GTExFile}) does not exist."
-    exit 1
+  if [[ ! -e "${GTExFile}" ]]; then
+      echo "[Error] GTEx file (${GTExFile}) does not exist."
+      exit 1
+  fi
 fi
-
 # Last step in setup:
 today=$(date "+%Y.%m.%d")
 info "Current date: ${today}\n"
 info "Working directory: ${targetDir}/${today}\n\n"
 
+exit 0
 #=================================== GENCODE =================================================
 
 # Get the most recent version of the data:
@@ -464,14 +466,14 @@ info "Number of cell specific regulatory features: $cellSpecFeatLines\n\n"
 
 tmpGTEx=${targetDir}/${today}/processed/GTEx_tmp.bed
 info "Creating GTEx bed file ... "
-listOfGTExFiles=$(tar -ztf ${GTExFile} | grep "signif_variant")
+listOfGTExFiles=$(tar -tf ${GTExFile} | grep "signif_variant")
 for f in ${listOfGTExFiles};do
     g=$(basename ${f})
     tissue=$(echo ${g}|perl -lne '$x="NA";if (/^([^.]+)\./){$x=$1;} print $x;')
     export tissue
 
     # taking care of deletions as well
-    tar -zxf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENSG\d+)\./;$tissue=$ENV{tissue};$,="\t";$chr=~s/^chr//;$start=$pos-1;$end=$pos;if (length($ref)>length($alt)){$end=$start+length($ref)-1;}  print $tissue,$chr,$start,$end,$F[0],$gene;'
+    tar -xf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENSG\d+)\./;$tissue=$ENV{tissue};$,="\t";$chr=~s/^chr//;$start=$pos-1;$end=$pos;if (length($ref)>length($alt)){$end=$start+length($ref)-1;}  print $tissue,$chr,$start,$end,$F[0],$gene;'
 done > ${tmpGTEx}
 
 cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$start=$F[2];$end=$F[3];$ID=$F[4];$gene=$F[5];$H{$ID}{chr}=$chr;$H{$ID}{start}=$start;$H{$ID}{end}=$end;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$start=$H{$id}{start};$end=$H{$id}{end};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};print "$chr\t$start\t$end\tgene=$gene;rsID=$id;tissue=$tissues";}}}' | sort -k1,1 -k2,2n > ${targetDir}/${today}/processed/GTEx.bed # 0-based
