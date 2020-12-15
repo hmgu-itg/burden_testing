@@ -222,7 +222,7 @@ if [ $? -ne 0 ] ; then
 fi
 
 GTExFile=$outdir/GTEx_Analysis_v8_eQTL.tar
-if (( "$reuse" > 0 )) && [[ ! -s "$GTExFile" ]] && [[ $(md5sum $GTExFile | cut -d' ' -f1) -eq d35b32152bdb21316b2509c46b0af998 ]]; then
+if (( "$reuse" > 0 )) && [[ -s "$GTExFile" ]] && [[ $(md5sum $GTExFile | cut -d' ' -f1) -eq d35b32152bdb21316b2509c46b0af998 ]]; then
   echo "[Info] GTEx file found and has the right checksum. Skipping download..."
 else
   cd ${outdir}
