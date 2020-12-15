@@ -240,7 +240,7 @@ if [[ $(md5sum $GTExFile | cut -d' ' -f1) -ne d35b32152bdb21316b2509c46b0af998 ]
   rm $GTExFile
   exit 1
 fi
-  
+
 # Last step in setup:
 today=$(date "+%Y.%m.%d")
 info "Current date: ${today}\n"
@@ -255,6 +255,7 @@ checksum=$(wget -q -O- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/r
 
 if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] && [[ "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1))" -eq $checksum ]]; then
   echo "[Info] GENCODE file found and has the right checksum. Skipping download..."
+  mv $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 else
   info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
   axel -a ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -o ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
