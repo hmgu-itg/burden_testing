@@ -236,7 +236,7 @@ else
 fi
 
 if [[ $(md5sum $GTExFile | cut -d' ' -f1) != "d35b32152bdb21316b2509c46b0af998" ]]; then
-  echo "[Error] Checksum invalid. The download probably failed. Please rerun with the reuse option (-r) to retry."
+  echo "[Error] Checksum invalid ($(md5sum $GTExFile | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
   rm $GTExFile
   exit 1
 fi
@@ -253,7 +253,7 @@ info "Working directory: ${targetDir}/${today}\n\n"
 mkdir -p ${targetDir}/${today}/GENCODE
 checksum=$(wget -q -O- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/MD5SUMS | grep -w gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)
 
-if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] && [[ "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1))" == "$checksum" ]]; then
+if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] && [[ "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
   echo "[Info] GENCODE file found and has the right checksum. Skipping download..."
   mv $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 else
@@ -265,7 +265,7 @@ else
   testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
 
   if [[ "$(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)" != "$checksum" ]]; then
-    echo "[Error] Checksum invalid (). The download probably failed. Please rerun with the reuse option (-r) to retry."
+    echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
     rm ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
     exit 1
   fi
@@ -273,7 +273,7 @@ fi
 # Counting genes in the dataset:
 genes=$(zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | awk 'BEGIN{FS="\t";}$3 == "gene"{print $3;}' | wc -l )
 info "Total number of genes in the GENCODE file: ${genes}\n\n"
-exit 0
+
 #=================================== REGULATION ==============================================
 
 # prepare target directory:
@@ -295,16 +295,27 @@ fi
 #GFF is 1-based
 for cell in ${cells}; do
     echo "Downloading cell type : $cell"
+    checksum=$(wget -O- -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/CHECKSUM| cut -f1 -d' ')
+    if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name ${cell}.gff.gz | head -1)" ]] && [[ "$(md5sum $(find $targetDir -name ${cell}.gff.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
+      echo "[Info] File found and has the right checksum. Skipping download..."
+      mv $(find $targetDir -name ${cell}.gff.gz | head -1) ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+    else
     axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
     checkGZfile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
+    if [[ "$(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)" != "$checksum" ]]; then
+      echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
+      rm ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+      exit 1
+    fi
+  fi
 done
 echo "Done"
 
 # Printing out report of the downloaded cell types:
 cellTypeCount=$(ls -la ${targetDir}/${today}/EnsemblRegulation/*gff.gz | wc -l)
 info "Number of downloaded cell types: ${cellTypeCount}\n\n"
-
+exit 0
 #=================================== APPRIS ==================================================
 
 #Downloading APPRIS data:
