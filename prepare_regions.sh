@@ -234,27 +234,44 @@ else
       exit 1
   fi
 fi
+
+if [[ $(md5sum $GTExFile | cut -d' ' -f1) -ne d35b32152bdb21316b2509c46b0af998 ]]; then
+  echo "[Error] Checksum invalid. The download probably failed. Please rerun with the reuse option (-r) to retry."
+  rm $GTExFile
+  exit 1
+fi
+  
 # Last step in setup:
 today=$(date "+%Y.%m.%d")
 info "Current date: ${today}\n"
 info "Working directory: ${targetDir}/${today}\n\n"
 
-exit 0
+
 #=================================== GENCODE =================================================
 
 # Get the most recent version of the data:
 mkdir -p ${targetDir}/${today}/GENCODE
-info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
-axel -a ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -o ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
-echo -e "done."
+checksum=$(wget -q -O- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/MD5SUMS | grep -w gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)
 
-# Testing if the file exists:
-testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
+if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] && [[ "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1))" -eq $checksum ]]; then
+  echo "[Info] GENCODE file found and has the right checksum. Skipping download..."
+else
+  info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
+  axel -a ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -o ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+  echo -e "done."
 
+  # Testing if the file exists:
+  testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
+
+  if [[ "$(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz)" -ne "$checksum" ]]; then
+    echo "[Error] Checksum invalid. The download probably failed. Please rerun with the reuse option (-r) to retry."
+    rm ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+    exit 1
+fi
 # Counting genes in the dataset:
 genes=$(zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | awk 'BEGIN{FS="\t";}$3 == "gene"{print $3;}' | wc -l )
 info "Total number of genes in the GENCODE file: ${genes}\n\n"
-
+exit 0
 #=================================== REGULATION ==============================================
 
 # prepare target directory:
