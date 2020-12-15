@@ -134,7 +134,7 @@ function checkGZfile {
 # This function prints out all the reports that were generated during the run (with time stamp!):
 function info {
     hourMin=$(date +"%T" | awk 'BEGIN{FS=OFS=":"}{print $1, $2}')
-    echo -ne "[Info ${hourMin}] $1"
+    echo -e "[Info ${hourMin}] $1"
 }
 
 # Printing help message if no parameters are given:
@@ -821,11 +821,11 @@ FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":
 info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sources: ${FailedSources}\n\n"
 
 if [[ $backup == "yes" ]];then
-    info "Backing up intermediate files ...\n"
-    tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${targetDir}/${today}/APPRIS  \
-	${targetDir}/${today}/EnsemblRegulation ${targetDir}/${today}/failed ${targetDir}/${today}/GENCODE  \
-	${targetDir}/${today}/processed
-    info "Intermediate files are saved in ${today}_annotation.backup.tar.gz\n"
+    info "Backup enabled, will not delete $targetDir."
+#    tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${targetDir}/${today}/APPRIS  \
+#	${targetDir}/${today}/EnsemblRegulation ${targetDir}/${today}/failed ${targetDir}/${today}/GENCODE  \
+#	${targetDir}/${today}/processed
+ #   info "Intermediate files are saved in ${today}_annotation.backup.tar.gz\n"
 else
     rm -rf ${targetDir}
 fi
