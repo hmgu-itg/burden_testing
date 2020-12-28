@@ -241,7 +241,7 @@ else
   fi
 fi
 
-if [[ $(md5sum $GTExFile | cut -d' ' -f1) != "d35b32152bdb21316b2509c46b0af998" || "$noSums" == "1" ]]; then
+if [[ "$noSums" == "1" || $(md5sum $GTExFile | cut -d' ' -f1) != "d35b32152bdb21316b2509c46b0af998" ]]; then
   echo "[Error] Checksum invalid ($(md5sum $GTExFile | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
   rm $GTExFile
   exit 1
@@ -270,7 +270,7 @@ else
   # Testing if the file exists:
   testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
 
-  if [[ "$(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)" != "$checksum" && "$noSums" == "0" ]]; then
+  if [[ "$noSums" == "0" && "$(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)" != "$checksum" ]]; then
     echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
     rm ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
     exit 1
@@ -317,7 +317,7 @@ for cell in ${cells}; do
     axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
     checkGZfile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
-    if [[ "$(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)" != "$checksum" && "$noSums" == "0" ]]; then
+    if [[ "$noSums" == "0" && "$(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)" != "$checksum" ]]; then
       echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
       rm ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
       exit 1
@@ -351,6 +351,7 @@ fi
 #=================================== moved UP to do downloads first
 # Downloading scores
 if [[ $getScores == "yes" ]];then
+  info "Processing scores.\n"
   if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/eigen.phred_v2.dat" ]] && [[ "$noSums" == "1" || $(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1) == "2346005c1cd457bb5ff48c64667736b2" ]]; then
     info "Eigen scores file found and has the right checksum. Skipping download..."
   else
