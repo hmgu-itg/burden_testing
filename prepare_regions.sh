@@ -229,7 +229,7 @@ fi
 
 GTExFile=$outdir/GTEx_Analysis_v8_eQTL.tar
 echo $reuse $noSums
-if [[-s "$GTExFile" ]];then echo lol; fi
+if [[ -s "$GTExFile" ]];then echo lol; fi
 exit 0
 if (( "$reuse" > 0 )) && [[ -s "$GTExFile" ]] && [[ "$noSums" == "1" || $(md5sum $GTExFile | cut -d' ' -f1) == "d35b32152bdb21316b2509c46b0af998" ]]; then
   info "GTEx file found and has the right checksum. Skipping download..."
