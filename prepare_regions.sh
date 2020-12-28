@@ -42,6 +42,7 @@ function usage {
     echo "          -x : optional, create backup of the downloaded data"
     echo "          -r : optional, re-use previous downloads if present"
     echo "          -d : just download data and exit, do not process them"
+    echo "          -s : do not perform checksums (unsafe)"
     echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
@@ -149,12 +150,14 @@ getCadd="yes"
 backup="no"
 reuse=0
 justdl=0
-while getopts "hncxe:rdo:" optname; do
+noSums=0
+while getopts "hncxse:rdo:" optname; do
     case "$optname" in
         "h" ) usage ;;
         "n" ) getScores="no" ;;
         "c" ) getCadd="no" ;;
         "x" ) backup="yes" ;;
+        "s" ) noSums=1 ;;
         "e" ) ensftp="${OPTARG}" ;;
         "r" ) reuse=1 ;;
         "d" ) justdl=1 ;;
@@ -225,7 +228,7 @@ if [ $? -ne 0 ] ; then
 fi
 
 GTExFile=$outdir/GTEx_Analysis_v8_eQTL.tar
-if (( "$reuse" > 0 )) && [[ -s "$GTExFile" ]] && [[ $(md5sum $GTExFile | cut -d' ' -f1) == "d35b32152bdb21316b2509c46b0af998" ]]; then
+if (( "$reuse" > 0 )) && [[ -s "$GTExFile" ]] && [[ "$noSums" == "1" || $(md5sum $GTExFile | cut -d' ' -f1) == "d35b32152bdb21316b2509c46b0af998" ]]; then
   info "GTEx file found and has the right checksum. Skipping download..."
 else
   cd ${outdir}
@@ -238,7 +241,7 @@ else
   fi
 fi
 
-if [[ $(md5sum $GTExFile | cut -d' ' -f1) != "d35b32152bdb21316b2509c46b0af998" ]]; then
+if [[ $(md5sum $GTExFile | cut -d' ' -f1) != "d35b32152bdb21316b2509c46b0af998" || "$noSums" == "1" ]]; then
   echo "[Error] Checksum invalid ($(md5sum $GTExFile | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
   rm $GTExFile
   exit 1
@@ -256,7 +259,7 @@ info "Working directory: ${targetDir}/${today}\n\n"
 mkdir -p ${targetDir}/${today}/GENCODE
 checksum=$(wget -q -O- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/MD5SUMS | grep -w gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)
 
-if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] && [[ "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
+if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] && [[ "$noSums" == "1" || "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
   info "GENCODE file found and has the right checksum. Skipping download..."
   mv $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 else
@@ -267,7 +270,7 @@ else
   # Testing if the file exists:
   testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
 
-  if [[ "$(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)" != "$checksum" ]]; then
+  if [[ "$(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)" != "$checksum" && "$noSums" == "0"]]; then
     echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
     rm ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
     exit 1
@@ -284,7 +287,15 @@ mkdir -p ${targetDir}/${today}/EnsemblRegulation
 info "Downloading cell specific regulatory features from Ensembl.\n"
 
 # Get list of all cell types:
-cells=$(curl -s ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/ | perl -lane 'print $F[-1]')
+localCellFile=$(find $targetDir -name RegCellList.txt)
+if [[ ! -z "$localCellFile" && "$reuse" == "1" ]]; then
+  echo Found cell type file at $localCellFile with $(cat $localCellFile | wc -l) types.
+else
+  localCellFile=$targetDir/$today/RegCellList.txt
+  curl -s ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/ | perl -lane 'print $F[-1]' > $localCellFile
+fi
+cells=$(cat $localCellFile)
+
 
 # If there are no cell types present in the downloaded set, it means there were some problems. We are exiting.
 if [ -z "${cells}" ]; then
@@ -299,14 +310,14 @@ fi
 for cell in ${cells}; do
     echo "Downloading cell type : $cell"
     checksum=$(wget -O- -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/CHECKSUM| cut -f1 -d' ')
-    if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name ${cell}.gff.gz | head -1)" ]] && [[ "$(md5sum $(find $targetDir -name ${cell}.gff.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
+    if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name ${cell}.gff.gz | head -1)" ]] && [[ "$noSums" == "1" || "$(md5sum $(find $targetDir -name ${cell}.gff.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
       info "File found and has the right checksum. Skipping download..."
       mv $(find $targetDir -name ${cell}.gff.gz | head -1) ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     else
     axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
     testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
     checkGZfile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
-    if [[ "$(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)" != "$checksum" ]]; then
+    if [[ "$(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)" != "$checksum" && "$noSums" == "0" ]]; then
       echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
       rm ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
       exit 1
@@ -340,7 +351,7 @@ fi
 #=================================== moved UP to do downloads first
 # Downloading scores
 if [[ $getScores == "yes" ]];then
-  if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/eigen.phred_v2.dat" ]] && [[ $(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1) == "2346005c1cd457bb5ff48c64667736b2" ]]; then
+  if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/eigen.phred_v2.dat" ]] && [[ "$noSums" == "1" || $(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1) == "2346005c1cd457bb5ff48c64667736b2" ]]; then
     info "Eigen scores file found and has the right checksum. Skipping download..."
   else
     info "Downloading Eigen Phred scores\n"
@@ -355,7 +366,7 @@ if [[ $getScores == "yes" ]];then
 	      echo "Try downloading later\n"
     fi
     localcksm=$(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1)
-    if [[ "$localcksm" != "2346005c1cd457bb5ff48c64667736b2" ]]; then
+    if [[ "$noSums" == "0" && "$localcksm" != "2346005c1cd457bb5ff48c64667736b2" ]]; then
       echo "[Error] Downloaded checksum ($localcksm) differs from expected (2346005c1cd457bb5ff48c64667736b2). Download probably failed. Rerun with reuse (-r) option."
       rm  $outdir/scores/eigen.phred_v2.dat
     fi
@@ -365,7 +376,7 @@ fi
 echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat" >> ${configfile}
 
 if [[ $getCadd == "yes" ]];then
-  if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/whole_genome_SNVs.tsv.gz" ]] && [[ $(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1) == "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
+  if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/whole_genome_SNVs.tsv.gz" ]] && [[ "$noSums" == "1" || $(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1) == "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
     info "CADD scores file found and has the right checksum. Skipping download..."
   else
     info "Downloading CADD scores\n"
@@ -379,7 +390,7 @@ if [[ $getCadd == "yes" ]];then
 	      echo "Try downloading later\n"
     fi
     localcksm=$(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1)
-    if [[ "$localcksm" != "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
+    if [[ "$noSums" == "0" && "$localcksm" != "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
       echo "[Error] Downloaded checksum ($localcksm) differs from expected (cb3856be4c3bb969ff8f0a6139ca226f). Download probably failed. Rerun with reuse (-r) option."
       rm  $outdir/scores/whole_genome_SNVs.tsv.gz
     fi
@@ -392,7 +403,7 @@ echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz" >> ${configfile}
 # Stopping early if just downloading
 
 if (( "$justdl" > 0 )); then
-  info Download flag enabled, stopping early.
+  info "Download flag enabled, stopping early."
   exit 0
 fi
 
