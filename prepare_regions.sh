@@ -244,7 +244,7 @@ else
   fi
 fi
 
-if [[ "$noSums" == "1" || $(md5sum $GTExFile | cut -d' ' -f1) != "d35b32152bdb21316b2509c46b0af998" ]]; then
+if [[ "$noSums" == "0" && $(md5sum $GTExFile | cut -d' ' -f1) != "d35b32152bdb21316b2509c46b0af998" ]]; then
   echo "[Error] Checksum invalid ($(md5sum $GTExFile | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
   rm $GTExFile
   exit 1
