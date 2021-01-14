@@ -41,8 +41,9 @@ function usage {
     echo "          -c : optional, do not download CADD scores"
     echo "          -x : optional, create backup of the downloaded data"
     echo "          -r : optional, re-use previous downloads if present"
-    echo "          -d : just download data and exit, do not process them"
-    echo "          -s : do not perform checksums (unsafe)"
+    echo "          -d : optional, just download data and exit, do not process them"
+    echo "          -s : optional, do not perform checksums (unsafe)"
+    echo "          -t : optional, directory to store temporary data, default: \"/tmp\""
     echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
@@ -151,13 +152,15 @@ backup="no"
 reuse=0
 justdl=0
 noSums=0
-while getopts "hncxse:rdo:" optname; do
+tempdir="/tmp"
+while getopts "hncxst:e:rdo:" optname; do
     case "$optname" in
         "h" ) usage ;;
         "n" ) getScores="no" ;;
         "c" ) getCadd="no" ;;
         "x" ) backup="yes" ;;
         "s" ) noSums=1 ;;
+        "t" ) tempdir="${OPTARG}" ;;
         "e" ) ensftp="${OPTARG}" ;;
         "r" ) reuse=1 ;;
         "d" ) justdl=1 ;;
@@ -194,6 +197,14 @@ else
   fi
 fi
 
+# temp dir
+if [ ! -d ${tempdir} ]; then
+    mkdir -p ${tempdir}
+    if [ $? -ne 0 ] ; then
+	echo "[Error] Could not create temp dir ${tempdir}"
+	exit 1
+    fi
+fi
 
 #===================================== VEP ===================================================
 
@@ -554,7 +565,7 @@ done | perl -F"\t" -lane '
             printf "%s\t%s\t%s\t%s\tchr=%s;start=%s;end=%s;class=%s;regulatory_ID=%s;Tissues=%s\n",$h{$ID}{line}[0], $h{$ID}{line}[1], $h{$ID}{line}[2], $ID, $h{$ID}{line}[0],$h{$ID}{line}[1], $h{$ID}{line}[2], $h{$ID}{line}[4], $ID, $cells;
         }
     }
-' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz # 0-based coordinates here
+' | sort -k1,1 -k2,2n -T ${tempdir} | bgzip -f > ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz # 0-based coordinates here
 
 
 # OUTPUT:
@@ -593,7 +604,7 @@ for f in ${listOfGTExFiles};do
     tar -xf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENSG\d+)\./;$tissue=$ENV{tissue};$,="\t";$chr=~s/^chr//;$start=$pos-1;$end=$pos;if (length($ref)>length($alt)){$end=$start+length($ref)-1;}  print $tissue,$chr,$start,$end,$F[0],$gene;'
 done > ${tmpGTEx}
 
-cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$start=$F[2];$end=$F[3];$ID=$F[4];$gene=$F[5];$H{$ID}{chr}=$chr;$H{$ID}{start}=$start;$H{$ID}{end}=$end;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$start=$H{$id}{start};$end=$H{$id}{end};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};print "$chr\t$start\t$end\tgene=$gene;rsID=$id;tissue=$tissues";}}}' | sort -k1,1 -k2,2n > ${targetDir}/${today}/processed/GTEx.bed # 0-based
+cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$start=$F[2];$end=$F[3];$ID=$F[4];$gene=$F[5];$H{$ID}{chr}=$chr;$H{$ID}{start}=$start;$H{$ID}{end}=$end;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$start=$H{$id}{start};$end=$H{$id}{end};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};print "$chr\t$start\t$end\tgene=$gene;rsID=$id;tissue=$tissues";}}}' | sort -k1,1 -k2,2n -T ${tempdir} > ${targetDir}/${today}/processed/GTEx.bed # 0-based
 
 echo "Done"
 #rm -f ${tmpGTEx}
@@ -708,7 +719,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
         $F[0]=~s/^chr//;
         $start=$F[3]-1;
         print "$F[0]\t$start\t$F[4]\tID:$g_ID;Name:$g_name";
-    ' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/genes.bed.gz # 0-based
+    ' | sort -k1,1 -k2,2n -T ${tempdir} | bgzip -f > ${targetDir}/${today}/processed/genes.bed.gz # 0-based
 
 # OUTPUT:
 #
@@ -785,7 +796,7 @@ zcat ${targetDir}/${today}/processed/overlapping_features.txt.gz \
         }{
             ($ID) = $_ =~ /\"gene_ID\":\"(ENSG[^"]+)\"/;
             exists $h{$ID} ? print join "\t", @{$h{$ID}}, $_ : print STDERR "$ID : gene was not found in gencode! line: $_"
-        }'  2> ${targetDir}/${today}/failed | sort -k1,1 -k2,2n > ${targetDir}/${today}/Linked_features.bed # 0-based
+        }'  2> ${targetDir}/${today}/failed | sort -k1,1 -k2,2n -T ${tempdir} > ${targetDir}/${today}/Linked_features.bed # 0-based
 
 echo -e " Done.\n"
 
@@ -831,8 +842,8 @@ echo "gencode_file=${outdir}/gencode.basic.annotation.tsv.gz" >> ${configfile}
 
 # Report failed associations:
 FailedAssoc=$(wc -l ${targetDir}/${today}/failed | awk '{print $1}')
-FailedGenes=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /(ENSG\d+)/; print $1' | sort | uniq | wc -l )
-FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":"(.+?)"/; print $1' | sort | uniq | tr "\n" ", " | sed 's/,$/\n/')
+FailedGenes=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /(ENSG\d+)/; print $1' | sort -T ${tempdir} | uniq | wc -l )
+FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":"(.+?)"/; print $1' | sort -T ${tempdir} | uniq | tr "\n" ", " | sed 's/,$/\n/')
 info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sources: ${FailedSources}\n\n"
 
 if [[ $backup == "yes" ]];then
