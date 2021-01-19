@@ -22,8 +22,8 @@
 # For reproducibility, both the GENCODE, Ensembl and GTEx versions are hardcoded
 
 
-script_version=4.0
-last_modified=2020.Sep.29
+script_version=4.1
+last_modified=2021.Jan.19
 
 ## Built in versions:
 GENCODE_release=32
@@ -182,7 +182,7 @@ if [ $? -ne 0 ] ; then
 fi
 
 # full dirname
-outdir=`readlink -f $outdir`
+outdir=`realpath $outdir`
 outdir=${outdir%/}
 
 # output config file
@@ -205,6 +205,22 @@ if [ ! -d ${tempdir} ]; then
 	exit 1
     fi
 fi
+tempdir=`realpath $tempdir`
+
+# report arguments
+echo ""
+echo "Provided arguments:"
+echo ""
+echo "Output directory         : $outdir"
+echo "Temp directory           : $tempdir"
+echo "Get Eigen scores         : $getScores"
+echo "Get CADD scores          : $getCadd"
+echo "Make backup              : $backup"
+echo "Do not perform checksums : $noSums"
+echo "Ensembl FTP server       : $ensftp"
+echo "Re-use previous downloads: $reuse"
+echo "Download only            : $justdl"
+echo ""
 
 #===================================== VEP ===================================================
 
