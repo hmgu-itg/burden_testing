@@ -789,7 +789,7 @@ info "Number of regulatory features linked by overlap: ${OverlapLinkedFeatures}\
 ##
 ## Step 11. Merging all the components together create sorted, compressed bedfile.
 ##
-info "Merging GENCODE, GTEx and overlap data"
+info "Merging GENCODE, GTEx and overlap data ..."
 export gene_file=${targetDir}/${today}/processed/genes.bed.gz
 
 #GENES
@@ -819,7 +819,7 @@ zcat ${targetDir}/${today}/processed/overlapping_features.txt.gz \
             exists $h{$ID} ? print join "\t", @{$h{$ID}}, $_ : print STDERR "$ID : gene was not found in gencode! line: $_"
         }'  2> ${targetDir}/${today}/failed | sort -k1,1 -k2,2n -T ${tempdir} > ${targetDir}/${today}/Linked_features.bed # 0-based
 
-echo -e " Done.\n"
+echo -e "Done\n"
 
 # source == GENCODE => chr,start,end in the 5th field are those of transcript,gene,exon,UTR,CDS
 # source == GTEx => chr,start,end in the 5th field are those of regulatory element
