@@ -320,10 +320,10 @@ info "Downloading cell specific regulatory features from Ensembl.\n"
 # Get list of all cell types:
 localCellFile=$(find $targetDir -name RegCellList.txt)
 if [[ ! -z "$localCellFile" && "$reuse" == "1" ]]; then
-  echo Found cell type file at $localCellFile with $(cat $localCellFile | wc -l) types.
+    echo Found cell type file at $localCellFile with $(cat $localCellFile | wc -l) types.
 else
-  localCellFile=$targetDir/$today/RegCellList.txt
-  curl -s ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/ | perl -lane 'print $F[-1]' > $localCellFile
+    localCellFile=$targetDir/$today/RegCellList.txt
+    curl -s ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/ | perl -lane 'print $F[-1]' > $localCellFile
 fi
 cells=$(cat $localCellFile)
 
@@ -342,18 +342,21 @@ for cell in ${cells}; do
     echo "Downloading cell type : $cell"
     checksum=$(wget -O- -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/CHECKSUM| cut -f1 -d' ')
     if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name ${cell}.gff.gz | head -1)" ]] && [[ "$noSums" == "1" || "$(md5sum $(find $targetDir -name ${cell}.gff.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
-      info "File found and has the right checksum. Skipping download..."
-      mv $(find $targetDir -name ${cell}.gff.gz | head -1) ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+	info "File found and has the right checksum. Skipping download..."
+	fn=$(find $targetDir -name ${cell}.gff.gz | head -1)
+	if [[ ! "$fn" -ef ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz ]];then
+	    mv "$fn" ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+	fi
     else
-    axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
-    testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
-    checkGZfile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
-    if [[ "$noSums" == "0" && "$(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)" != "$checksum" ]]; then
-      echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
-      rm ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
-      exit 1
+	axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+	testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
+	checkGZfile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
+	if [[ "$noSums" == "0" && "$(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)" != "$checksum" ]]; then
+	    echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
+	    rm ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+	    exit 1
+	fi
     fi
-  fi
 done
 echo "Done"
 
@@ -366,17 +369,20 @@ info "Number of downloaded cell types: ${cellTypeCount}\n\n"
 #Downloading APPRIS data:
 mkdir -p ${targetDir}/${today}/APPRIS
 if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name appris_data.principal.txt | head -1)" ]]; then
-  info "Appris file found (no checksum - unsafe!). Skipping download..."
-  mv $(find $targetDir -name appris_data.principal.txt | head -1) ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+    info "Appris file found (no checksum - unsafe!). Skipping download..."
+    fn=$(find $targetDir -name appris_data.principal.txt | head -1)
+    if [[ ! "$fn" -ef ${targetDir}/${today}/APPRIS/appris_data.principal.txt ]];then
+	mv "$fn" ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+    fi
 else
-  info "Downloading APPRIS isoform data\n"
-  info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
-  axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
-      -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+    info "Downloading APPRIS isoform data\n"
+    info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
+    axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
+	 -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
 
-  # Testing if the file exists or not:
-  testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
-info "Download complete\n\n"
+    # Testing if the file exists or not:
+    testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
+    info "Download complete\n\n"
 fi
 
 #=================================== moved UP to do downloads first
