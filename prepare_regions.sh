@@ -243,7 +243,6 @@ else
   echo "VEPexec=${outdir}/ensembl-vep/vep" >>  ${configfile}
 fi
 
-
 #=============================================================================================
 
 cd ${outdir}
@@ -381,54 +380,60 @@ fi
 #=================================== moved UP to do downloads first
 # Downloading scores
 if [[ $getScores == "yes" ]];then
-  info "Processing scores.\n"
-  if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/eigen.phred_v2.dat" ]] && [[ "$noSums" == "1" || $(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1) == "2346005c1cd457bb5ff48c64667736b2" ]]; then
-    info "Eigen scores file found and has the right checksum. Skipping download..."
-  else
-    info "Downloading Eigen Phred scores\n"
-    mkdir -p $outdir/scores
-    cd $outdir/scores
+    info "Processing scores.\n"
+    if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/eigen.phred_v2.dat" ]] && [[ "$noSums" == "1" || $(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1) == "2346005c1cd457bb5ff48c64667736b2" ]]; then
+	info "Eigen scores file found and has the right checksum. Skipping download..."
+	cat <(grep -v "EigenPath=" ${configfile}) <(echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat") | sponge ${configfile}
+    else
+	info "Downloading Eigen Phred scores\n"
+	mkdir -p $outdir/scores
+	cd $outdir/scores
 
-    axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
-    axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
+	axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
+	axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
 
-    if [[ $? -ne 0 ]];then
-	     echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
-	      echo "Try downloading later\n"
+	if [[ $? -ne 0 ]];then
+	    echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
+	    echo "Try downloading later\n"
+	fi
+	localcksm=$(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1)
+	if [[ "$noSums" == "0" && "$localcksm" != "2346005c1cd457bb5ff48c64667736b2" ]]; then
+	    echo "[Error] Downloaded checksum ($localcksm) differs from expected (2346005c1cd457bb5ff48c64667736b2). Download probably failed. Rerun with reuse (-r) option."
+	    rm  $outdir/scores/eigen.phred_v2.dat
+	    exit 1
+	else
+	    cat <(grep -v "EigenPath=" ${configfile}) <(echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat") | sponge ${configfile}
+	fi
+	cd ..
     fi
-    localcksm=$(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1)
-    if [[ "$noSums" == "0" && "$localcksm" != "2346005c1cd457bb5ff48c64667736b2" ]]; then
-      echo "[Error] Downloaded checksum ($localcksm) differs from expected (2346005c1cd457bb5ff48c64667736b2). Download probably failed. Rerun with reuse (-r) option."
-      rm  $outdir/scores/eigen.phred_v2.dat
-    fi
-    cd ..
-  fi
 fi
-echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat" >> ${configfile}
 
 if [[ $getCadd == "yes" ]];then
-  if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/whole_genome_SNVs.tsv.gz" ]] && [[ "$noSums" == "1" || $(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1) == "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
-    info "CADD scores file found and has the right checksum. Skipping download..."
-  else
-    info "Downloading CADD scores\n"
-    mkdir -p scores
-    cd scores
-    axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
-    axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
+    if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/whole_genome_SNVs.tsv.gz" ]] && [[ "$noSums" == "1" || $(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1) == "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
+	info "CADD scores file found and has the right checksum. Skipping download..."
+	cat <(grep -v "caddPath=" ${configfile}) <(echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz") | sponge ${configfile}
+    else
+	info "Downloading CADD scores\n"
+	mkdir -p scores
+	cd scores
+	axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
+	axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
 
-    if [[ $? -ne 0 ]];then
-	     echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
-	      echo "Try downloading later\n"
+	if [[ $? -ne 0 ]];then
+	    echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
+	    echo "Try downloading later\n"
+	fi
+	localcksm=$(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1)
+	if [[ "$noSums" == "0" && "$localcksm" != "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
+	    echo "[Error] Downloaded checksum ($localcksm) differs from expected (cb3856be4c3bb969ff8f0a6139ca226f). Download probably failed. Rerun with reuse (-r) option."
+	    rm  $outdir/scores/whole_genome_SNVs.tsv.gz
+	    exit 1
+	else
+	    cat <(grep -v "caddPath=" ${configfile}) <(echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz") | sponge ${configfile}
+	fi
+	cd ..
     fi
-    localcksm=$(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1)
-    if [[ "$noSums" == "0" && "$localcksm" != "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
-      echo "[Error] Downloaded checksum ($localcksm) differs from expected (cb3856be4c3bb969ff8f0a6139ca226f). Download probably failed. Rerun with reuse (-r) option."
-      rm  $outdir/scores/whole_genome_SNVs.tsv.gz
-    fi
-    cd ..
-  fi
 fi
-echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz" >> ${configfile}
 
 #=============================================================================================
 # Stopping early if just downloading
