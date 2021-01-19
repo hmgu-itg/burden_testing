@@ -856,8 +856,8 @@ zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.g
 
 #==================================== OUTPUT config.txt ======================================
 
-echo "Linked_features=${outdir}/Linked_features.bed.gz" >> ${configfile}
-echo "gencode_file=${outdir}/gencode.basic.annotation.tsv.gz" >> ${configfile}
+cat <(grep -v "Linked_features=" ${configfile}) <(echo "Linked_features=${outdir}/Linked_features.bed.gz") | sponge ${configfile}
+cat <(grep -v "gencode_file=" ${configfile}) <(echo "gencode_file=${outdir}/gencode.basic.annotation.tsv.gz") | sponge ${configfile}
 
 #=============================================================================================
 
