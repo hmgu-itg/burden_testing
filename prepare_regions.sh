@@ -45,6 +45,7 @@ function usage {
     echo "          -s : optional, do not perform checksums (unsafe)"
     echo "          -t : optional, directory to store temporary data, default: \"/tmp\""
     echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
+    echo "          -q : optional, less verbose output"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
     echo ""
@@ -152,8 +153,9 @@ backup="no"
 reuse=0
 justdl=0
 noSums=0
+axelq=""
 tempdir="/tmp"
-while getopts "hncxst:e:rdo:" optname; do
+while getopts "hncxst:e:rdo:q" optname; do
     case "$optname" in
         "h" ) usage ;;
         "n" ) getScores="no" ;;
@@ -165,6 +167,7 @@ while getopts "hncxst:e:rdo:" optname; do
         "r" ) reuse=1 ;;
         "d" ) justdl=1 ;;
         "o" ) outdir="${OPTARG}" ;;
+        "q" ) axelq="-q" ;;
         "?" ) usage ;;
         *) usage ;;
     esac;
@@ -220,6 +223,7 @@ echo "Do not perform checksums : $noSums"
 echo "Ensembl FTP server       : $ensftp"
 echo "Re-use previous downloads: $reuse"
 echo "Download only            : $justdl"
+echo "Less verbose             : $axelq"
 echo ""
 
 #===================================== VEP ===================================================
@@ -233,7 +237,7 @@ else
   cd ensembl-vep
   git checkout release/$Ensembl_release
 
-  mkdir -p ${outdir}/vep && cd ${outdir}/vep && axel -a ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && echo Unpacking ... && tar -xzf homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && rm homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && cd -
+  mkdir -p ${outdir}/vep && cd ${outdir}/vep && axel "$axelq" -a ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && echo Unpacking ... && tar -xzf homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && rm homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && cd -
 
   sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
 
@@ -261,7 +265,7 @@ if (( "$reuse" > 0 )) && [[ -s "$GTExFile" ]] && [[ "$noSums" == "1" || $(md5sum
   info "GTEx file found and has the right checksum. Skipping download..."
 else
   cd ${outdir}
-  axel -a https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
+  axel "$axelq" -a https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
   #gzip -f GTEx_Analysis_v8_eQTL.tar
 
   if [[ ! -e "${GTExFile}" ]]; then
@@ -295,7 +299,7 @@ if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_rel
     fi
 else
     info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
-    axel -a ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -o ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+    axel "$axelq" -a ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -o ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
     echo -e "done."
 
     # Testing if the file exists:
@@ -348,7 +352,7 @@ for cell in ${cells}; do
 	    mv "$fn" ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
 	fi
     else
-	axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+	axel "$axelq" -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
 	testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
 	checkGZfile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
 	if [[ "$noSums" == "0" && "$(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)" != "$checksum" ]]; then
@@ -377,7 +381,7 @@ if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name appris_data.principal.
 else
     info "Downloading APPRIS isoform data\n"
     info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
-    axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
+    axel "$axelq" -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
 	 -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
 
     # Testing if the file exists or not:
@@ -397,8 +401,8 @@ if [[ $getScores == "yes" ]];then
 	mkdir -p $outdir/scores
 	cd $outdir/scores
 
-	axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
-	axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
+	axel "$axelq" -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
+	axel "$axelq" -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
 
 	if [[ $? -ne 0 ]];then
 	    echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
@@ -424,8 +428,8 @@ if [[ $getCadd == "yes" ]];then
 	info "Downloading CADD scores\n"
 	mkdir -p scores
 	cd scores
-	axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
-	axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
+	axel "$axelq" -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
+	axel "$axelq" -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
 
 	if [[ $? -ne 0 ]];then
 	    echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
