@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version="v1.0 Last modified: 2020.Nov.30"
+version="v1.0 Last modified: 2021.Jan.31"
 today=$(date "+%Y.%b.%d")
 
 # Folder with the variant selector script:
@@ -30,6 +30,10 @@ function display_help() {
     echo "     -l  - comma separated list of overlap features (promoter, CTCF, enhancer, promoterFlank, openChrom, TF_bind or all)"
     echo "     -x  - extend genomic regions by this amount (bp) (default: 0)"
     echo "     -o  - include variants with severe consequences only (more severe than missense)"
+    echo "     -S  - shortcut (optional, \"exsevere\": \"-g exon -o\")"
+    echo "                    (          \"excadd\"  : \"-g exon -s CADD -x 50\")"
+    echo "                    (          \"exreg\"   : \"-g exon -s EigenPhred -x 50 -e promoter,enhancer,TF_bind -l promoter,enhancer,TF_bind\")"
+    echo "                    (          \"regonly\" : \"-s EigenPhred -e promoter,enhancer,TF_bind -l promoter,enhancer,TF_bind\")"
     echo ""
     echo "Parameters to set up scores for variants:"
     echo "     -s  - apply weighting; accepted values: CADD, EigenPhred"
@@ -59,9 +63,10 @@ OPTIND=1
 score=""
 geneListFile=""
 verbosity="debug"
+shortc="none"
 
 #while getopts ":hL:c:d:bg:m:s:l:e:x:k:t:ofw:jC:V:" optname; do
-while getopts ":hL:c:d:bg:s:l:e:x:ow:C:i:v" optname; do
+while getopts ":hL:c:d:bg:s:l:e:x:ow:C:i:S:v" optname; do
     case "$optname" in
       # Gene list related parameters:
         "L") geneListFile=${OPTARG} ;;
@@ -77,6 +82,7 @@ while getopts ":hL:c:d:bg:s:l:e:x:ow:C:i:v" optname; do
         "o") lof=1 ;;
         "C") configFile=${OPTARG} ;;
         "i") inputFile=${OPTARG} ;;
+        "S") shortc=${OPTARG} ;;
 #        "v") verbosity="debug" ;;
 
       # Other parameters:
@@ -89,8 +95,18 @@ while getopts ":hL:c:d:bg:s:l:e:x:ow:C:i:v" optname; do
 done
 
 if [[ -z "${inputFile}" ]]; then
-    "[Error] input file not specified!"
+    echo "[Error] input file not specified!"
     exit 1
+fi
+
+# ---------------------------------- TESTING SHORTCUT VALUE --------------------------------------
+
+if [[ "$shortc" != "none" ]];then
+    if [[ "$shortc" != "regonly" && "$shortc" != "exreg" && "$shortc" != "excadd" && "$shortc" != "exsevere" ]];then
+	echo "[Error] wrong shortcut value specified (-S $shortc)"
+	echo "[Error] allowed values are: exreg, regonly, excadd, exsevere"
+	exit 1
+    fi
 fi
 
 # -------------------------------- TESTING INPUT FILE FORMAT -------------------------------------
@@ -110,7 +126,6 @@ if [[ $? != 0 ]];then
 fi
 
 # ------------------------------------------------------------------------------------------------
-
 
 if [[ -z "${outputDir}" ]]; then
     echo `date "+%Y.%b.%d_%H:%M"` "[Error] Output directory not specified"
@@ -183,64 +198,84 @@ fi
 # -----------------------------------------------------------------------------------------------------------------------------
 
 outprefix="group_file"
-# GENCODE features
-if [[ ! -z "${gencode}" ]]; then
-    commandOptions="${commandOptions} --gencode ${gencode}"
-    str=$( echo "${gencode}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-    outprefix=${outprefix}"_GENCODE_"${str}
-fi
-
-# GTEx - expecting a comma separated list of regulatory features.
-if [[ ! -z "$gtex" ]]; then
-    commandOptions="${commandOptions} --gtex ${gtex}"
-    str=$( echo "${gtex}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-    outprefix=${outprefix}"_GTEx_"${str}
-fi
-
-# Overlap - expecting a comma separated list of regulatory features.
-if [[ ! -z "${overlap}" ]]; then
-    commandOptions="${commandOptions} --overlap ${overlap}"
-    str=$( echo "${overlap}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
-    outprefix=${outprefix}"_overlap_"${str}
-fi
-
-# If lof is set, only variants with severe consequences will be selected.
-if [[ ! -z "$lof" ]]; then
-    commandOptions="${commandOptions} --lof "
-    outprefix=${outprefix}"_severe"
-fi
-
 warning1=""
 warning2=""
 score_tmp=""
-# Score - If score is not given we apply no score. Otherwise we test the submitted value:
-# Accepted scores:
-if [[ ! -z "${score}" ]]; then
-    score="${score^^}"
-    case "${score}" in
-        EIGENPHRED )   score="EigenPhred";;
-        CADD )         score="CADD";;
-        * )            score_tmp="noweight";;
+
+if [[ "$shortc" == "none" ]];then
+
+    # GENCODE features
+    if [[ ! -z "${gencode}" ]]; then
+	commandOptions="${commandOptions} --gencode ${gencode}"
+	str=$( echo "${gencode}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
+	outprefix=${outprefix}"_GENCODE_"${str}
+    fi
+
+    # GTEx - expecting a comma separated list of regulatory features.
+    if [[ ! -z "$gtex" ]]; then
+	commandOptions="${commandOptions} --gtex ${gtex}"
+	str=$( echo "${gtex}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
+	outprefix=${outprefix}"_GTEx_"${str}
+    fi
+
+    # Overlap - expecting a comma separated list of regulatory features.
+    if [[ ! -z "${overlap}" ]]; then
+	commandOptions="${commandOptions} --overlap ${overlap}"
+	str=$( echo "${overlap}" | perl -lane '$_ =~ s/^\.//;$_ =~ s/,/_/g; print $_;')
+	outprefix=${outprefix}"_overlap_"${str}
+    fi
+
+    # If lof is set, only variants with severe consequences will be selected.
+    if [[ ! -z "$lof" ]]; then
+	commandOptions="${commandOptions} --lof "
+	outprefix=${outprefix}"_severe"
+    fi
+
+    # Score - If score is not given we apply no score. Otherwise we test the submitted value:
+    # Accepted scores:
+    if [[ ! -z "${score}" ]]; then
+	score="${score^^}"
+	case "${score}" in
+            EIGENPHRED )   score="EigenPhred";;
+            CADD )         score="CADD";;
+            * )            score_tmp="noweight";;
+	esac
+    else
+	score="noweight"
+    fi
+
+    if [[ ! -z ${score_tmp} ]];then
+	warning1="[Warning] Submitted score name ($score) is not recognized! Accepted scores: CADD, EigenPhred."
+	warning2="[Warning] No scoring will be applied."
+	score="noweight"
+    fi
+
+    # Only adding score to command line if score is requested:
+    if [[ "${score}" != "noweight" ]]; then
+	commandOptions="${commandOptions} --score ${score}";
+    fi
+    outprefix=${outprefix}"_score_"${score}
+
+    if [[ ! -z "${xtend}" ]]; then
+	commandOptions="${commandOptions} --extend ${xtend}"
+	outprefix=${outprefix}"_extend_"${xtend}
+    fi
+else # shortcut specified
+    outprefix=${outprefix}"_$shortc"
+    case "$shortc" in
+	"exreg")
+	    commandOptions="${commandOptions} --gencode exon --extend 50 --score EigenPhred --gtex promoter,enhancer,TF_bind --overlap promoter,enhancer,TF_bind"
+	    ;;
+	"excadd")
+	    commandOptions="${commandOptions} --gencode exon --extend 50 --score CADD"
+	    ;;
+	"exsevere")
+	    commandOptions="${commandOptions} --gencode exon --lof"
+	    ;;
+	"regonly")
+	    commandOptions="${commandOptions} --score EigenPhred --gtex promoter,enhancer,TF_bind --overlap promoter,enhancer,TF_bind"
+	    ;;
     esac
-else
-    score="noweight"
-fi
-
-if [[ ! -z ${score_tmp} ]];then
-    warning1="[Warning] Submitted score name ($score) is not recognized! Accepted scores: CADD, EigenPhred."
-    warning2="[Warning] No scoring will be applied."
-    score="noweight"
-fi
-
-# Only adding score to command line if score is requested:
-if [[ "${score}" != "noweight" ]]; then
-    commandOptions="${commandOptions} --score ${score}";
-fi
-outprefix=${outprefix}"_score_"${score}
-
-if [[ ! -z "${xtend}" ]]; then
-    commandOptions="${commandOptions} --extend ${xtend}"
-    outprefix=${outprefix}"_extend_"${xtend}
 fi
 
 outputDir2=${outputDir}"/"${outprefix}
@@ -264,6 +299,7 @@ commandOptions="${commandOptions} --output-dir ${outputDir3}"
 LOGFILE=${outputDir3}/"make_group_file_gene_set.${chunkNo}.log"
 
 #--------------------------------------------------------------------------------------------
+
 if [[ -z ${geneListFile} ]];then
     gencode_file=$(grep "^gencode_file" ${configFile} | cut -f 2 -d '=')
     geneListFile="${outputDir3}/gencode_gene_list.txt"
@@ -337,20 +373,26 @@ echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 echo `date "+%Y.%b.%d_%H:%M"` "[Info] Variant filtering options:" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"`  "input file: ${inputFile}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "GENCODE features: ${gencode:--}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "GTEx features: ${gtex:--}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "Overlapping reg.features: ${overlap:-NA}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "Features are extended by ${xtend:-0}bp" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] Weighting options:" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"`  "Weighting: ${score}" >> ${LOGFILE}
-echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+if [[ "$shortc" == "none" ]];then
+    echo `date "+%Y.%b.%d_%H:%M"`  "GENCODE features: ${gencode:--}" >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"`  "GTEx features: ${gtex:--}" >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"`  "Overlapping reg.features: ${overlap:-NA}" >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"`  "Features are extended by ${xtend:-0}bp" >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` "[Info] Weighting options:" >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"`  "Weighting: ${score}" >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+else
+    echo `date "+%Y.%b.%d_%H:%M"`  "Shortcut: ${shortc}" >> ${LOGFILE}
+    echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
+fi
 
 echo `date "+%Y.%b.%d_%H:%M"`  "[Info] Verbosity: ${verbosity}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
-echo `date "+%Y.%b.%d_%H:%M"` "[Info] command line options for the selector script: ${commandOptions}" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] command line options for the selector script:" >> ${LOGFILE}
+echo `date "+%Y.%b.%d_%H:%M"` "[Info] ${commandOptions}" >> ${LOGFILE}
 echo `date "+%Y.%b.%d_%H:%M"` "" >> ${LOGFILE}
 
 # -----------------------------------------------------------------------------------------------------------------------------
