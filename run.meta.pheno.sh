@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 if [[ "$#" -lt 4 ]];then
     echo "ERROR: $# arguments are provided; need at least 4"
