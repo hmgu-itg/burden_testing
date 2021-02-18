@@ -37,7 +37,7 @@ for (( i=2; i<argc; i++ )); do
 done
 
 echo "${array[@]}"
-./run.meta "${array[@]}"
+run.meta "${array[@]}"
 echo
 
 echo "INFO: deleting temp dirs:"
