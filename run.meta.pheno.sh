@@ -44,11 +44,11 @@ echo "${array[@]}"
 run.meta "${array[@]}"
 echo
 
-echo "INFO: deleting temp dirs:"
-for d in "${tmpdirs[@]}";do
-    echo "INFO: $d"
-    rm -rf "$d"
-done
+# echo "INFO: deleting temp dirs:"
+# for d in "${tmpdirs[@]}";do
+#     echo "INFO: $d"
+#     rm -rf "$d"
+# done
 echo
 
 exit 0
