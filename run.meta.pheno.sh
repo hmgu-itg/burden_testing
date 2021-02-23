@@ -7,8 +7,10 @@ fi
 
 # group file
 gfile=$1
+echo "GROUP FILE: $gfile"
 # pheno name
 pname=$2
+echo "PHENO: $pname"
 
 if [[ ! -f "$gfile" ]];then
     echo "ERROR: group file ($gfile) is not a regular file"
@@ -24,6 +26,7 @@ argv=("$@")
 
 # the rest of the arguments are input dirs
 for (( i=2; i<argc; i++ )); do
+    echo "CURRENT DIR: ${argv[i]}"
     if [[ ! -d "${argv[i]}" ]];then
 	echo "ERROR: ${argv[i]} is not a directory"
 	exit 1
