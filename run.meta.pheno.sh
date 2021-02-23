@@ -28,10 +28,14 @@ for (( i=2; i<argc; i++ )); do
 	echo "ERROR: ${argv[i]} is not a directory"
 	exit 1
     fi
-    tmp_dir=$(mktemp -d -t run.meta.pheno-XXXXXXX)
+    tmp_dir=$(mktemp -d -p "${argv[i]}" -t run.meta.pheno-XXXXXXX)
     tmpdirs+=($tmp_dir)
     echo "INFO: created temp dir $tmp_dir"
-    cp -v "${argv[i]}"/*."$pname".* "$tmp_dir"
+    for f in $(find "${argv[i]}" -maxdepth 1 -name "*.$pname.*");do
+	b=$(basename $f)
+	ln -v -s $f "$tmp_dir"/"$b"
+    done
+    #cp -v "${argv[i]}"/*."$pname".* "$tmp_dir"
     array+=($tmp_dir)
     echo
 done
