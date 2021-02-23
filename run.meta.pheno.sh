@@ -33,7 +33,7 @@ for (( i=2; i<argc; i++ )); do
     echo "INFO: created temp dir $tmp_dir"
     for f in $(find "${argv[i]}" -maxdepth 1 -name "*.$pname.*");do
 	b=$(basename $f)
-	ln -v -s $f "$tmp_dir"/"$b"
+	ln -v -s $(realpath $f) "$tmp_dir"/"$b"
     done
     #cp -v "${argv[i]}"/*."$pname".* "$tmp_dir"
     array+=($tmp_dir)
@@ -44,11 +44,11 @@ echo "${array[@]}"
 run.meta "${array[@]}"
 echo
 
-# echo "INFO: deleting temp dirs:"
-# for d in "${tmpdirs[@]}";do
-#     echo "INFO: $d"
-#     rm -rf "$d"
-# done
+echo "INFO: deleting temp dirs:"
+for d in "${tmpdirs[@]}";do
+    echo "INFO: $d"
+    rm -rf "$d"
+done
 echo
 
 exit 0
