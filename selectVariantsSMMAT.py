@@ -5,6 +5,10 @@ import logging
 import os
 import sys
 
+script_path = os.path.abspath(__name__)
+burden_module_dir = os.path.join(os.path.dirname(script_path), 'python')
+sys.path.append(burden_module_dir)
+
 from burden import config
 from burden import utils
 from burden import filters
