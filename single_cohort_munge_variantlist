@@ -2,6 +2,21 @@
 fn=$1
 mis=$2
 maf=$3 
-Rscript -e 'library(data.table);d=fread("'$fn'", header=F);setnames(d, c("chr", "ps", "ref", "alt", "ac", "an"));MAFfromAF=function(x){out=x;out[x>0.5]=1-out[x>0.5];return(out)}; d[,af:=ac/an];d[,maf := MAFfromAF(af)];maxan=max(d[,an])*(1-'$mis');d=d[an>=maxan & maf<'$maf']; d[,id:="-"];d=d[,c("chr", "ps", "id", "ref", "alt")];fwrite(d, sub(".gz", ".formatted", "'$fn'"), sep="\t", col.names=F)'
+Rscript -e '
+library(data.table)
+d=fread("'$fn'", header=F)
+setnames(d, c("chr", "ps", "ref", "alt", "ac", "an"))
+MAFfromAF=function(x){
+  out=x;out[x>0.5]=1-out[x>0.5]
+  return(out)
+}
+d=d[ac>0,]
+d[,af:=ac/an]
+d[,maf := MAFfromAF(af)]
+maxan=max(d[,an])*(1-'$mis');d=d[an>=maxan & maf<'$maf']
+d[,id:="-"]
+d=d[,c("chr", "ps", "id", "ref", "alt")]
+fwrite(d, sub(".gz", ".formatted", "'$fn'"), sep="\t", col.names=F)'
+
 bgzip ${fn/.gz/.formatted}
 tabix -s 1 -b 2 -e 2 ${fn/.gz/.formatted.gz}
