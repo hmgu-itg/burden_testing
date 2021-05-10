@@ -22,8 +22,8 @@
 # For reproducibility, both the GENCODE, Ensembl and GTEx versions are hardcoded
 
 
-script_version=4.0
-last_modified=2020.Sep.29
+script_version=4.1
+last_modified=2021.Jan.19
 
 ## Built in versions:
 GENCODE_release=32
@@ -40,6 +40,10 @@ function usage {
     echo "          -n : optional, do not download Eigen scores"
     echo "          -c : optional, do not download CADD scores"
     echo "          -x : optional, create backup of the downloaded data"
+    echo "          -r : optional, re-use previous downloads if present"
+    echo "          -d : optional, just download data and exit, do not process them"
+    echo "          -s : optional, do not perform checksums (unsafe)"
+    echo "          -t : optional, directory to store temporary data, default: \"/tmp\""
     echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
@@ -79,7 +83,7 @@ line contains all information of the association."
     echo "  -source: from which source the given region is coming from (GENCODE, GTEx, Overlap)."
     echo "  -class: class of the given feature (eg. exon, CDS, gene, enhancer, promoter etc.)"
     echo "  -chr, start, end: GRCh38 coordintes of the feature."
-    echo "  -other sources contain information about the evidence. (linked rsID, tissue in which the feature in active etc.)"
+    echo "  -other information. (linked rsID, tissue in which the feature in active etc.)"
     echo ""
     echo "IMPORTANT: ALL COORDINATES ARE BASED ON GRCh38 BUILD"
     echo ""
@@ -117,10 +121,22 @@ function testFileLines {
     fi
 }
 
+# check if GZ file is OK
+function checkGZfile {
+#    echo -n "Checking GZ file integrity: $1 ... "
+    if ! gzip -q -t "$1";then
+	echo "[Error] Integrity check failed for $1"
+        echo "[Error] Exit"
+        exit 1
+#    else
+#	echo "OK"
+    fi
+}
+
 # This function prints out all the reports that were generated during the run (with time stamp!):
 function info {
     hourMin=$(date +"%T" | awk 'BEGIN{FS=OFS=":"}{print $1, $2}')
-    echo -ne "[Info ${hourMin}] $1"
+    echo -e "[Info ${hourMin}] $1"
 }
 
 # Printing help message if no parameters are given:
@@ -133,13 +149,21 @@ OPTIND=1
 outdir=""
 getCadd="yes"
 backup="no"
-while getopts "hnce:o:" optname; do
+reuse=0
+justdl=0
+noSums=0
+tempdir="/tmp"
+while getopts "hncxst:e:rdo:" optname; do
     case "$optname" in
         "h" ) usage ;;
         "n" ) getScores="no" ;;
         "c" ) getCadd="no" ;;
         "x" ) backup="yes" ;;
+        "s" ) noSums=1 ;;
+        "t" ) tempdir="${OPTARG}" ;;
         "e" ) ensftp="${OPTARG}" ;;
+        "r" ) reuse=1 ;;
+        "d" ) justdl=1 ;;
         "o" ) outdir="${OPTARG}" ;;
         "?" ) usage ;;
         *) usage ;;
@@ -158,36 +182,70 @@ if [ $? -ne 0 ] ; then
 fi
 
 # full dirname
-outdir=`readlink -f $outdir`
+outdir=`realpath $outdir`
 outdir=${outdir%/}
 
 # output config file
 configfile=${outdir}/config.txt
-rm -f ${configfile}
+if [ "$reuse" -eq 0 ]; then
+  rm -f ${configfile}
+else
+  if [[ -s "${configfile}" ]]; then
+    info "Previous config file found at ${configfile}."
+  else
+    info "Reuse flag is set but no or empty config file found at ${configfile}. Starting from scratch."
+  fi
+fi
+
+# temp dir
+if [ ! -d ${tempdir} ]; then
+    mkdir -p ${tempdir}
+    if [ $? -ne 0 ] ; then
+	echo "[Error] Could not create temp dir ${tempdir}"
+	exit 1
+    fi
+fi
+tempdir=`realpath $tempdir`
+
+# report arguments
+echo ""
+echo "Provided arguments:"
+echo ""
+echo "Output directory         : $outdir"
+echo "Temp directory           : $tempdir"
+echo "Get Eigen scores         : $getScores"
+echo "Get CADD scores          : $getCadd"
+echo "Make backup              : $backup"
+echo "Do not perform checksums : $noSums"
+echo "Ensembl FTP server       : $ensftp"
+echo "Re-use previous downloads: $reuse"
+echo "Download only            : $justdl"
+echo ""
 
 #===================================== VEP ===================================================
 
-cd ${outdir}
+if (( "$reuse" > 0 )) && [[ ! -z "$(grep VEPdir ${configfile})" ]]; then
+  info "VEP information found in config file. Skipping VEP download (unsafe - no checks performed)..."
+else
+  cd ${outdir}
 
-git clone https://github.com/Ensembl/ensembl-vep.git
-cd ensembl-vep
-git checkout release/98
+  git clone https://github.com/Ensembl/ensembl-vep.git
+  cd ensembl-vep
+  git checkout release/$Ensembl_release
 
-mkdir -p ${outdir}/vep && cd ${outdir}/vep && axel -a ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_98_GRCh38.tar.gz && echo Unpacking ... && tar -xzf homo_sapiens_vep_98_GRCh38.tar.gz && rm homo_sapiens_vep_98_GRCh38.tar.gz && cd -
+  mkdir -p ${outdir}/vep && cd ${outdir}/vep && axel -a ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && echo Unpacking ... && tar -xzf homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && rm homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && cd -
 
-sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
+  sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
 
-PATH=$PATH:${outdir}/vep/htslib PERL5LIB=$PERL5LIB:${outdir}/vep perl INSTALL.pl -a ac -n --ASSEMBLY GRCh38 -s homo_sapiens -c ${outdir}/vep -d ${outdir}/vep
+  PATH=$PATH:${outdir}/vep/htslib PERL5LIB=$PERL5LIB:${outdir}/vep perl INSTALL.pl -a ac -n --ASSEMBLY GRCh38 -s homo_sapiens -c ${outdir}/vep -d ${outdir}/vep
 
-echo "VEPdir=${outdir}/vep" >>  ${configfile}
-echo "VEPexec=${outdir}/ensembl-vep/vep" >>  ${configfile}
-
-cd ${outdir}
-
-#exit 0
+  echo "VEPdir=${outdir}/vep" >>  ${configfile}
+  echo "VEPexec=${outdir}/ensembl-vep/vep" >>  ${configfile}
+fi
 
 #=============================================================================================
 
+cd ${outdir}
 targetDir=${outdir}"/prepare_regions_tempfiles"
 mkdir -p ${targetDir}
 if [ $? -ne 0 ] ; then
@@ -195,15 +253,27 @@ if [ $? -ne 0 ] ; then
     exit 1
 fi
 
-cd ${outdir}
-axel -a https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
-gzip -f GTEx_Analysis_v8_eQTL.tar
+GTExFile=$outdir/GTEx_Analysis_v8_eQTL.tar
+#echo $reuse $noSums $GTExFile
+#if [[ -s "$GTExFile" ]];then echo lol; fi
+#exit 0
+if (( "$reuse" > 0 )) && [[ -s "$GTExFile" ]] && [[ "$noSums" == "1" || $(md5sum $GTExFile | cut -d' ' -f1) == "d35b32152bdb21316b2509c46b0af998" ]]; then
+  info "GTEx file found and has the right checksum. Skipping download..."
+else
+  cd ${outdir}
+  axel -a https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
+  #gzip -f GTEx_Analysis_v8_eQTL.tar
 
-GTExFile="GTEx_Analysis_v8_eQTL.tar.gz"
+  if [[ ! -e "${GTExFile}" ]]; then
+      echo "[Error] GTEx file (${GTExFile}) does not exist."
+      exit 1
+  fi
+fi
 
-if [[ ! -e "${GTExFile}" ]]; then
-    echo "[Error] GTEx file (${GTExFile}) does not exist."
-    exit 1
+if [[ "$noSums" == "0" && $(md5sum $GTExFile | cut -d' ' -f1) != "d35b32152bdb21316b2509c46b0af998" ]]; then
+  echo "[Error] Checksum invalid ($(md5sum $GTExFile | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
+  rm $GTExFile
+  exit 1
 fi
 
 # Last step in setup:
@@ -215,13 +285,28 @@ info "Working directory: ${targetDir}/${today}\n\n"
 
 # Get the most recent version of the data:
 mkdir -p ${targetDir}/${today}/GENCODE
-info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
-axel -a ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -o ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
-echo -e "done."
+checksum=$(wget -q -O- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/MD5SUMS | grep -w gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)
 
-# Testing if the file exists:
-testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
+if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] && [[ "$noSums" == "1" || "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
+    info "GENCODE file found and has the right checksum. Skipping download..."
+    fn=$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)
+    if [[ ! "$fn" -ef ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz ]];then
+	mv "$fn" ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+    fi
+else
+    info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
+    axel -a ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -o ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+    echo -e "done."
 
+    # Testing if the file exists:
+    testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
+
+    if [[ "$noSums" == "0" && "$(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)" != "$checksum" ]]; then
+	echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
+	rm ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+	exit 1
+    fi
+fi
 # Counting genes in the dataset:
 genes=$(zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | awk 'BEGIN{FS="\t";}$3 == "gene"{print $3;}' | wc -l )
 info "Total number of genes in the GENCODE file: ${genes}\n\n"
@@ -233,7 +318,15 @@ mkdir -p ${targetDir}/${today}/EnsemblRegulation
 info "Downloading cell specific regulatory features from Ensembl.\n"
 
 # Get list of all cell types:
-cells=$(curl -s ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/ | perl -lane 'print $F[-1]')
+localCellFile=$(find $targetDir -name RegCellList.txt)
+if [[ ! -z "$localCellFile" && "$reuse" == "1" ]]; then
+    echo Found cell type file at $localCellFile with $(cat $localCellFile | wc -l) types.
+else
+    localCellFile=$targetDir/$today/RegCellList.txt
+    curl -s ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/ | perl -lane 'print $F[-1]' > $localCellFile
+fi
+cells=$(cat $localCellFile)
+
 
 # If there are no cell types present in the downloaded set, it means there were some problems. We are exiting.
 if [ -z "${cells}" ]; then
@@ -247,8 +340,23 @@ fi
 #GFF is 1-based
 for cell in ${cells}; do
     echo "Downloading cell type : $cell"
-    axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
-    testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
+    checksum=$(wget -O- -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/CHECKSUM| cut -f1 -d' ')
+    if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name ${cell}.gff.gz | head -1)" ]] && [[ "$noSums" == "1" || "$(md5sum $(find $targetDir -name ${cell}.gff.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
+	info "File found and has the right checksum. Skipping download..."
+	fn=$(find $targetDir -name ${cell}.gff.gz | head -1)
+	if [[ ! "$fn" -ef ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz ]];then
+	    mv "$fn" ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+	fi
+    else
+	axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+	testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
+	checkGZfile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
+	if [[ "$noSums" == "0" && "$(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)" != "$checksum" ]]; then
+	    echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
+	    rm ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+	    exit 1
+	fi
+    fi
 done
 echo "Done"
 
@@ -260,15 +368,88 @@ info "Number of downloaded cell types: ${cellTypeCount}\n\n"
 
 #Downloading APPRIS data:
 mkdir -p ${targetDir}/${today}/APPRIS
-info "Downloading APPRIS isoform data\n"
-info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
-axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
-    -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name appris_data.principal.txt | head -1)" ]]; then
+    info "Appris file found (no checksum - unsafe!). Skipping download..."
+    fn=$(find $targetDir -name appris_data.principal.txt | head -1)
+    if [[ ! "$fn" -ef ${targetDir}/${today}/APPRIS/appris_data.principal.txt ]];then
+	mv "$fn" ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+    fi
+else
+    info "Downloading APPRIS isoform data\n"
+    info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
+    axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
+	 -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
 
-# Testing if the file exists or not:
-testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
+    # Testing if the file exists or not:
+    testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
+    info "Download complete\n\n"
+fi
 
-info "Download complete\n\n"
+#=================================== moved UP to do downloads first
+# Downloading scores
+if [[ $getScores == "yes" ]];then
+    info "Processing scores.\n"
+    if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/eigen.phred_v2.dat" ]] && [[ "$noSums" == "1" || $(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1) == "2346005c1cd457bb5ff48c64667736b2" ]]; then
+	info "Eigen scores file found and has the right checksum. Skipping download..."
+	cat <(grep -v "EigenPath=" ${configfile}) <(echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat") | sponge ${configfile}
+    else
+	info "Downloading Eigen Phred scores\n"
+	mkdir -p $outdir/scores
+	cd $outdir/scores
+
+	axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
+	axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
+
+	if [[ $? -ne 0 ]];then
+	    echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
+	    echo "Try downloading later\n"
+	fi
+	localcksm=$(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1)
+	if [[ "$noSums" == "0" && "$localcksm" != "2346005c1cd457bb5ff48c64667736b2" ]]; then
+	    echo "[Error] Downloaded checksum ($localcksm) differs from expected (2346005c1cd457bb5ff48c64667736b2). Download probably failed. Rerun with reuse (-r) option."
+	    rm  $outdir/scores/eigen.phred_v2.dat
+	    exit 1
+	else
+	    cat <(grep -v "EigenPath=" ${configfile}) <(echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat") | sponge ${configfile}
+	fi
+	cd ..
+    fi
+fi
+
+if [[ $getCadd == "yes" ]];then
+    if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/whole_genome_SNVs.tsv.gz" ]] && [[ "$noSums" == "1" || $(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1) == "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
+	info "CADD scores file found and has the right checksum. Skipping download..."
+	cat <(grep -v "caddPath=" ${configfile}) <(echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz") | sponge ${configfile}
+    else
+	info "Downloading CADD scores\n"
+	mkdir -p scores
+	cd scores
+	axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
+	axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
+
+	if [[ $? -ne 0 ]];then
+	    echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
+	    echo "Try downloading later\n"
+	fi
+	localcksm=$(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1)
+	if [[ "$noSums" == "0" && "$localcksm" != "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
+	    echo "[Error] Downloaded checksum ($localcksm) differs from expected (cb3856be4c3bb969ff8f0a6139ca226f). Download probably failed. Rerun with reuse (-r) option."
+	    rm  $outdir/scores/whole_genome_SNVs.tsv.gz
+	    exit 1
+	else
+	    cat <(grep -v "caddPath=" ${configfile}) <(echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz") | sponge ${configfile}
+	fi
+	cd ..
+    fi
+fi
+
+#=============================================================================================
+# Stopping early if just downloading
+
+if (( "$justdl" > 0 )); then
+  info "Download flag enabled, stopping early."
+  exit 0
+fi
 
 #=============================================================================================
 #Combining APPRIS and GENCODE data
@@ -276,6 +457,12 @@ info "Download complete\n\n"
 info "Combining APPRIS and GENCODE data.. "
 mkdir -p ${targetDir}/${today}/processed
 export APPRIS_FILE=${targetDir}/${today}/APPRIS/appris_data.principal.txt
+
+## Warning: we cannot check the contents since they are dynamic
+
+#if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name Appris_annotation_added.txt.gz | head -1)" ]]; then
+#    echo "[Info] Appris has already been combined with Gencode. Skipping merge, but this is unsafe."
+
 zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | grep -v "#" | awk '$3 != "Selenocysteine" && $3 != "start_codon" && $3 != "stop_codon"' \
                 | perl -MJSON -M"Data::Dumper"  -F"\t" -lane '
                 BEGIN {
@@ -292,7 +479,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
                 }{
                     if ( $_ =~ /gene_id\s+\"(ENSG.+?)\"/){ # Gene related annotation
                         $geneID = $1;
-                        # if the gene is from PAR region on Y then we keep the full gene ID and transcript ID 
+                        # if the gene is from PAR region on Y then we keep the full gene ID and transcript ID
                         # otherwise, we remove the suffix
                         if ($geneID !~ /_PAR_Y/){
                         $geneID =~ /(ENSG\d+)\./;
@@ -379,15 +566,10 @@ CellTypes=$( ls -la ${targetDir}/${today}/EnsemblRegulation/ | perl -lane 'print
 for cell in ${CellTypes}; do
     export cell
     fn=${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
-    
+    checkGZfile ${fn}
+
     # parsing cell specific files (At this point we only consider active features. Although repressed regions might also be informative):
 
-    # Check integrity 
-    if ! gzip -q -t ${fn};then
-	echo "\nWARNING: integrity check failed for $fn; skipping\n"
-	continue
-    fi
-    
     zcat ${fn} | grep -i "activity=active" \
         | perl -F"\t" -lane 'next unless length($F[0]) < 3 || $F[0]=~/^chr/; # We skip irregular chromosome names.
                 $F[0]=~s/^chr//;
@@ -400,7 +582,7 @@ for cell in ${CellTypes}; do
                 $type = $F[2];
                 $end = $F[4];
                 ($ID) = $_ =~ /regulatory_feature_stable_id=(ENSR\d+)/;
-                print join "\t", $cell_type, $F[0], $start, $end, $ID, $type;' 
+                print join "\t", $cell_type, $F[0], $start, $end, $ID, $type;'
 # Now combining these lines in a fashion that each line will contain all active tissues:
 done | perl -F"\t" -lane '
     $x =shift @F;
@@ -412,7 +594,7 @@ done | perl -F"\t" -lane '
             printf "%s\t%s\t%s\t%s\tchr=%s;start=%s;end=%s;class=%s;regulatory_ID=%s;Tissues=%s\n",$h{$ID}{line}[0], $h{$ID}{line}[1], $h{$ID}{line}[2], $ID, $h{$ID}{line}[0],$h{$ID}{line}[1], $h{$ID}{line}[2], $h{$ID}{line}[4], $ID, $cells;
         }
     }
-' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz # 0-based coordinates here
+' | sort -k1,1 -k2,2n -T ${tempdir} | bgzip -f > ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz # 0-based coordinates here
 
 
 # OUTPUT:
@@ -441,17 +623,17 @@ info "Number of cell specific regulatory features: $cellSpecFeatLines\n\n"
 
 tmpGTEx=${targetDir}/${today}/processed/GTEx_tmp.bed
 info "Creating GTEx bed file ... "
-listOfGTExFiles=$(tar -ztf ${GTExFile} | grep "signif_variant")
+listOfGTExFiles=$(tar -tf ${GTExFile} | grep "signif_variant")
 for f in ${listOfGTExFiles};do
     g=$(basename ${f})
     tissue=$(echo ${g}|perl -lne '$x="NA";if (/^([^.]+)\./){$x=$1;} print $x;')
     export tissue
 
     # taking care of deletions as well
-    tar -zxf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENSG\d+)\./;$tissue=$ENV{tissue};$,="\t";$chr=~s/^chr//;$start=$pos-1;$end=$pos;if (length($ref)>length($alt)){$end=$start+length($ref)-1;}  print $tissue,$chr,$start,$end,$F[0],$gene;'
+    tar -xf ${GTExFile} ${f} -O | zcat - | tail -n +2 | perl -F"\t" -lane '($chr, $pos, $ref, $alt, $build) = split("_", $F[0]);($gene) = $F[1] =~ /(ENSG\d+)\./;$tissue=$ENV{tissue};$,="\t";$chr=~s/^chr//;$start=$pos-1;$end=$pos;if (length($ref)>length($alt)){$end=$start+length($ref)-1;}  print $tissue,$chr,$start,$end,$F[0],$gene;'
 done > ${tmpGTEx}
 
-cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$start=$F[2];$end=$F[3];$ID=$F[4];$gene=$F[5];$H{$ID}{chr}=$chr;$H{$ID}{start}=$start;$H{$ID}{end}=$end;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$start=$H{$id}{start};$end=$H{$id}{end};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};print "$chr\t$start\t$end\tgene=$gene;rsID=$id;tissue=$tissues";}}}' | sort -k1,1 -k2,2n > ${targetDir}/${today}/processed/GTEx.bed # 0-based
+cat ${tmpGTEx} | perl -F"\t" -lane '$tissue=$F[0];$chr=$F[1];$start=$F[2];$end=$F[3];$ID=$F[4];$gene=$F[5];$H{$ID}{chr}=$chr;$H{$ID}{start}=$start;$H{$ID}{end}=$end;push( @{$H{$ID}{genes}{$gene}}, $tissue ); END {foreach $id (keys %H){$chr=$H{$id}{chr};$start=$H{$id}{start};$end=$H{$id}{end};foreach $gene (keys %{$H{$id}{genes}}){$tissues = join "|", @{$H{$id}{genes}{$gene}};print "$chr\t$start\t$end\tgene=$gene;rsID=$id;tissue=$tissues";}}}' | sort -k1,1 -k2,2n -T ${tempdir} > ${targetDir}/${today}/processed/GTEx.bed # 0-based
 
 echo "Done"
 #rm -f ${tmpGTEx}
@@ -469,7 +651,7 @@ echo "Done"
 #=============================================================================================
 
 ##
-## Step 9. Using intersectbed. Find overlap between GTEx variants and regulatory regions
+## Step 9. Using intersectBed. Overlap between GTEx variants and regulatory regions
 ##
 info "Linking genes to regulatory features using GTEx data ... "
 
@@ -566,7 +748,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
         $F[0]=~s/^chr//;
         $start=$F[3]-1;
         print "$F[0]\t$start\t$F[4]\tID:$g_ID;Name:$g_name";
-    ' | sort -k1,1 -k2,2n | bgzip -f > ${targetDir}/${today}/processed/genes.bed.gz # 0-based
+    ' | sort -k1,1 -k2,2n -T ${tempdir} | bgzip -f > ${targetDir}/${today}/processed/genes.bed.gz # 0-based
 
 # OUTPUT:
 #
@@ -615,7 +797,7 @@ info "Number of regulatory features linked by overlap: ${OverlapLinkedFeatures}\
 ##
 ## Step 11. Merging all the components together create sorted, compressed bedfile.
 ##
-info "Merging GENCODE, GTEx and overlap data"
+info "Merging GENCODE, GTEx and overlap data ..."
 export gene_file=${targetDir}/${today}/processed/genes.bed.gz
 
 #GENES
@@ -643,9 +825,9 @@ zcat ${targetDir}/${today}/processed/overlapping_features.txt.gz \
         }{
             ($ID) = $_ =~ /\"gene_ID\":\"(ENSG[^"]+)\"/;
             exists $h{$ID} ? print join "\t", @{$h{$ID}}, $_ : print STDERR "$ID : gene was not found in gencode! line: $_"
-        }'  2> ${targetDir}/${today}/failed | sort -k1,1 -k2,2n > ${targetDir}/${today}/Linked_features.bed # 0-based
+        }'  2> ${targetDir}/${today}/failed | sort -k1,1 -k2,2n -T ${tempdir} > ${targetDir}/${today}/Linked_features.bed # 0-based
 
-echo -e " Done.\n"
+echo -e "Done\n"
 
 # source == GENCODE => chr,start,end in the 5th field are those of transcript,gene,exon,UTR,CDS
 # source == GTEx => chr,start,end in the 5th field are those of regulatory element
@@ -682,57 +864,26 @@ zcat  ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.g
 
 #==================================== OUTPUT config.txt ======================================
 
-echo "Linked_features=${outdir}/Linked_features.bed.gz" >> ${configfile}
-echo "gencode_file=${outdir}/gencode.basic.annotation.tsv.gz" >> ${configfile}
+cat <(grep -v "Linked_features=" ${configfile}) <(echo "Linked_features=${outdir}/Linked_features.bed.gz") | sponge ${configfile}
+cat <(grep -v "gencode_file=" ${configfile}) <(echo "gencode_file=${outdir}/gencode.basic.annotation.tsv.gz") | sponge ${configfile}
 
 #=============================================================================================
 
 # Report failed associations:
 FailedAssoc=$(wc -l ${targetDir}/${today}/failed | awk '{print $1}')
-FailedGenes=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /(ENSG\d+)/; print $1' | sort | uniq | wc -l )
-FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":"(.+?)"/; print $1' | sort | uniq | tr "\n" ", " )
-info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sournces: ${FailedSources}\n\n"
+FailedGenes=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /(ENSG\d+)/; print $1' | sort -T ${tempdir} | uniq | wc -l )
+FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":"(.+?)"/; print $1' | sort -T ${tempdir} | uniq | tr "\n" ", " | sed 's/,$/\n/')
+info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sources: ${FailedSources}\n\n"
 
 if [[ $backup == "yes" ]];then
-    info "Backing up intermediate files ...\n"
-    tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${targetDir}/${today}/APPRIS  \
-	${targetDir}/${today}/EnsemblRegulation ${targetDir}/${today}/failed ${targetDir}/${today}/GENCODE  \
-	${targetDir}/${today}/processed
-    info "Intermediate files are saved in ${today}_annotation.backup.tar.gz\n"
+    info "Backup enabled, will not delete $targetDir."
+#    tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${targetDir}/${today}/APPRIS  \
+#	${targetDir}/${today}/EnsemblRegulation ${targetDir}/${today}/failed ${targetDir}/${today}/GENCODE  \
+#	${targetDir}/${today}/processed
+ #   info "Intermediate files are saved in ${today}_annotation.backup.tar.gz\n"
 else
     rm -rf ${targetDir}
 fi
 
-# Downloading scores
-if [[ $getScores == "yes" ]];then
-    info "Downloading Eigen Phred scores\n"
-    mkdir -p scores
-    cd scores
-    axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
-    axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
-
-    if [[ $? -ne 0 ]];then
-	echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
-	echo "Try downloading later\n"
-    fi
-    cd ..
-    echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat" >> ${configfile}
-fi
-
-if [[ $getCadd == "yes" ]];then
-    info "Downloading CADD scores\n"
-    mkdir -p scores
-    cd scores
-    axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
-    axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
-
-    if [[ $? -ne 0 ]];then
-	echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
-	echo "Try downloading later\n"
-    fi
-    cd ..
-    echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz" >> ${configfile}
-fi
 
 info "The End\n"
-exit 0
