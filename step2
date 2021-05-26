@@ -7,10 +7,9 @@ createSparseMatrix<-function(id_fname,sp_fname){
   sp_data<-read.table(sp_fname,sep="\t")
   colnames(sp_data)<-c("ID1","ID2","V")
   mat<-sparseMatrix(i=sp_data$ID1+1,j=sp_data$ID2+1,x=sp_data$V,dims=c(nrow(id_data),nrow(id_data)))
-  grm.names<-as.character(id_data$IID)
-  colnames(mat)<-grm.names
-  rownames(mat)<-grm.names
-  return mat
+  colnames(mat)<-as.character(id_data$IID)
+  rownames(mat)<-as.character(id_data$IID)
+  return(mat)
 }
 
 check_for_packages=function(){
