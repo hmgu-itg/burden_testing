@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 createSparseMatrix<-function(id_fname,sp_fname){
-  cat(paste("[INFO] Creating sparse GRM using id_fname, sp_fname", "\n"))
+  cat(paste("[INFO] Creating sparse GRM using ",id_fname,", ",sp_fname,"\n"))
   id_data<-read.table(id_fname,sep="\t")
   colnames(id_data)<-c("FID","IID")
   sp_data<-read.table(sp_fname,sep="\t")
@@ -14,7 +14,7 @@ createSparseMatrix<-function(id_fname,sp_fname){
 
 check_for_packages=function(){
   cat(paste("[INFO] Checking for installed R packages.", "\n"))
-  list.of.packages <- c("GMMAT", "reshape2", "parallel", "data.table", "Hmisc", "argparser")
+  list.of.packages <- c("GMMAT", "Matrix", "reshape2", "parallel", "data.table", "Hmisc", "argparser")
   list.of.bloated.bioconductor.packages = c("SeqArray")
   list.of.packages=c(list.of.packages, list.of.bloated.bioconductor.packages)
   new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
