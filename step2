@@ -1,5 +1,19 @@
 #!/usr/bin/env Rscript
 
+createSparseMatrix<-function(id_fname,sp_fname){
+  cat(paste("[INFO] Creating sparse GRM using id_fname, sp_fname", "\n"))
+  id_data<-read.table(id_fname,sep="\t")
+  colnames(id_data)<-c("FID","IID")
+  sp_data<-read.table(sp_fname,sep="\t")
+  colnames(sp_data)<-c("ID1","ID2","V")
+  mat<-sparseMatrix(i=sp_data$ID1+1,j=sp_data$ID2+1,x=sp_data$V,dims=c(nrow(id_data),nrow(id_data)))
+  grm.names<-as.character(id_data$IID)
+  grm.mat<-mat
+  colnames(grm.mat)<-grm.names
+  rownames(grm.mat)<-grm.names
+  return grm
+}
+
 check_for_packages=function(){
   cat(paste("[INFO] Checking for installed R packages.", "\n"))
   list.of.packages <- c("GMMAT", "reshape2", "parallel", "data.table", "Hmisc", "argparser")
@@ -23,8 +37,8 @@ check_args=function(args, parser){
     print(p)
     stop("\t[ERROR] : cohort name, matrix prefix, GDS file, phenotype and group file must all be defined.")
   }
-  if(args$matrix_type %nin% c("GCTA", "GEMMA")){
-    stop(paste("\t[ERROR] : Only GEMMA and GCTA are supported matrix types (you supplied",args$matrix_type,")"))
+  if(args$matrix_type %nin% c("GCTA", "GEMMA","sparse")){
+    stop(paste("\t[ERROR] : Only dense GEMMA, GCTA and sparse GCTA are supported matrix types (you supplied",args$matrix_type,")"))
   }
   if(is.na(args$fam_file) & args$matrix_type=="GEMMA"){
     stop("\t[ERROR] : Your matrix type is GEMMA, a fam file is needed.")
@@ -64,7 +78,7 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
       grm[, c("id1", "id2"):=list(grm.names[V1], grm.names[V2])]
       grm.mat=acast(formula=id1~id2, value.var="V4", data=grm)#xtabs(V4~V1+V2, data=ha.grm)
       grm.mat[is.na(grm.mat)]=t(grm.mat)[is.na(grm.mat)]
-    }else{
+    }else if(matrix_type=="GEMMA"){
       if(is.null(fam_file)){stop("\t[ERROR] : GEMMA matrix files don't contain IDs, please supply a FAM file.")}
       if(is.na(file.info(fam_file)[1,1]) | file.info(fam_file)[1,1]==0 | is.na(file.info(matrix_prefix)[1,1]) | file.info(matrix_prefix)[1,1]==0){
         stop("\t[ERROR] : Either the matrix file or the FAM file doesn't exist or is of size 0.")
@@ -75,6 +89,8 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
       grm.names=(fread(fam_file, header=F))$V2
       colnames(grm.mat)=grm.names
       rownames(grm.mat)=grm.names
+    }else{
+	grm<-createSparseMatrix(paste0(matrix_prefix,".grm.id"),paste0(matrix_prefix,".grm.sp"))
     }
     cat(paste("[INFO] Read square matrix of dimension", ncol(grm.mat), "\n"))
     pheno=fread(phenofile)
@@ -131,8 +147,8 @@ check_for_packages()
 
 p = arg_parser("Wrapper for single-cohort SMMAT analysis", hide.opts=T)
 p = add_argument(p, "--cohort-name", "Name of the cohort, will be used as output prefix. Assigned at beginning of project, should remain constant throughout.", type="character")
-p = add_argument(p, "--matrix-prefix", "Prefix of matrix files for GCTA matrix ([prefix].grm.gz and [prefix].grm.id are expected to exist), or matrix file for GEMMA.", type="character")
-p = add_argument(p, "--matrix-type", "Format of the matrix. GCTA and GEMMA formats are supported.", short="-t", default="GCTA")
+p = add_argument(p, "--matrix-prefix", "Prefix of matrix files for GCTA matrix ([prefix].grm.gz and [prefix].grm.id, or [prefix].grm.sp and [prefix].grm.id in case of sparse GCTA matrix, are expected to exist), or matrix file for GEMMA.", type="character")
+p = add_argument(p, "--matrix-type", "Format of the matrix. dense \"GCTA\", \"GEMMA\" and \"sparse\" GCTA formats are supported.", short="-t", default="GCTA")
 p = add_argument(p, "--GDS", "GDS (genotype) file.", type="character", short="-y")
 p = add_argument(p, "--pheno", "Phenotype file. Two columns, whitespace or comma-delimited, with header. The first column is the sample \"id\" and is named as such. The second is the phenotype name. Please avoid exotic characters in the phenotype name.", type="character")
 p = add_argument(p, "--group-file", "SMMAT group file as xxprovided by the analysis team.", short="-g", type="character")
