@@ -8,10 +8,9 @@ createSparseMatrix<-function(id_fname,sp_fname){
   colnames(sp_data)<-c("ID1","ID2","V")
   mat<-sparseMatrix(i=sp_data$ID1+1,j=sp_data$ID2+1,x=sp_data$V,dims=c(nrow(id_data),nrow(id_data)))
   grm.names<-as.character(id_data$IID)
-  grm.mat<-mat
-  colnames(grm.mat)<-grm.names
-  rownames(grm.mat)<-grm.names
-  return grm
+  colnames(mat)<-grm.names
+  rownames(mat)<-grm.names
+  return mat
 }
 
 check_for_packages=function(){
@@ -90,7 +89,8 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
       colnames(grm.mat)=grm.names
       rownames(grm.mat)=grm.names
     }else{
-	grm<-createSparseMatrix(paste0(matrix_prefix,".grm.id"),paste0(matrix_prefix,".grm.sp"))
+	grm.mat<-createSparseMatrix(paste0(matrix_prefix,".grm.id"),paste0(matrix_prefix,".grm.sp"))
+	grm.names<-colnames(grm.mat)
     }
     cat(paste("[INFO] Read square matrix of dimension", ncol(grm.mat), "\n"))
     pheno=fread(phenofile)
