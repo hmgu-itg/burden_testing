@@ -32,7 +32,7 @@ From: ubuntu:18.04
 	cd bcftools
 	make bcftools && cp bcftools /usr/bin
 	
-	Rscript --vanilla -e "install.packages(c(\"reshape2\",\"R.utils\", \"parallel\", \"Hmisc\", \"argparser\", \"data.table\", \"BiocManager\"),repos = \"http://cran.us.r-project.org\");BiocManager::install(c(\"SeqArray\", \"SeqVarTools\"));install.packages(\"GMMAT\", repos = \"http://cran.us.r-project.org\")"
+	Rscript --vanilla -e "install.packages(c(\"reshape2\",\"R.utils\", \"parallel\", \"Hmisc\", \"argparser\", \"data.table\", \"BiocManager\", \"doMC\"),repos = \"http://cran.us.r-project.org\");BiocManager::install(c(\"SeqArray\", \"SeqVarTools\"));install.packages(\"GMMAT\", repos = \"http://cran.us.r-project.org\")"
 	perl -MCPAN -e 'foreach (@ARGV) { CPAN::Shell->rematein("notest", "install", $_) }' Module::Build DBI Try::Tiny JSON Data::Dumper File::Basename Getopt::Long Data::Types File::Path
 
 	cd /usr/local/bin
@@ -75,8 +75,8 @@ From: ubuntu:18.04
 	echo "This container was created: $CREATIONDATE"
 
 %labels
-	Author Arthur Gilly, Andrei Barysenka, Daniel Suveges
-	Version v1.5
+	Author Arthur Gilly, Andrei Barysenka, Daniel Suveges, Young-Chan Park
+	Version v1.5.1
 
 %help
 	This container allows you to run rare variant aggregation tests using MONSTER and SMMAT; for more information run this container with the help command line option.
