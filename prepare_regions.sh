@@ -126,11 +126,11 @@ function testFileLines {
 function checkGZfile {
 #    echo -n "Checking GZ file integrity: $1 ... "
     if ! gzip -q -t "$1";then
-	echo "[Error] Integrity check failed for $1"
+    echo "[Error] Integrity check failed for $1"
         echo "[Error] Exit"
         exit 1
 #    else
-#	echo "OK"
+#    echo "OK"
     fi
 }
 
@@ -211,8 +211,8 @@ fi
 if [ ! -d ${tempdir} ]; then
     mkdir -p ${tempdir}
     if [ $? -ne 0 ] ; then
-	echo "[Error] Could not create temp dir ${tempdir}"
-	exit 1
+    echo "[Error] Could not create temp dir ${tempdir}"
+    exit 1
     fi
 fi
 tempdir=`realpath $tempdir`
@@ -306,9 +306,8 @@ if (( "$reuse" > 0 )) \
     info "GENCODE file found and has the right checksum. Skipping download..."
     fn=$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)
     if [[ ! "$fn" -ef ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz ]];then
-    
-    debug 'mv "$fn" ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz'
-	mv "$fn" ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+        debug 'mv "$fn" ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz'
+        mv "$fn" ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
     fi
 else
     info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
@@ -319,9 +318,9 @@ else
     testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
 
     if [[ "$noSums" == "0" && "$(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)" != "$checksum" ]]; then
-	echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
-	rm ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
-	exit 1
+        echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
+        rm ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+        exit 1
     fi
 fi
 # Counting genes in the dataset:
@@ -359,20 +358,20 @@ for cell in ${cells}; do
     echo "Downloading cell type : $cell"
     checksum=$(wget -O- -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/CHECKSUM| cut -f1 -d' ')
     if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name ${cell}.gff.gz | head -1)" ]] && [[ "$noSums" == "1" || "$(md5sum $(find $targetDir -name ${cell}.gff.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
-	info "File found and has the right checksum. Skipping download..."
-	fn=$(find $targetDir -name ${cell}.gff.gz | head -1)
-	if [[ ! "$fn" -ef ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz ]];then
-	    mv "$fn" ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
-	fi
+        info "File found and has the right checksum. Skipping download..."
+        fn=$(find $targetDir -name ${cell}.gff.gz | head -1)
+        if [[ ! "$fn" -ef ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz ]];then
+            mv "$fn" ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+        fi
     else
-	axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
-	testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
-	checkGZfile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
-	if [[ "$noSums" == "0" && "$(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)" != "$checksum" ]]; then
-	    echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
-	    rm ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
-	    exit 1
-	fi
+        axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+        testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
+        checkGZfile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
+        if [[ "$noSums" == "0" && "$(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)" != "$checksum" ]]; then
+            echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
+            rm ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+            exit 1
+        fi
     fi
 done
 echo "Done"
@@ -389,13 +388,13 @@ if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name appris_data.principal.
     info "Appris file found (no checksum - unsafe!). Skipping download..."
     fn=$(find $targetDir -name appris_data.principal.txt | head -1)
     if [[ ! "$fn" -ef ${targetDir}/${today}/APPRIS/appris_data.principal.txt ]];then
-	mv "$fn" ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+        mv "$fn" ${targetDir}/${today}/APPRIS/appris_data.principal.txt
     fi
 else
     info "Downloading APPRIS isoform data\n"
     info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
     axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
-	 -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+     -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
 
     # Testing if the file exists or not:
     testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
@@ -406,57 +405,59 @@ fi
 # Downloading scores
 if [[ $getScores == "yes" ]];then
     info "Processing scores.\n"
-    if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/eigen.phred_v2.dat" ]] && [[ "$noSums" == "1" || $(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1) == "2346005c1cd457bb5ff48c64667736b2" ]]; then
-	info "Eigen scores file found and has the right checksum. Skipping download..."
-	cat <(grep -v "EigenPath=" ${configfile}) <(echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat") | sponge ${configfile}
+    if (( "$reuse" > 0 )) \
+      && [[ -s "$outdir/scores/eigen.phred_v2.dat" ]] \
+      && [[ "$noSums" == "1" || $(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1) == "2346005c1cd457bb5ff48c64667736b2" ]]; then
+        info "Eigen scores file found and has the right checksum. Skipping download..."
+        cat <(grep -v "EigenPath=" ${configfile}) <(echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat") | sponge ${configfile}
     else
-	info "Downloading Eigen Phred scores\n"
-	mkdir -p $outdir/scores
-	cd $outdir/scores
+        info "Downloading Eigen Phred scores\n"
+        mkdir -p $outdir/scores
+        cd $outdir/scores
 
-	axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
-	axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
-
-	if [[ $? -ne 0 ]];then
-	    echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
-	    echo "Try downloading later\n"
-	fi
-	localcksm=$(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1)
-	if [[ "$noSums" == "0" && "$localcksm" != "2346005c1cd457bb5ff48c64667736b2" ]]; then
-	    echo "[Error] Downloaded checksum ($localcksm) differs from expected (2346005c1cd457bb5ff48c64667736b2). Download probably failed. Rerun with reuse (-r) option."
-	    rm  $outdir/scores/eigen.phred_v2.dat
-	    exit 1
-	else
-	    cat <(grep -v "EigenPath=" ${configfile}) <(echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat") | sponge ${configfile}
-	fi
-	cd ..
+        axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
+        axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
+    
+        if [[ $? -ne 0 ]];then
+            echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
+            echo "Try downloading later\n"
+        fi
+        localcksm=$(md5sum $outdir/scores/eigen.phred_v2.dat | cut -d' ' -f1)
+        if [[ "$noSums" == "0" && "$localcksm" != "2346005c1cd457bb5ff48c64667736b2" ]]; then
+            echo "[Error] Downloaded checksum ($localcksm) differs from expected (2346005c1cd457bb5ff48c64667736b2). Download probably failed. Rerun with reuse (-r) option."
+            rm  $outdir/scores/eigen.phred_v2.dat
+            exit 1
+        else
+            cat <(grep -v "EigenPath=" ${configfile}) <(echo "EigenPath=${outdir}/scores/eigen.phred_v2.dat") | sponge ${configfile}
+        fi
+        cd ..
     fi
 fi
 
 if [[ $getCadd == "yes" ]];then
     if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/whole_genome_SNVs.tsv.gz" ]] && [[ "$noSums" == "1" || $(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1) == "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
-	info "CADD scores file found and has the right checksum. Skipping download..."
-	cat <(grep -v "caddPath=" ${configfile}) <(echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz") | sponge ${configfile}
+        info "CADD scores file found and has the right checksum. Skipping download..."
+        cat <(grep -v "caddPath=" ${configfile}) <(echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz") | sponge ${configfile}
     else
-	info "Downloading CADD scores\n"
-	mkdir -p scores
-	cd scores
-	axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
-	axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
+        info "Downloading CADD scores\n"
+        mkdir -p scores
+        cd scores
+        axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
+        axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
 
-	if [[ $? -ne 0 ]];then
-	    echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
-	    echo "Try downloading later\n"
-	fi
-	localcksm=$(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1)
-	if [[ "$noSums" == "0" && "$localcksm" != "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
-	    echo "[Error] Downloaded checksum ($localcksm) differs from expected (cb3856be4c3bb969ff8f0a6139ca226f). Download probably failed. Rerun with reuse (-r) option."
-	    rm  $outdir/scores/whole_genome_SNVs.tsv.gz
-	    exit 1
-	else
-	    cat <(grep -v "caddPath=" ${configfile}) <(echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz") | sponge ${configfile}
-	fi
-	cd ..
+        if [[ $? -ne 0 ]];then
+            echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
+            echo "Try downloading later\n"
+        fi
+        localcksm=$(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1)
+        if [[ "$noSums" == "0" && "$localcksm" != "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
+            echo "[Error] Downloaded checksum ($localcksm) differs from expected (cb3856be4c3bb969ff8f0a6139ca226f). Download probably failed. Rerun with reuse (-r) option."
+            rm  $outdir/scores/whole_genome_SNVs.tsv.gz
+            exit 1
+        else
+            cat <(grep -v "caddPath=" ${configfile}) <(echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz") | sponge ${configfile}
+        fi
+    cd ..
     fi
 fi
 
@@ -503,22 +504,22 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
                         $geneID=$1;
                         }
 
-			$transcriptID="NA";
-			if ($F[8] =~ /transcript_id\s+\"(ENST.+?)\"/){
-			$tmp=$1;
-			if ($tmp !~ /_PAR_Y/){
-			$tmp =~ /(ENST\d+)\./;
-			$transcriptID=$1;
-			}
-			else{
-			$transcriptID=$tmp;
-			}
-			}
+            $transcriptID="NA";
+            if ($F[8] =~ /transcript_id\s+\"(ENST.+?)\"/){
+            $tmp=$1;
+            if ($tmp !~ /_PAR_Y/){
+            $tmp =~ /(ENST\d+)\./;
+            $transcriptID=$1;
+            }
+            else{
+            $transcriptID=$tmp;
+            }
+            }
 
-			$exonID="NA";
-			if ($F[8] =~ /exon_id\s+\"(ENSE.+?)\./){
-			$exonID=$1;
-			}
+            $exonID="NA";
+            if ($F[8] =~ /exon_id\s+\"(ENSE.+?)\./){
+            $exonID=$1;
+            }
 
                         $F[0] =~ s/chr//;
                         $start = $F[3];
@@ -593,8 +594,8 @@ for cell in ${CellTypes}; do
                 $cell_type = $ENV{cell};
                 $start = $F[3];
 
-		# $start - 1 as bed is 0-based
-		$start=$start-1;
+        # $start - 1 as bed is 0-based
+        $start=$start-1;
 
                 $type = $F[2];
                 $end = $F[4];
@@ -746,21 +747,21 @@ info "Linking genes to regulatory features based on overlap ... "
 zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | awk '$3 == "gene"' | perl -lane '
      $g_name="NA";
         if ($_ =~ /gene_name\s+\"(.+?)\";/){
-	$g_name=$1;
-	}
+    $g_name=$1;
+    }
 
-	$g_ID="NA";
+    $g_ID="NA";
         if ($_ =~ /gene_id\s+\"(.+?)\";/){
-	$g_ID=$1;
-	}
+    $g_ID=$1;
+    }
 
-	# if gene ID contains PAR_Y then keep it
-	# otherwise remove the suffix
+    # if gene ID contains PAR_Y then keep it
+    # otherwise remove the suffix
 
-	if ($g_ID !~ /_PAR_Y/){
-	 $g_ID =~ /(ENSG\d+)\./;
-	 $g_ID=$1;
-	}
+    if ($g_ID !~ /_PAR_Y/){
+     $g_ID =~ /(ENSG\d+)\./;
+     $g_ID=$1;
+    }
 
         $F[0]=~s/^chr//;
         $start=$F[3]-1;
@@ -773,7 +774,7 @@ zcat ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
 
 
 # Intersect bed output:
-# 1	16048	29570	ID:ENSG00000227232;Name:WASH7P	1	16048	30847	ENSR00000528774	chr=1;start=16048;end=30847;class=CTCF_binding_site;regulatory_ID=ENSR00000528774;Tissues=DND-41|HMEC|HSMMtube|IMR90|K562|MultiCell|NHDF-AD
+# 1    16048    29570    ID:ENSG00000227232;Name:WASH7P    1    16048    30847    ENSR00000528774    chr=1;start=16048;end=30847;class=CTCF_binding_site;regulatory_ID=ENSR00000528774;Tissues=DND-41|HMEC|HSMMtube|IMR90|K562|MultiCell|NHDF-AD
 intersectBed -wb -a ${targetDir}/${today}/processed/genes.bed.gz -b ${targetDir}/${today}/processed/Cell_spec_regulatory_features.bed.gz -sorted 2>/dev/null | perl -MData::Dumper -MJSON -F"\t" -lane '
         # Parsing gene info:
         ($g_ID) = $F[3] =~ /ID:(ENSG[^;]+);/;
@@ -895,8 +896,8 @@ info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} g
 if [[ $backup == "yes" ]];then
     info "Backup enabled, will not delete $targetDir."
 #    tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${targetDir}/${today}/APPRIS  \
-#	${targetDir}/${today}/EnsemblRegulation ${targetDir}/${today}/failed ${targetDir}/${today}/GENCODE  \
-#	${targetDir}/${today}/processed
+#    ${targetDir}/${today}/EnsemblRegulation ${targetDir}/${today}/failed ${targetDir}/${today}/GENCODE  \
+#    ${targetDir}/${today}/processed
  #   info "Intermediate files are saved in ${today}_annotation.backup.tar.gz\n"
 else
     rm -rf ${targetDir}
