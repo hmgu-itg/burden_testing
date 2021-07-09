@@ -285,9 +285,13 @@ info "Working directory: ${targetDir}/${today}\n\n"
 
 # Get the most recent version of the data:
 mkdir -p ${targetDir}/${today}/GENCODE
+
+info "Getting MD5 hash of gencode.v${GENCODE_release}.annotation.gtf.gz file."
 checksum=$(wget -q -O- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/MD5SUMS | grep -w gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)
 
-if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] && [[ "$noSums" == "1" || "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
+if (( "$reuse" > 0 )) \
+   && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] \
+   && [[ "$noSums" == "1" || "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]] ; then
     info "GENCODE file found and has the right checksum. Skipping download..."
     fn=$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)
     if [[ ! "$fn" -ef ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz ]];then
