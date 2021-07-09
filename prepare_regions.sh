@@ -44,6 +44,7 @@ function usage {
     echo "          -d : optional, just download data and exit, do not process them"
     echo "          -s : optional, do not perform checksums (unsafe)"
     echo "          -t : optional, directory to store temporary data, default: \"/tmp\""
+    echo "          -m : optional, debug mode"
     echo "          -e <ftp://ftp.ensembl.org> : optional, Ensembl FTP server"
     echo ""
     echo " This script was written to prepare input file for the burden testing pipeline."
@@ -139,6 +140,13 @@ function info {
     echo -e "[Info ${hourMin}] $1"
 }
 
+function debug {
+    if [[ "$debug_mode" -eq 1 ]] ; then
+      hourMin=$(date +"%T" | awk 'BEGIN{FS=OFS=":"}{print $1, $2}')
+      echo -e "[Debug ${hourMin}] $1"
+    fi
+}
+
 # Printing help message if no parameters are given:
 if [[ $# == 0 ]]; then usage; fi
 
@@ -152,8 +160,9 @@ backup="no"
 reuse=0
 justdl=0
 noSums=0
+debug_mode=0
 tempdir="/tmp"
-while getopts "hncxst:e:rdo:" optname; do
+while getopts "hncxst:e:rdmo:" optname; do
     case "$optname" in
         "h" ) usage ;;
         "n" ) getScores="no" ;;
@@ -164,6 +173,7 @@ while getopts "hncxst:e:rdo:" optname; do
         "e" ) ensftp="${OPTARG}" ;;
         "r" ) reuse=1 ;;
         "d" ) justdl=1 ;;
+        "m" ) debug_mode=1 ;;
         "o" ) outdir="${OPTARG}" ;;
         "?" ) usage ;;
         *) usage ;;
@@ -220,6 +230,7 @@ echo "Do not perform checksums : $noSums"
 echo "Ensembl FTP server       : $ensftp"
 echo "Re-use previous downloads: $reuse"
 echo "Download only            : $justdl"
+echo "Debug mode               : $debug_mode"
 echo ""
 
 #===================================== VEP ===================================================
@@ -295,6 +306,8 @@ if (( "$reuse" > 0 )) \
     info "GENCODE file found and has the right checksum. Skipping download..."
     fn=$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)
     if [[ ! "$fn" -ef ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz ]];then
+    
+    debug 'mv "$fn" ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz'
 	mv "$fn" ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
     fi
 else
