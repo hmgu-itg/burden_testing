@@ -319,15 +319,24 @@ if (( "$reuse" > 0 )) \
     fi
 else
     info "Downloading GENCODE annotation. Release version: ${GENCODE_release}... "
-    axel -a ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz -o ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+    gencode_output_file="${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
+    axel -a ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz \
+      -o $gencode_output_file
     echo -e "done."
 
-    # Testing if the file exists:
-    testFile "${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz"
+    if [[ ! -f "$gencode_output_file" ]] ; then
+        info "GENCODE download with FTP failed. Retrying with HTTP"
+        axel -a http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/gencode.v${GENCODE_release}.annotation.gtf.gz \
+          -o $gencode_output_file
+        echo -e "done."
+    fi
 
-    if [[ "$noSums" == "0" && "$(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)" != "$checksum" ]]; then
-        echo "[Error] Checksum invalid ($(md5sum ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
-        rm ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz
+    # Testing if the file exists:
+    testFile "$gencode_output_file"
+
+    if [[ "$noSums" == "0" && "$(md5sum $gencode_output_file | cut -d' ' -f1)" != "$checksum" ]]; then
+        echo "[Error] Checksum invalid ($(md5sum $gencode_output_file | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
+        rm $gencode_output_file
         exit 1
     fi
 fi
