@@ -81,7 +81,7 @@ From: ubuntu:18.04
 
 %labels
 	Author Arthur Gilly, Andrei Barysenka, Daniel Suveges, Young-Chan Park
-	Version v1.5.1
+	Version v1.5.2
 
 %help
 	This container allows you to run rare variant aggregation tests using MONSTER and SMMAT; for more information run this container with the help command line option.
