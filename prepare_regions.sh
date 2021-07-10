@@ -424,7 +424,7 @@ else
     if [[ "$noSums" == "0" && "$appris_checksum" != "$downloaded_appris_checksum" ]]; then
         echo "[Error] Downloaded checksum ($downloaded_appris_checksum) differs from expected ($appris_checksum). Download probably failed. Rerun with reuse (-r) option."
         exit 1
-
+    fi
     # Testing if the file exists or not:
     testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
     info "Download complete\n\n"
