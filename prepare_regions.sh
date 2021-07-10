@@ -381,7 +381,10 @@ for cell in ${cells}; do
             mv "$fn" ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
         fi
     else
-        axel -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
+        axel \
+          -q \
+          ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/homo_sapiens.*Regulatory_Build.regulatory_activity.*.gff.gz \
+          -o ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz
         testFile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
         checkGZfile "${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz"
         if [[ "$noSums" == "0" && "$(md5sum ${targetDir}/${today}/EnsemblRegulation/${cell}.gff.gz | cut -d' ' -f1)" != "$checksum" ]]; then
@@ -401,17 +404,19 @@ info "Number of downloaded cell types: ${cellTypeCount}\n\n"
 
 #Downloading APPRIS data:
 mkdir -p ${targetDir}/${today}/APPRIS
-if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name appris_data.principal.txt | head -1)" ]]; then
+if (( "$reuse" > 0 )) \
+  && [[ ! -z "$(find $targetDir -name appris_data.principal.txt | head -1)" ]]; then
     info "Appris file found (no checksum - unsafe!). Skipping download..."
     fn=$(find $targetDir -name appris_data.principal.txt | head -1)
-    if [[ ! "$fn" -ef ${targetDir}/${today}/APPRIS/appris_data.principal.txt ]];then
+    if [[ ! "$fn" -ef ${targetDir}/${today}/APPRIS/appris_data.principal.txt ]]; then
         mv "$fn" ${targetDir}/${today}/APPRIS/appris_data.principal.txt
     fi
 else
     info "Downloading APPRIS isoform data\n"
     info "Download from the current release folder. Build: GRCh38, for GENCODE version: ${GENCODE_release}\n"
-    axel -a http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
-     -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+    axel -a \
+      http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
+      -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
 
     # Testing if the file exists or not:
     testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
@@ -451,8 +456,10 @@ if [[ $getScores == "yes" ]];then
     fi
 fi
 
-if [[ $getCadd == "yes" ]];then
-    if (( "$reuse" > 0 )) && [[ -s "$outdir/scores/whole_genome_SNVs.tsv.gz" ]] && [[ "$noSums" == "1" || $(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1) == "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
+if [[ $getCadd == "yes" ]]; then
+    if (( "$reuse" > 0 )) \
+      && [[ -s "$outdir/scores/whole_genome_SNVs.tsv.gz" ]] \
+      && [[ "$noSums" == "1" || $(md5sum $outdir/scores/whole_genome_SNVs.tsv.gz | cut -d' ' -f1) == "cb3856be4c3bb969ff8f0a6139ca226f" ]]; then
         info "CADD scores file found and has the right checksum. Skipping download..."
         cat <(grep -v "caddPath=" ${configfile}) <(echo "caddPath=${outdir}/scores/whole_genome_SNVs.tsv.gz") | sponge ${configfile}
     else
@@ -462,7 +469,7 @@ if [[ $getCadd == "yes" ]];then
         axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz
         axel -a https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz.tbi
 
-        if [[ $? -ne 0 ]];then
+        if [[ $? -ne 0 ]]; then
             echo "Error: could not download CADD scores (https://krishna.gs.washington.edu/download/CADD/v1.5/GRCh38/whole_genome_SNVs.tsv.gz)\n"
             echo "Try downloading later\n"
         fi
@@ -910,12 +917,12 @@ FailedGenes=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /(ENSG\d+)/;
 FailedSources=$( cat ${targetDir}/${today}/failed | perl -lane '$_ =~ /"source":"(.+?)"/; print $1' | sort -T ${tempdir} | uniq | tr "\n" ", " | sed 's/,$/\n/')
 info "Number of lost associations: ${FailedAssoc}, belonging to ${FailedGenes} genes in the following sources: ${FailedSources}\n\n"
 
-if [[ $backup == "yes" ]];then
+if [[ $backup == "yes" ]]; then
     info "Backup enabled, will not delete $targetDir."
-#    tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${targetDir}/${today}/APPRIS  \
-#    ${targetDir}/${today}/EnsemblRegulation ${targetDir}/${today}/failed ${targetDir}/${today}/GENCODE  \
-#    ${targetDir}/${today}/processed
- #   info "Intermediate files are saved in ${today}_annotation.backup.tar.gz\n"
+    # tar czf ${targetDir}/${today}/${today}_annotation.backup.tar.gz --remove-file ${targetDir}/${today}/APPRIS  \
+    # ${targetDir}/${today}/EnsemblRegulation ${targetDir}/${today}/failed ${targetDir}/${today}/GENCODE  \
+    # ${targetDir}/${today}/processed
+    # info "Intermediate files are saved in ${today}_annotation.backup.tar.gz\n"
 else
     rm -rf ${targetDir}
 fi
