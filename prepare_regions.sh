@@ -373,7 +373,7 @@ fi
 #GFF is 1-based
 for cell in ${cells}; do
     echo "Downloading cell type : $cell"
-    checksum=$(wget -O- -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/CHECKSUM| cut -f1 -d' ')
+    checksum=$(wget -O- -q ${ensftp}/pub/release-${Ensembl_release}/regulation/homo_sapiens/RegulatoryFeatureActivity/${cell}/CHECKSUM | cut -f1 -d' ')
     if (( "$reuse" > 0 )) && [[ ! -z "$(find $targetDir -name ${cell}.gff.gz | head -1)" ]] && [[ "$noSums" == "1" || "$(md5sum $(find $targetDir -name ${cell}.gff.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]]; then
         info "File found and has the right checksum. Skipping download..."
         fn=$(find $targetDir -name ${cell}.gff.gz | head -1)
@@ -404,9 +404,11 @@ info "Number of downloaded cell types: ${cellTypeCount}\n\n"
 
 #Downloading APPRIS data:
 mkdir -p ${targetDir}/${today}/APPRIS
+appris_checksum=$(wget -q -O- http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/md5checksums.txt | grep appris_data.principal.txt | cut -d' ' -f1)
 if (( "$reuse" > 0 )) \
-  && [[ ! -z "$(find $targetDir -name appris_data.principal.txt | head -1)" ]]; then
-    info "Appris file found (no checksum - unsafe!). Skipping download..."
+  && [[ ! -z "$(find $targetDir -name appris_data.principal.txt | head -1)" ]] \
+  && [[ "$(md5sum $(find $targetDir  -name appris_data.principal.txt | head -1) | cut -d' ' -f1)" == "$appris_checksum" ]]; then
+    info "Appris file found and has the right checksum. Skipping download..."
     fn=$(find $targetDir -name appris_data.principal.txt | head -1)
     if [[ ! "$fn" -ef ${targetDir}/${today}/APPRIS/appris_data.principal.txt ]]; then
         mv "$fn" ${targetDir}/${today}/APPRIS/appris_data.principal.txt
@@ -417,6 +419,11 @@ else
     axel -a \
       http://apprisws.bioinfo.cnio.es/pub/current_release/datafiles/homo_sapiens/GRCh38/appris_data.principal.txt \
       -o ${targetDir}/${today}/APPRIS/appris_data.principal.txt
+    
+    downloaded_appris_checksum=$(md5sum ${targetDir}/${today}/APPRIS/appris_data.principal.txt | cut -d' ' -f1)
+    if [[ "$noSums" == "0" && "$appris_checksum" != "$downloaded_appris_checksum" ]]; then
+        echo "[Error] Downloaded checksum ($downloaded_appris_checksum) differs from expected ($appris_checksum). Download probably failed. Rerun with reuse (-r) option."
+        exit 1
 
     # Testing if the file exists or not:
     testFile "${targetDir}/${today}/APPRIS/appris_data.principal.txt"
@@ -425,7 +432,7 @@ fi
 
 #=================================== moved UP to do downloads first
 # Downloading scores
-if [[ $getScores == "yes" ]];then
+if [[ $getScores == "yes" ]]; then
     info "Processing scores.\n"
     if (( "$reuse" > 0 )) \
       && [[ -s "$outdir/scores/eigen.phred_v2.dat" ]] \
@@ -440,7 +447,7 @@ if [[ $getScores == "yes" ]];then
         axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat
         axel -a ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat.tbi
     
-        if [[ $? -ne 0 ]];then
+        if [[ $? -ne 0 ]]; then
             echo "Error: could not download Eigen scores (ftp://anonymous@ftpexchange.helmholtz-muenchen.de:21021/ticketnr_3523523523525/eigen.phred_v2.dat)\n"
             echo "Try downloading later\n"
         fi
