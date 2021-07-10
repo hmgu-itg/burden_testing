@@ -306,7 +306,7 @@ info "Working directory: ${targetDir}/${today}\n\n"
 mkdir -p ${targetDir}/${today}/GENCODE
 
 info "Getting MD5 hash of gencode.v${GENCODE_release}.annotation.gtf.gz file."
-checksum=$(wget -q -O- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/MD5SUMS | grep -w gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)
+checksum=$(wget -q -O- http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/MD5SUMS | grep -w gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)
 
 if (( "$reuse" > 0 )) \
   && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] \
