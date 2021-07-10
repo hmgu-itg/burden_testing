@@ -244,7 +244,13 @@ else
   cd ensembl-vep
   git checkout release/$Ensembl_release
 
-  mkdir -p ${outdir}/vep && cd ${outdir}/vep && axel -a ftp://ftp.ebi.ac.uk/ensemblorg/pub/release-98/variation/indexed_vep_cache/homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && echo Unpacking ... && tar -xzf homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && rm homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz && cd -
+  mkdir -p ${outdir}/vep \
+    && cd ${outdir}/vep \
+    && axel -a ftp://ftp.ensembl.org/pub/release-${Ensembl_release}/variation/indexed_vep_cache/homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz \
+    && echo Unpacking ... \
+    && tar -xzf homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz \
+    && rm homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz \
+    && cd -
 
   sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
 
