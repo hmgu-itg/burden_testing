@@ -241,7 +241,7 @@ else
   cd ${outdir}
 
   git clone https://github.com/Ensembl/ensembl-vep.git
-  cd ensembl-vep
+  cd ${outdir}/ensembl-vep
   git checkout release/$Ensembl_release
 
   mkdir -p ${outdir}/vep \
@@ -250,7 +250,7 @@ else
     && echo Unpacking ... \
     && tar -xzf homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz \
     && rm homo_sapiens_vep_${Ensembl_release}_GRCh38.tar.gz \
-    && cd -
+    && cd ${outdir}/ensembl-vep
 
   sed 's/ensembl\.org/ebi\.ac\.uk\/ensemblorg/g' INSTALL.pl | sponge INSTALL.pl
 
@@ -274,23 +274,25 @@ GTExFile=$outdir/GTEx_Analysis_v8_eQTL.tar
 #echo $reuse $noSums $GTExFile
 #if [[ -s "$GTExFile" ]];then echo lol; fi
 #exit 0
-if (( "$reuse" > 0 )) && [[ -s "$GTExFile" ]] && [[ "$noSums" == "1" || $(md5sum $GTExFile | cut -d' ' -f1) == "d35b32152bdb21316b2509c46b0af998" ]]; then
-  info "GTEx file found and has the right checksum. Skipping download..."
+if (( "$reuse" > 0 )) \
+  && [[ -s "$GTExFile" ]] \
+  && [[ "$noSums" == "1" || $(md5sum $GTExFile | cut -d' ' -f1) == "d35b32152bdb21316b2509c46b0af998" ]]; then
+    info "GTEx file found and has the right checksum. Skipping download..."
 else
-  cd ${outdir}
-  axel -a https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
-  #gzip -f GTEx_Analysis_v8_eQTL.tar
+    cd ${outdir}
+    axel -a https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
+    # gzip -f GTEx_Analysis_v8_eQTL.tar
 
-  if [[ ! -e "${GTExFile}" ]]; then
-      echo "[Error] GTEx file (${GTExFile}) does not exist."
-      exit 1
-  fi
+    if [[ ! -e "${GTExFile}" ]]; then
+        echo "[Error] GTEx file (${GTExFile}) does not exist."
+        exit 1
+    fi
 fi
 
 if [[ "$noSums" == "0" && $(md5sum $GTExFile | cut -d' ' -f1) != "d35b32152bdb21316b2509c46b0af998" ]]; then
-  echo "[Error] Checksum invalid ($(md5sum $GTExFile | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
-  rm $GTExFile
-  exit 1
+    echo "[Error] Checksum invalid ($(md5sum $GTExFile | cut -d' ' -f1)). The download probably failed. Please rerun with the reuse option (-r) to retry."
+    rm $GTExFile
+    exit 1
 fi
 
 # Last step in setup:
@@ -307,8 +309,8 @@ info "Getting MD5 hash of gencode.v${GENCODE_release}.annotation.gtf.gz file."
 checksum=$(wget -q -O- ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_${GENCODE_release}/MD5SUMS | grep -w gencode.v${GENCODE_release}.annotation.gtf.gz | cut -d' ' -f1)
 
 if (( "$reuse" > 0 )) \
-   && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] \
-   && [[ "$noSums" == "1" || "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]] ; then
+  && [[ ! -z "$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)" ]] \
+  && [[ "$noSums" == "1" || "$(md5sum $(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1) | cut -d' ' -f1)" == "$checksum" ]] ; then
     info "GENCODE file found and has the right checksum. Skipping download..."
     fn=$(find $targetDir -name gencode.v${GENCODE_release}.annotation.gtf.gz | head -1)
     if [[ ! "$fn" -ef ${targetDir}/${today}/GENCODE/gencode.v${GENCODE_release}.annotation.gtf.gz ]];then
