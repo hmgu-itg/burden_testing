@@ -71,7 +71,8 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
       }
       grm.mat=as.matrix(fread(matrix_prefix))
       dim.mat=ncol(grm.mat)
-      grm.mat=grm.mat[,-dim.mat]
+      cat(paste("DEBUG: read matrix of type GEMMA and size", nrow(grm.mat), "x", dim.mat, ".\n"))
+      if(all(is.na(grm.mat[,dim.mat]))){grm.mat=grm.mat[,-dim.mat]}
       grm.names=(fread(fam_file, header=F))$V2
       colnames(grm.mat)=grm.names
       rownames(grm.mat)=grm.names
