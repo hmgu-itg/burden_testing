@@ -51,7 +51,7 @@ check_args=function(args, parser){
   }
 }
 
-run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_file, matrix_type="GCTA", fam_file=NULL, nthread = 1, outfile=NA){
+run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_file, matrix_type="GCTA", fam_file=NULL, nthread = 1, outfile=NA, method_optim="AI"){
     grm=NULL
     grm.mat=NULL
     if(matrix_type=="GCTA"){
@@ -90,7 +90,7 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
         pheno=pheno[,(phenoname) := mean(.SD[[1]]), by=id, .SDcols=phenoname]
     }
     cat("[INFO] Fitting Null model.\n")
-    model0=glmmkin(as.formula(paste(colnames(pheno)[2], "~ 1")), data=pheno, id="id",  family= gaussian(link = "identity"), kins=grm.mat)
+    model0=glmmkin(as.formula(paste(colnames(pheno)[2], "~ 1")), data=pheno, id="id",  family= gaussian(link = "identity"), kins=grm.mat, method.optim=method_optim)
     cat("[INFO] Done. Fitting alternative model.\n")
 
     if(nthread>1){
@@ -139,7 +139,7 @@ p = add_argument(p, "--group-file", "SMMAT group file as xxprovided by the analy
 p = add_argument(p, "--fam-file", "[optional] fam file for GEMMA matrices.", type="character")
 p = add_argument(p, "--threads", "[optional] Number of parallel threads.", default=1, type="integer")
 p = add_argument(p, "--out", "[optional] Output file. If not set, [cohort].[trait].out will be used.", type="character")
-
+p = add_argument(p, "--method-optim", "[optional] Optimisation method for running GLMM", default = "AI", type="character")
 args=parse_args(p, argv = commandArgs(trailingOnly = TRUE))
 check_args(args, p)
 
@@ -151,7 +151,7 @@ if(is.na(args$out)){
   outfn=args$out
 }
 
-ret=run_SMMAT(cohort_prefix=args$cohort_name, matrix_prefix=args$matrix_prefix, GDFList=args$GDS, pheno=args$pheno, group_file=args$group_file, matrix_type=args$matrix_type, fam_file=args$fam_file, nthread=args$threads, outfile=outfn)
+ret=run_SMMAT(cohort_prefix=args$cohort_name, matrix_prefix=args$matrix_prefix, GDFList=args$GDS, pheno=args$pheno, group_file=args$group_file, matrix_type=args$matrix_type, fam_file=args$fam_file, nthread=args$threads, outfile=outfn, method_optim=args$method_optim)
 cat("[INFO] Done. Writing output.\n")
 
 
