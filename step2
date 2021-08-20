@@ -151,6 +151,64 @@ if(is.na(args$out)){
   outfn=args$out
 }
 
+.pKuonen<-function (x, lambda, delta = rep(0, length(lambda)), df = rep(1, length(lambda)))
+{
+    delta <- delta[lambda != 0]
+    df <- df[lambda != 0]
+    lambda <- lambda[lambda != 0]
+    if(length(lambda) != length(delta)) stop("Error: inconsistent length in lambda and delta!")
+    if(length(lambda) != length(df)) stop("Error: inconsistent length in lambda and df!")
+    if (length(lambda) == 1) {
+        return(pchisq(x/lambda, df = df, ncp = delta, lower.tail = FALSE))
+    }
+    d <- max(lambda)
+    lambda <- lambda/d
+    x <- x/d
+    k0 <- function(zeta) {
+        -sum(df * log(1 - 2 * zeta * lambda))/2 + sum((delta * lambda *
+            zeta)/(1 - 2 * zeta * lambda))
+    }
+    kprime0 <- function(zeta) {
+        sapply(zeta, function(zz) {
+            sum(((delta + df) * lambda)/(1 - 2 * zz * lambda) + 2 * (delta *
+                zz * lambda^2)/(1 - 2 * zz * lambda)^2)
+        })
+    }
+    kpprime0 <- function(zeta) {
+        sum((2 * (2 * delta + df) * lambda^2)/(1 - 2 * zeta * lambda)^2 + 8 *
+            delta * zeta * lambda^3/(1 - 2 * zeta * lambda)^3)
+    }
+    if (any(lambda < 0)) {
+        lmin <- max(1/(2 * lambda[lambda < 0])) * 0.99999
+    }
+    else if (x > sum((df+delta)*lambda)) {
+        lmin <- -0.01
+    }
+    else {
+        lmin <- -length(lambda)*max(df+delta)/(2 * x)
+    }
+    lmax <- min(1/(2 * lambda[lambda > 0])) * 0.99999
+    riskyZeta= tryCatch(
+    hatzeta <- uniroot(function(zeta) kprime0(zeta) - x, lower = lmin,
+        upper = lmax, tol = 1e-08)$root
+        ,
+        error=function(e){
+          cat(paste0("[WARNING] : uniroot function errored out (x=", 
+          x, 
+        ", delta=[", 
+        paste(delta, collapse=","), 
+        "], df=[",
+        paste(df, collapse=","),
+         "], lmin=", lmin, ", lmax=", lmax, ")\n"))
+      return(e)})
+      if(inherits(riskyZeta, "error")) return(NA)
+    w <- sign(hatzeta) * sqrt(2 * (hatzeta * x - k0(hatzeta)))
+    v <- hatzeta * sqrt(kpprime0(hatzeta))
+    if (abs(hatzeta) < 1e-04)
+        NA
+    else pnorm(w + log(v/w)/w, lower.tail = FALSE)
+}
+
 ret=run_SMMAT(cohort_prefix=args$cohort_name, matrix_prefix=args$matrix_prefix, GDFList=args$GDS, pheno=args$pheno, group_file=args$group_file, matrix_type=args$matrix_type, fam_file=args$fam_file, nthread=args$threads, outfile=outfn, method_optim=args$method_optim)
 cat("[INFO] Done. Writing output.\n")
 
