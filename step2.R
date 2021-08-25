@@ -51,7 +51,7 @@ check_args=function(args, parser){
   }
 }
 
-run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_file, matrix_type="GCTA", fam_file=NULL, nthread = 1, outfile=NA, method_optim="AI"){
+run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_file, matrix_type="GCTA", fam_file=NULL, nthread = 1, outfile=NA, method_optim="AI", verbose=FALSE){
     grm=NULL
     grm.mat=NULL
     if(matrix_type=="GCTA"){
@@ -106,7 +106,8 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
         use.minor.allele=T,
         Garbage.Collection = T,
         ncores=nthread,
-        meta.file.prefix = outfile)
+        meta.file.prefix = outfile,
+        verbose = verbose)
       }else{
         SMMAT.out=SMMAT(null.obj = model0,
             geno.file = GDFList,
@@ -118,7 +119,8 @@ run_SMMAT = function(cohort_prefix, matrix_prefix, GDFList, phenofile, group_fil
             rho=(0:10)/10,
             use.minor.allele=T,
             Garbage.Collection = T,
-            meta.file.prefix = outfile)
+            meta.file.prefix = outfile,
+            verbose = verbose)
 
       }
     return(list(pheno=colnames(pheno)[2], out=SMMAT.out))
@@ -140,6 +142,7 @@ p = add_argument(p, "--fam-file", "[optional] fam file for GEMMA matrices.", typ
 p = add_argument(p, "--threads", "[optional] Number of parallel threads.", default=1, type="integer")
 p = add_argument(p, "--out", "[optional] Output file. If not set, [cohort].[trait].out will be used.", type="character")
 p = add_argument(p, "--method-optim", "[optional] Optimisation method for running GLMM", default = "AI", type="character")
+p = add_argument(p, "--verbose", "[optional] Output verbosity message", flag=TRUE)
 args=parse_args(p, argv = commandArgs(trailingOnly = TRUE))
 check_args(args, p)
 
@@ -151,7 +154,7 @@ if(is.na(args$out)){
   outfn=args$out
 }
 
-ret=run_SMMAT(cohort_prefix=args$cohort_name, matrix_prefix=args$matrix_prefix, GDFList=args$GDS, pheno=args$pheno, group_file=args$group_file, matrix_type=args$matrix_type, fam_file=args$fam_file, nthread=args$threads, outfile=outfn, method_optim=args$method_optim)
+ret=run_SMMAT(cohort_prefix=args$cohort_name, matrix_prefix=args$matrix_prefix, GDFList=args$GDS, pheno=args$pheno, group_file=args$group_file, matrix_type=args$matrix_type, fam_file=args$fam_file, nthread=args$threads, outfile=outfn, method_optim=args$method_optim, verbose=args$verbose)
 cat("[INFO] Done. Writing output.\n")
 
 
