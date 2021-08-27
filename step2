@@ -212,6 +212,7 @@ if(is.na(args$out)){
 options(error = function(){traceback(3);recover()})
 
 .Q_pval <- function(Q, lambda, method = "davies") {
+  print("This function is the one in step2!!!!!!!!")
   pval=NULL
     if(method == "davies") {
         tmp = try(CompQuadForm::davies(q = Q, lambda = lambda, acc = 1e-6))
