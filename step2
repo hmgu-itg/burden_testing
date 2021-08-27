@@ -210,11 +210,34 @@ if(is.na(args$out)){
 # }
 
 options(error = function(){traceback(3);recover()})
-full.fpath <- tryCatch(normalizePath(parent.frame(2)$ofile),  # works when using source
-               error=function(e) # works when using R CMD
-                     normalizePath(unlist(strsplit(commandArgs()[grep('^--file=', commandArgs())], '='))[2]))
-# https://stackoverflow.com/a/13480153
-source(file.path(dirname(full.fpath), 'SMMAT.debug.R'))
+
+.Q_pval <- function(Q, lambda, method = "davies") {
+  pval=NULL
+  if(method == "davies") {
+    tmp = try(CompQuadForm::davies(q = Q, lambda = lambda, acc = 1e-6))  
+    if(class(tmp) == "try-error" || (tmp$ifault > 0) || (pval <= 1e-5) || (pval >= 1)) method <- "kuonen"
+  } else {
+    return(tmp$Qq)
+  }
+  if(method == "kuonen") {
+    pval <- try(.pKuonen(x = Q, lambda = lambda))
+    if(class(pval) == "try-error" || is.na(pval)) method <- "liu"
+  }
+  if(method == "liu") pval <- try(CompQuadForm::liu(q = Q, lambda = lambda))
+  if(class(pval) == "try-error"){
+    cat(paste(
+      "[WARNING] : all methods failed for a position, returning a NA p-value for SKAT-O (Q=",
+      paste(Q, sep=",",collapse=";"), 
+       ", lambda=",
+       paste(lambda, sep=",",collapse=";"),
+        ".\n"))
+    return(NA)
+  }
+  return(pval)
+}
+
+assignInNamespace(".Q_pval",.Q_pval,ns="GMMAT")
+
 ret=run_SMMAT(cohort_prefix=args$cohort_name, matrix_prefix=args$matrix_prefix, GDFList=args$GDS, pheno=args$pheno, group_file=args$group_file, matrix_type=args$matrix_type, fam_file=args$fam_file, nthread=args$threads, outfile=outfn, method_optim=args$method_optim)
 cat("[INFO] Done. Writing output.\n")
 
