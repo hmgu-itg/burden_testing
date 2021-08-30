@@ -220,7 +220,7 @@ options(error = function(){traceback(3);recover()})
     return(tmp$Qq)
   }
   if(method == "kuonen") {
-    pval <- try(.pKuonen(x = Q, lambda = lambda))
+    pval <- try(GMMAT::.pKuonen(x = Q, lambda = lambda))
     if(class(pval) == "try-error" || is.na(pval)) method <- "liu"
   }
   if(method == "liu") pval <- try(CompQuadForm::liu(q = Q, lambda = lambda))
