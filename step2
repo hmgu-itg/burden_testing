@@ -282,8 +282,64 @@ options(error = function(){traceback(3);recover()})
   return(pval)
 }
 
-assignInNamespace(".Q_pval",.Q_pval,ns="GMMAT")
+.skato_pval <- function(U, V, rho, method = "davies") {
+    n.r <- length(rho)
+    n.p <- length(U)
+    lambdas <- vector("list", n.r)
+    pval <- qval <- rep(NA, n.r)
+    Q <- (1-rho)*sum(U^2)+rho*sum(U)^2
+    Burden.score <- Burden.var <- Burden.pval <- SKAT.pval <- NA
+    for(i in 1:n.r) {
+	if(rho[i]==1) {
+	    Burden.score <- sum(U)
+	    Burden.var <- sum(V)
+	    Burden.pval <- pchisq(Burden.score^2/Burden.var, df=1, lower.tail=FALSE)
+	    lambdas[[i]] <- Burden.var
+	    pval[i] <- Burden.pval
+	    next
+	}
+	if(rho[i]!=0) {
+	    R.M <- matrix(rho[i], n.p, n.p)
+	    diag(R.M) <- 1
+	    R.M.chol <- t(chol(R.M, pivot = TRUE))
+	    V.temp <- crossprod(R.M.chol, crossprod(V, R.M.chol))
+	} else V.temp <- V
+	lambda <- eigen(V.temp, only.values = TRUE, symmetric=TRUE)$values
+    	lambdas[[i]] <- lambda[lambda > 0]
+	pval[i] <- .Q_pval(Q[i], lambdas[[i]], method = method)
+	if(rho[i]==0) SKAT.pval <- pval[i]
+    }
+    minp <- min(pval)
+  if(any(is.na(pval)){
+       return(list(p=NA, minp=NA, minp.rho=NA, Burden.score=Burden.score, Burden.var=Burden.var, Burden.pval=Burden.pval, SKAT.pval=SKAT.pval))
+    }
+    for(i in 1:n.r) {
+	df <- sum(lambdas[[i]]^2)^2/sum(lambdas[[i]]^4)
+	qval[i] <- (qchisq(minp, df, lower.tail = FALSE)-df)/sqrt(2*df)*sqrt(2*sum(lambdas[[i]]^2))+sum(lambdas[[i]])
+    }
+    ZMZ <- tcrossprod(rowSums(V))/sum(V)
+    V.temp <- V - ZMZ
+    lambda <- eigen(V.temp, only.values = TRUE, symmetric = TRUE)$values
+    lambda <- lambda[lambda > 0]
+    muq <- sum(lambda)
+    varq <- sum(lambda^2) * 2 + sum(ZMZ * V.temp) * 4
+    df <- sum(lambda^2)^2/sum(lambda^4)
+    tau <- rho * sum(V) + sum(V %*% V)/sum(V) * (1 - rho)
+    re <- tryCatch({
+        integrate(function(x){
+    	    t1 <- tau %x% t(x)
+    	    re<-pchisq((apply((qval - t1)/(1-rho),2,min) - muq)/sqrt(varq)*sqrt(2*df) + df, df=df) * dchisq(x,df=1)
+    	    return(re)
+	}, lower = 0, upper = 40, subdivisions = 2000, abs.tol = 10^-25)
+    }, error=function(e) NA)
+    return(list(p = min(1-re[[1]], minp*n.r), minp = minp, minp.rho = rho[which.min(pval)],
+    Burden.score=Burden.score, Burden.var=Burden.var, Burden.pval=Burden.pval,
+    SKAT.pval=SKAT.pval))
+}
 
+assignInNamespace(".Q_pval",.Q_pval,ns="GMMAT")
+assignInNamespace(".skato_pval",.skato_pval,ns="GMMAT")
+                   
 ret=run_SMMAT(cohort_prefix=args$cohort_name, matrix_prefix=args$matrix_prefix, GDFList=args$GDS, pheno=args$pheno, group_file=args$group_file, matrix_type=args$matrix_type, fam_file=args$fam_file, nthread=args$threads, outfile=outfn, method_optim=args$method_optim)
 cat("[INFO] Done. Writing output.\n")
 
