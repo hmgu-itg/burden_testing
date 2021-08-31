@@ -310,7 +310,7 @@ options(error = function(){traceback(3);recover()})
 	if(rho[i]==0) SKAT.pval <- pval[i]
     }
     minp <- min(pval)
-  if(any(is.na(pval)){
+  if(any(is.na(pval))){
        return(list(p=NA, minp=NA, minp.rho=NA, Burden.score=Burden.score, Burden.var=Burden.var, Burden.pval=Burden.pval, SKAT.pval=SKAT.pval))
     }
     for(i in 1:n.r) {
