@@ -260,8 +260,8 @@ options(error = function(){traceback(3);recover()})
 .Q_pval <- function(Q, lambda, method = "davies") {
   pval=NULL
   if(method == "davies") {
-    tmp = try(CompQuadForm::davies(q = Q, lambda = lambda, acc = 1e-6))  
-    if(class(tmp) == "try-error" || (tmp$ifault > 0) || (pval <= 1e-5) || (pval >= 1)) method <- "kuonen"
+    tmp = try(CompQuadForm::davies(q = Q, lambda = lambda, acc = 1e-6))
+    if(class(tmp) == "try-error" || (tmp$ifault > 0) || (tmp$Qq <= 1e-5) || (tmp$Qq >= 1)) method <- "kuonen"
   } else {
     return(tmp$Qq)
   }
