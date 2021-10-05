@@ -1,0 +1,54 @@
+#!/bin/bash
+ensg=$1
+condition=$2
+pheno=$(readlink -f $3)
+plinkfile=$(readlink -f $4)
+matrix=$(readlink -f $5)
+gds=$(readlink -f $6)
+setfile=$(readlink -f $7)
+assoc=$8
+outf=$9
+mkdir $outf || exit
+cd $outf
+
+grep -w '^'$ensg.$condition $setfile>redux.variantset
+topsnp=$(tabix $assoc $(cat redux.variantset | awk '{print $2":"$3"-"$3}')| sort -k14,14g| head -1 | cut -f2)
+
+if [ -z "$(echo $topsnp | grep '^chr')" ]; then
+  topsnp=chr$topsnp
+fi
+topsnp=$(echo $topsnp| sed 's/_.*//;s/\[b38\]//')
+
+echo
+echo Using topsnp $topsnp
+echo
+
+plink --bfile $plinkfile --extract <(echo $topsnp) --recode A --out tocondition
+Rscript -e 'library(GMMAT)
+library(data.table)
+pheno=fread("'$pheno'")
+covar=fread("tocondition.raw")
+covar[,c("FID", "PAT", "MAT", "SEX", "PHENOTYPE"):=NULL]
+colnames(covar)[2:ncol(covar)]=paste0("covar", 1:(ncol(covar)-1))
+m=merge(pheno, covar, by.x="id", by.y="IID")
+matrix_prefix="'$matrix'"
+library(reshape2)
+      grm=as.matrix(fread(paste0(matrix_prefix, ".grm.gz"), header=F))
+      grm.names=as.character(fread(paste0(matrix_prefix, ".grm.id"), header=F)$V1)
+      grm=as.data.table(grm)
+      grm[, c("id1", "id2"):=list(grm.names[V1], grm.names[V2])]
+      grm.mat=acast(formula=id1~id2, value.var="V4", data=grm)
+      grm.mat[is.na(grm.mat)]=t(grm.mat)[is.na(grm.mat)]
+model0=glmmkin(as.formula(paste(colnames(m)[2], "~", colnames(m)[3:ncol(m)])), data=m, id="id",  family= gaussian(link = "identity"), kins=grm.mat)
+SMMAT.out=SMMAT(null.obj = model0,
+            geno.file = "'$gds'",
+            group.file = "redux.variantset",
+            MAF.range=c(1e-10, 0.05),
+            MAF.weights.beta = c(1,1),
+            miss.cutoff=0.01,
+            tests=c("O", "E"),
+            rho=(0:10)/10,
+            use.minor.allele=T,
+            Garbage.Collection = T,
+meta.file.prefix = "tocondition")
+print(SMMAT.out)'
