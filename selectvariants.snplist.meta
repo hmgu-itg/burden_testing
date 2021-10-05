@@ -1,0 +1,84 @@
+#!/bin/bash
+
+## PLEASE ONLY ABSOLUTE PATHS
+
+# this stays constant across studies
+ensg=$1
+shift
+prot=$1
+shift
+condition=$1
+shift
+outfile=$1
+shift
+setfile=$1
+shift
+indexvariant=$1
+shift
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+# this is study specific
+SS=("$@")
+names=()
+phenos=()
+plinkfiles=()
+matrices=()
+gdss=()
+assocs=()
+
+for ssarg in ${SS[@]}; do
+	IFS=',' read -r -a csfields <<< "$ssarg"
+		names+=( "${csfields[0]}" )
+		phenos+=( "${csfields[1]}" )
+		plinkfiles+=( "${csfields[2]}" )
+		matrices+=( "${csfields[3]}" )
+		gdss+=( "${csfields[4]}" )
+		assocs+=( "${csfields[5]}" )
+done
+
+
+for i in ${!SS[@]}; do
+	echo study $i is named ${names[$i]} #, has pheno ${phenos[$i]}, plink ${plinkfiles[$i]}, matrix ${matrices[$i]}, gds ${gdss[$i]}, assoc ${assocs[$i]}
+done
+echo index variant is $indexvariant
+
+mkdir $outfile || exit
+ cd $outfile
+
+
+condsnp=$indexvariant
+echo Now conditioning on other cohorts for $condsnp...
+
+for i in ${!SS[@]}; do
+		echo Processing cohort "${names[$i]}" ...
+		$DIR/selectvariants.snplist $ensg $condition ${phenos[$i]} ${plinkfiles[$i]} ${matrices[$i]} ${gdss[$i]} $setfile $condsnp ${names[$i]}.$prot.$ensg.$condition.${condsnp/:/_}
+		if [[ -s ${names[$i]}.$prot.$ensg.$condition.${condsnp/:/_}/tocondition.var.1 ]]; then
+			echo ${names[$i]}.$prot.$ensg.$condition.${condsnp/:/_}/tocondition >> toanalyse
+		fi
+done
+
+echo
+echo META ANALYSIS
+echo
+grep -w '^'$ensg.$condition $setfile | sed 's/\t/-/;s/\t/:/' | grep -w -f <(echo $indexvariant | sed 's/chr//g'| tr ',' '\n') | sed 's/-/\t/;s/:/\t/'>redux.variantset
+
+mfp=$(cat toanalyse | sed 's/^/\"/;s/$/",/'| tr '\n' ' '| sed 's/, $/\n/')
+echo $mfp
+Rscript -e 'library(GMMAT);library(data.table)
+nf='$(cat toanalyse| wc -l)'
+print(nf)
+mfp=c('"$mfp"')
+print(mfp)
+meta=SMMAT.meta(meta.files.prefix=mfp, n.files=rep(1, nf),
+        group.file="redux.variantset",
+        MAF.range=c(1e-10, 0.05),
+        MAF.weights.beta = c(1,1),
+        miss.cutoff=0.01,
+        tests=c("O", "E"),
+        rho=(0:10)/10,
+        use.minor.allele=T
+          )
+
+fwrite(meta, "'$ensg.$prot'.cond.out", sep="\t", na=NA, quote=F)
+print(t(meta))'
