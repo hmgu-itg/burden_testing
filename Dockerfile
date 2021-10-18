@@ -91,7 +91,10 @@ ARG VERSION
 
 LABEL maintainer1="Arthur Gilly <arthur.gilly@helmholtz-muenchen.de>"
 LABEL maintainer2="Young-Chan Park <young-chan.park@helmholtz-muenchen.de>"
+LABEL org.label-schema.vendor="HMGU-ITG"
 LABEL org.label-schema.schema-version="1.0"
-LABEL org.label-schema.build-date=$BUILD_DATE
-LABEL org.label-schema.vcs-ref=$VCS_REF
-LABEL version=$VERSION
+LABEL org.label-schema.name="burden_testing"
+LABEL org.label-schema.vcs-url="https://github.com/hmgu-itg/burden_testing"
+LABEL org.label-schema.vcs-ref="$VCS_REF"
+LABEL org.label-schema.build-date="$BUILD_DATE"
+LABEL org.label-schema.version="$VERSION"
