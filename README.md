@@ -4,7 +4,8 @@ This is a pipeline to run genome-wide burdent tests using sequencing data. Head 
 
 
 
-## Build
+## Building containers
+
 ```bash
 VERSION=1.5.4 # Change this appropriately 
 
@@ -19,6 +20,3 @@ sudo docker build \
 
 sudo SINGULARITY_NOHTTPS=1 singularity build burden_testing_${VERSION} docker-daemon://burden_testing:"$VERSION"
 ```
-
-
-sudo SINGULARITY_NOHTTPS=1 /opt/singularity371/bin/singularity build burden_testing_${VERSION} docker-daemon://burden_testing:"$VERSION"
