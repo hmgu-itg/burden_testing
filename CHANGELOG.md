@@ -1,3 +1,6 @@
+# v1.5.5.dev
+- Added code in `prepare_regions.sh` which outputs `metadata.txt` file which contains metadata about when and what version of `prepare_regions.sh` script was executed to generate the geneset data. 
+
 # v1.5.4
 Note that starting from this version, the version of the repository tag has diverged from container version. v1.5.4 is the uploaded container version, but the `burden_testing` code from v1.5.3 is used.
 
