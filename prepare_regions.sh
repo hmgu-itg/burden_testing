@@ -22,8 +22,7 @@
 # For reproducibility, both the GENCODE, Ensembl and GTEx versions are hardcoded
 
 
-script_version=4.1
-last_modified=2021.Jan.19
+script_version=4.1.1
 
 ## Built in versions:
 GENCODE_release=32
@@ -232,6 +231,34 @@ echo "Re-use previous downloads: $reuse"
 echo "Download only            : $justdl"
 echo "Debug mode               : $debug_mode"
 echo ""
+
+## Write a metadata.txt file which contains info about the executed run
+metafile=${outdir}/metadata.txt
+_script_loc="`dirname \"$0\"`"
+# We use --git-dir instead of -C, because -C isn't available in older versions of git
+commit_id=$(git --git-dir ${_script_loc}/.git rev-parse HEAD)
+if [ -z "$commit_id" ] ; then
+  info "Commit ID couldn't be retrieved. Falling back to an unknown value."
+  commit_id='???'
+fi
+echo "repo-commit-id: $commit_id" > $metafile
+echo "prepare-regions-ver: $script_version" >> $metafile
+echo "GENCODE_release: $GENCODE_release" >> $metafile
+echo "Ensembl_release: $Ensembl_release" >> $metafile
+echo "GTEx_release: $GTExRelease" >> $metafile
+echo "Arguments: 
+  - outdir: $outdir
+  - tempdir: $tempdir
+  - getScores: $getScores
+  - getCadd: $getCadd
+  - backup: $backup
+  - noSums: $noSums
+  - ensftp: $ensftp
+  - reuse: $reuse
+  - justdl: $justdl
+  - debug_mode: $debug_mode
+" >> $metafile
+echo "Started: $(date +'%Y-%m-%d %H:%M:%S')" >> $metafile
 
 #===================================== VEP ===================================================
 
@@ -936,3 +963,5 @@ fi
 
 
 info "The End\n"
+
+echo "Ended: $(date +'%Y-%m-%d %H:%M:%S')" >> $metafile
