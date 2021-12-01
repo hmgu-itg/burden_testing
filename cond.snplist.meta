@@ -1,0 +1,82 @@
+#!/bin/bash
+
+## PLEASE ONLY ABSOLUTE PATHS
+
+# this stays constant across studies
+ensg=$1
+shift
+prot=$1
+shift
+condition=$1
+shift
+outfile=$1
+shift
+setfile=$1
+shift
+indexvariant=$1
+shift
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+# this is study specific
+SS=("$@")
+names=()
+phenos=()
+plinkfiles=()
+matrices=()
+gdss=()
+assocs=()
+
+for ssarg in ${SS[@]}; do
+	IFS=',' read -r -a csfields <<< "$ssarg"
+		names+=( "${csfields[0]}" )
+		phenos+=( "${csfields[1]}" )
+		plinkfiles+=( "${csfields[2]}" )
+		matrices+=( "${csfields[3]}" )
+		gdss+=( "${csfields[4]}" )
+		assocs+=( "${csfields[5]}" )
+done
+
+
+for i in ${!SS[@]}; do
+	echo study $i is named ${names[$i]} #, has pheno ${phenos[$i]}, plink ${plinkfiles[$i]}, matrix ${matrices[$i]}, gds ${gdss[$i]}, assoc ${assocs[$i]}
+done
+echo index variant is $indexvariant
+
+mkdir $outfile || exit
+cd $outfile
+
+
+condsnp=$indexvariant
+echo Now conditioning on other cohorts for $condsnp...
+
+for i in ${!SS[@]}; do
+		echo Processing cohort "${names[$i]}" ...
+		$DIR/cond.snplist $ensg $condition ${phenos[$i]} ${plinkfiles[$i]} ${matrices[$i]} ${gdss[$i]} $setfile $condsnp ${names[$i]}.$prot.$ensg.$condition.${condsnp/:/_}
+		if [[ ! -f ${names[$i]}.$prot.$ensg.$condition.${condsnp/:/_}/tocondition.raw ]]; then
+			echo
+			echo WARNING : Variant is absent from cohort "${names[$i]}"
+			echo           Analysing without conditional
+			echo
+			rm -r ${names[$i]}.$prot.$ensg.$condition.${condsnp/:/_}
+			$DIR/reanalyse.single.burden $ensg $condition ${phenos[$i]} ${plinkfiles[$i]} ${matrices[$i]} ${gdss[$i]} $setfile $condsnp ${names[$i]}.$prot.$ensg.$condition.${condsnp/:/_}
+		fi
+done
+
+echo
+echo META ANALYSIS
+echo
+grep -w '^'$ensg.$condition $setfile>redux.variantset
+Rscript -e 'library(GMMAT);library(data.table)
+meta=SMMAT.meta(meta.files.prefix=c('$(find -name "*.score.1" | sed 's/.score.1//;s/^/\"/;s/$/\"/'| tr '\n' ',' | sed 's/,$/\n/')'), n.files=rep(1, '"${#names[@]}"'),
+        group.file="redux.variantset",
+        MAF.range=c(1e-10, 0.05),
+        MAF.weights.beta = c(1,1),
+        miss.cutoff=0.01,
+        tests=c("O", "E"),
+        rho=(0:10)/10,
+        use.minor.allele=T
+          )
+
+fwrite(meta, "'$ensg.$prot'.cond.out", sep="\t", na=NA, quote=F)
+print(meta)'

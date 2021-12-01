@@ -1,0 +1,94 @@
+#!/bin/bash
+
+## PLEASE ONLY ABSOLUTE PATHS
+
+# this stays constant across studies
+ensg=$1
+shift
+prot=$1
+shift
+condition=$1
+shift
+outfile=$1
+shift
+setfile=$1
+shift
+indexcohort=$1
+shift
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+# this is study specific
+SS=("$@")
+names=()
+phenos=()
+plinkfiles=()
+matrices=()
+gdss=()
+assocs=()
+indexcohortindex="none"
+i=0
+for ssarg in ${SS[@]}; do
+	IFS=',' read -r -a csfields <<< "$ssarg"
+		names+=( "${csfields[0]}" )
+		phenos+=( "${csfields[1]}" )
+		plinkfiles+=( "${csfields[2]}" )
+		matrices+=( "${csfields[3]}" )
+		gdss+=( "${csfields[4]}" )
+		assocs+=( "${csfields[5]}" )
+		if [[ "${csfields[0]}" == $indexcohort ]]; then
+			indexcohortindex=$i
+		fi
+		i=$(( i + 1 ))
+done
+
+if [[ "$indexcohortindex" == "none" ]]; then
+	echo Study $indexcohort was not found among ${names[*]}
+fi
+
+for i in ${!SS[@]}; do
+	echo study $i is named ${names[$i]} #, has pheno ${phenos[$i]}, plink ${plinkfiles[$i]}, matrix ${matrices[$i]}, gds ${gdss[$i]}, assoc ${assocs[$i]}
+done
+echo index cohort is ${names[$indexcohortindex]}
+
+mkdir $outfile || exit
+cd $outfile
+
+$DIR/cond.topsnp.internal $ensg $condition ${phenos[$indexcohortindex]} ${plinkfiles[$indexcohortindex]} ${matrices[$indexcohortindex]} ${gdss[$indexcohortindex]} $setfile ${assocs[$indexcohortindex]} $indexcohort.$prot.$ensg.$condition.topsnp
+
+condsnp=$(head -1 $indexcohort.$prot.$ensg.$condition.topsnp/tocondition.raw | awk '{print $NF}'| sed 's/_.*//')
+
+echo Now conditioning on other cohorts for $condsnp...
+
+for i in ${!SS[@]}; do
+	if [[ "${names[$i]}" != "$indexcohort" ]]; then
+		echo Processing cohort "${names[$i]}" ...
+		$DIR/cond.snplist $ensg $condition ${phenos[$i]} ${plinkfiles[$i]} ${matrices[$i]} ${gdss[$i]} $setfile $condsnp ${names[$i]}.$prot.$ensg.$condition.${condsnp/:/_}
+		if [[ ! -f ${names[$i]}.$prot.$ensg.$condition.${condsnp/:/_}/tocondition.raw ]]; then
+			echo
+			echo WARNING : Variant is absent from cohort "${names[$i]}"
+			echo           Analysing without conditional
+			echo
+			rm -r ${names[$i]}.$prot.$ensg.$condition.${condsnp/:/_}
+			$DIR/reanalyse.single.burden $ensg $condition ${phenos[$i]} ${plinkfiles[$i]} ${matrices[$i]} ${gdss[$i]} $setfile $condsnp ${names[$i]}.$prot.$ensg.$condition.${condsnp/:/_}
+		fi
+	fi
+done
+
+echo
+echo META ANALYSIS
+echo
+grep -w '^'$ensg.$condition $setfile>redux.variantset
+Rscript -e 'library(GMMAT);library(data.table)
+meta=SMMAT.meta(meta.files.prefix=c('$(find -name "*.score.1" | sed 's/.score.1//;s/^/\"/;s/$/\"/'| tr '\n' ',' | sed 's/,$/\n/')'), n.files=rep(1, '"${#names[@]}"'),
+        group.file="redux.variantset",
+        MAF.range=c(1e-10, 0.05),
+        MAF.weights.beta = c(1,1),
+        miss.cutoff=0.01,
+        tests=c("O", "E"),
+        rho=(0:10)/10,
+        use.minor.allele=T
+          )
+
+fwrite(meta, "'$ensg.$prot'.cond.out", sep="\t", na=NA, quote=F)
+print(meta)'
